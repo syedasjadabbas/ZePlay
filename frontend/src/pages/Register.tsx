@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -282,27 +283,49 @@ const Register: React.FC = () => {
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
                   {field.label}
                 </label>
-                <input
-                  id={field.id}
-                  type={field.type}
-                  placeholder={field.placeholder}
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 text-white rounded-xl text-sm placeholder:text-white/30 caret-brand-accent outline-none transition-all duration-200"
-                  style={{
-                    background: 'rgba(16,28,64,0.8)',
-                    border: '1px solid rgba(255,255,255,0.09)',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.border = '1px solid rgba(59,130,246,0.5)';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.04)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                />
+                {field.type === 'password' ? (
+                  <PasswordInput
+                    id={field.id}
+                    placeholder={field.placeholder}
+                    value={field.value}
+                    onChange={field.onChange}
+                    required
+                    style={{
+                      background: 'rgba(16,28,64,0.8)',
+                      border: '1px solid rgba(255,255,255,0.09)',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.border = '1px solid rgba(59,130,246,0.5)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.04)';
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
+                  <input
+                    id={field.id}
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 text-white rounded-xl text-sm placeholder:text-white/30 caret-brand-accent outline-none transition-all duration-200"
+                    style={{
+                      background: 'rgba(16,28,64,0.8)',
+                      border: '1px solid rgba(255,255,255,0.09)',
+                    }}
+                    onFocus={e => {
+                      e.currentTarget.style.border = '1px solid rgba(59,130,246,0.5)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.04)';
+                    }}
+                    onBlur={e => {
+                      e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                )}
               </div>
             ))}
 

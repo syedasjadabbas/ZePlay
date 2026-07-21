@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { clearAuthSession } from '../services/api';
 
 interface ProfileData {
   profile_id: string;
@@ -55,8 +55,7 @@ const Profiles: React.FC = () => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('selectedProfileId');
+    clearAuthSession();
     navigate('/login');
   };
 
