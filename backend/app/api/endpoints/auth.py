@@ -19,10 +19,12 @@ from app.schemas.user import (
 from app.core import security
 from app.api import deps
 from app.services.email_service import send_verification_email, send_password_reset_email
+from app.config import settings
 
 router = APIRouter()
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     """Register a new user account (unverified by default)."""
     # Check for existing email
@@ -58,10 +60,28 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_token)
     await db.commit()
     
-    # Send verification email asynchronously
+    # Determine email delivery method
+    email_configured = bool(settings.RESEND_API_KEY)
+    dev_notice = None if email_configured else (
+        "Email service not configured. "
+        "Verification link is available in local_emails.log on the server."
+    )
+    
+    # Send verification email
     await send_verification_email(db_user.email, db_user.name, token)
     
-    return db_user
+    return {
+        "user_id": str(db_user.user_id),
+        "email": db_user.email,
+        "name": db_user.name,
+        "subscription_plan": db_user.subscription_plan,
+        "is_verified": db_user.is_verified,
+        "created_at": db_user.created_at,
+        "updated_at": db_user.updated_at,
+        "email_configured": email_configured,
+        "dev_notice": dev_notice,
+    }
+
 
 @router.post("/login", response_model=Token)
 async def login(
@@ -160,8 +180,19 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     
     # Send password reset email
     await send_password_reset_email(user.email, user.name, token)
-    
-    return {"status": "success", "message": "If a matching account exists, a reset link has been sent."}
+
+    email_configured = bool(settings.RESEND_API_KEY)
+    dev_notice = None if email_configured else (
+        "Email service not configured. "
+        "Reset link is available in local_emails.log on the server."
+    )
+
+    return {
+        "status": "success",
+        "message": "If a matching account exists, a reset link has been sent.",
+        "email_configured": email_configured,
+        "dev_notice": dev_notice,
+    }
 
 @router.post("/reset-password")
 async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
