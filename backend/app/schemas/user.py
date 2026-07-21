@@ -26,6 +26,7 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
     is_verified: bool
+    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

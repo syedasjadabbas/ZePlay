@@ -8,7 +8,9 @@ import VerifyEmail from './pages/VerifyEmail';
 import Profiles from './pages/Profiles';
 import Home from './pages/Home';
 import MovieDetails from './pages/MovieDetails';
+import AdminUpload from './pages/AdminUpload';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 const App: React.FC = () => {
   return (
@@ -44,6 +46,22 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <MovieDetails />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/upload"
+          element={
+            <AdminRoute>
+              <AdminUpload />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminUpload />
+            </AdminRoute>
           }
         />
 

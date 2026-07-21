@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Storage settings
+    STORAGE_DIR: str = "storage/videos"
+
     # Pydantic v2 configuration to find the .env file
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
