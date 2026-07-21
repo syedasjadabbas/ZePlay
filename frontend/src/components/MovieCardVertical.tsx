@@ -9,6 +9,8 @@ interface MovieCardVerticalProps {
   duration_minutes: number;
   genres: Array<{ name: string }>;
   progressPercent?: number; // Optional watch progress percentage
+  isInWatchlist?: boolean; // Optional watchlist saved status
+  ratingScore?: number; // Optional live average rating score
 }
 
 const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
@@ -16,6 +18,8 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   title,
   thumbnail_url,
   progressPercent,
+  isInWatchlist,
+  ratingScore,
 }) => {
   const navigate = useNavigate();
 
@@ -50,10 +54,20 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
         }}
       />
 
+      {/* Saved Watchlist Badge Indicator */}
+      {isInWatchlist && (
+        <div className="absolute top-2.5 left-2.5 bg-brand-accent/95 backdrop-blur-md px-2 py-0.5 rounded-md text-[8px] font-black text-white uppercase tracking-wider shadow-md z-10 border border-white/20 flex items-center gap-1">
+          <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
+            <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+          </svg>
+          List
+        </div>
+      )}
+
       {/* Standard Rating Overlay */}
       {progressPercent === undefined && (
         <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-bold text-brand-accent border border-white/5 flex items-center gap-1">
-          ★ {getRating(title)}
+          ★ {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : getRating(title)}
         </div>
       )}
 

@@ -2,10 +2,12 @@ from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from app.database import get_db
 from app.models.user import User
 from app.models.profile import Profile
+from app.models.watch_history import WatchHistory
+from app.models.watchlist import Watchlist
 from app.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate
 from app.api import deps
 
@@ -43,7 +45,7 @@ async def create_profile(
     db_profile = Profile(
         user_id=current_user.user_id,
         display_name=profile_in.display_name,
-        avatar_url=profile_in.avatar_url,
+        avatar_url=profile_in.avatar_url or "🍿",
         is_kids_profile=profile_in.is_kids_profile or False,
         language_pref=profile_in.language_pref or "en"
     )
@@ -90,7 +92,7 @@ async def delete_profile(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete a profile from the account."""
-    # Fetch profile and verify ownership
+    # Fetch profile and verify ownership first
     result = await db.execute(
         select(Profile).filter(
             Profile.profile_id == profile_id,
@@ -103,7 +105,23 @@ async def delete_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found or access denied."
         )
-    
+
+    # Check profile count for this account
+    count_result = await db.execute(
+        select(func.count(Profile.profile_id)).filter(Profile.user_id == current_user.user_id)
+    )
+    count = count_result.scalar() or 0
+    if count <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete the last remaining profile on your account."
+        )
+
+    # Clean up dependent records explicitly
+    await db.execute(delete(WatchHistory).filter(WatchHistory.profile_id == profile_id))
+    await db.execute(delete(Watchlist).filter(Watchlist.profile_id == profile_id))
+
     await db.delete(profile)
     await db.commit()
     return None
+

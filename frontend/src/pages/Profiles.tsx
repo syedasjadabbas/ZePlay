@@ -10,13 +10,8 @@ interface ProfileData {
   language_pref: string;
 }
 
-const AVATAR_COLORS = [
-  'from-blue-500 to-indigo-600',
-  'from-cyan-400 to-blue-600',
-  'from-violet-500 to-purple-700',
-  'from-emerald-400 to-teal-600',
-  'from-pink-400 to-rose-600',
-];
+const EMOJIS = ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', '🐸', '🐵', '🦄', '🚀', '🎮', '🍿'];
+
 
 const Profiles: React.FC = () => {
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
@@ -31,6 +26,8 @@ const Profiles: React.FC = () => {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newIsKids, setNewIsKids] = useState(false);
   const [newLang, setNewLang] = useState('en');
+  const [newEmoji, setNewEmoji] = useState('🍿');
+  const [editEmoji, setEditEmoji] = useState('🍿');
   
   const navigate = useNavigate();
 
@@ -65,9 +62,12 @@ const Profiles: React.FC = () => {
       setNewDisplayName(profile.display_name);
       setNewIsKids(profile.is_kids_profile);
       setNewLang(profile.language_pref);
+      setEditEmoji(profile.avatar_url || '🍿');
       setShowEditModal(true);
     } else {
       localStorage.setItem('selectedProfileId', profile.profile_id);
+      localStorage.setItem('selectedProfileName', profile.display_name);
+      localStorage.setItem('selectedProfileAvatar', profile.avatar_url || '🍿');
       navigate('/');
     }
   };
@@ -77,12 +77,11 @@ const Profiles: React.FC = () => {
     if (!newDisplayName.trim()) return;
 
     try {
-      const randColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
       await api.post('/profiles/', {
         display_name: newDisplayName,
         is_kids_profile: newIsKids,
         language_pref: newLang,
-        avatar_url: randColor,
+        avatar_url: newEmoji,
       });
       setShowCreateModal(false);
       resetForm();
@@ -101,7 +100,15 @@ const Profiles: React.FC = () => {
         display_name: newDisplayName,
         is_kids_profile: newIsKids,
         language_pref: newLang,
+        avatar_url: editEmoji,
       });
+
+      const activeProfileId = localStorage.getItem('selectedProfileId');
+      if (activeProfileId === selectedProfile.profile_id) {
+        localStorage.setItem('selectedProfileName', newDisplayName);
+        localStorage.setItem('selectedProfileAvatar', editEmoji);
+      }
+
       setShowEditModal(false);
       setSelectedProfile(null);
       resetForm();
@@ -112,16 +119,32 @@ const Profiles: React.FC = () => {
   };
 
   const handleDeleteProfile = async (profileId: string) => {
-    if (!window.confirm("Are you sure you want to delete this profile?")) return;
+    if (!window.confirm("Are you sure you want to delete this profile? All watch history and watchlist items for this profile will be permanently removed.")) return;
 
     try {
       await api.delete(`/profiles/${profileId}`);
+      
+      const activeProfileId = localStorage.getItem('selectedProfileId');
+      if (activeProfileId === profileId) {
+        // If remaining profiles exist after fetch, switch or clear
+        const remaining = profiles.filter(p => p.profile_id !== profileId);
+        if (remaining.length > 0) {
+          localStorage.setItem('selectedProfileId', remaining[0].profile_id);
+          localStorage.setItem('selectedProfileName', remaining[0].display_name);
+          localStorage.setItem('selectedProfileAvatar', remaining[0].avatar_url || '🍿');
+        } else {
+          localStorage.removeItem('selectedProfileId');
+          localStorage.removeItem('selectedProfileName');
+          localStorage.removeItem('selectedProfileAvatar');
+        }
+      }
+
       setShowEditModal(false);
       setSelectedProfile(null);
       resetForm();
       fetchProfiles();
     } catch (err: any) {
-      alert("Could not delete profile.");
+      alert(err.response?.data?.detail || "Could not delete profile.");
     }
   };
 
@@ -129,6 +152,7 @@ const Profiles: React.FC = () => {
     setNewDisplayName('');
     setNewIsKids(false);
     setNewLang('en');
+    setNewEmoji('🍿');
   };
 
   return (
@@ -170,7 +194,9 @@ const Profiles: React.FC = () => {
 
             <div className="flex flex-wrap justify-center gap-8 md:gap-10">
               {profiles.map((profile) => {
-                const avatarBg = profile.avatar_url || 'from-neutral-700 to-neutral-800';
+                const isEmoji = profile.avatar_url && EMOJIS.includes(profile.avatar_url);
+                const avatarBg = !isEmoji && profile.avatar_url ? profile.avatar_url : 'from-neutral-700 to-neutral-800';
+                
                 return (
                   <div 
                     key={profile.profile_id} 
@@ -178,16 +204,22 @@ const Profiles: React.FC = () => {
                     className="group flex flex-col items-center cursor-pointer relative"
                   >
                     <div className="relative">
-                      {/* Apple-style circular initials avatar with subtle borders */}
+                      {/* Avatar container */}
                       <div className="w-28 h-28 md:w-32 md:h-32 rounded-full p-0.5 border border-white/5 group-hover:border-brand-accent/50 group-hover:shadow-[0_0_30px_rgba(59,130,246,0.3)] transition-all duration-300 transform group-hover:scale-105 shadow-2xl">
-                        <div className={`w-full h-full rounded-full bg-gradient-to-br flex items-center justify-center text-3xl font-extrabold font-display uppercase tracking-wider text-white ${avatarBg}`}>
-                          {profile.display_name.substring(0, 1)}
-                        </div>
+                        {isEmoji ? (
+                          <div className="w-full h-full rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/5 flex items-center justify-center text-5xl select-none">
+                            {profile.avatar_url}
+                          </div>
+                        ) : (
+                          <div className={`w-full h-full rounded-full bg-gradient-to-br flex items-center justify-center text-3xl font-extrabold font-display uppercase tracking-wider text-white ${avatarBg}`}>
+                            {profile.display_name.substring(0, 1)}
+                          </div>
+                        )}
                       </div>
 
                       {/* Manage Overlay */}
                       {isManageMode && (
-                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
                           <div className="w-8 h-8 rounded-full bg-brand-accent text-white flex items-center justify-center shadow-lg">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -259,6 +291,25 @@ const Profiles: React.FC = () => {
                 />
               </div>
 
+              {/* Avatar Selector Grid */}
+              <div>
+                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
+                <div className="grid grid-cols-7 gap-2 bg-[#101C40] p-3 rounded-xl border border-white/10">
+                  {EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setNewEmoji(emoji)}
+                      className={`text-2xl p-1.5 rounded-lg hover:bg-white/10 transition-all flex items-center justify-center ${
+                        newEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -296,7 +347,7 @@ const Profiles: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 bg-neutral-850 hover:bg-neutral-800 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  className="px-5 py-2.5 bg-neutral-850 hover:bg-neutral-850 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
                 >
                   Cancel
                 </button>
@@ -324,6 +375,25 @@ const Profiles: React.FC = () => {
                   maxLength={20}
                   className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/50 caret-brand-accent"
                 />
+              </div>
+
+              {/* Avatar Selector Grid */}
+              <div>
+                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
+                <div className="grid grid-cols-7 gap-2 bg-[#101C40] p-3 rounded-xl border border-white/10">
+                  {EMOJIS.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setEditEmoji(emoji)}
+                      className={`text-2xl p-1.5 rounded-lg hover:bg-white/10 transition-all flex items-center justify-center ${
+                        editEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
@@ -378,7 +448,7 @@ const Profiles: React.FC = () => {
                   onClick={() => handleDeleteProfile(selectedProfile.profile_id)}
                   className="px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
                 >
-                  Delete Profile
+                  Delete
                 </button>
               </div>
             </form>
@@ -387,8 +457,18 @@ const Profiles: React.FC = () => {
       )}
 
       {/* Footer */}
-      <footer className="p-6 text-center text-xs text-neutral-600">
-        &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
+      <footer className="p-6 text-center text-xs text-neutral-600 space-y-1">
+        <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
+        <div>
+          <a 
+            href="https://www.zeploy.tech" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
+          >
+            POWERED BY ZEPLOY TECH
+          </a>
+        </div>
       </footer>
     </div>
   );

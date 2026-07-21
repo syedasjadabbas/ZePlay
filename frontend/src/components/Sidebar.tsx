@@ -66,24 +66,44 @@ const Sidebar: React.FC = () => {
           </button>
 
           {isAdmin && (
-            <button 
-              onClick={() => navigate('/admin/upload')}
-              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
-                isActive('/admin/upload') || isActive('/admin')
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md shadow-amber-500/10' 
-                  : 'border-amber-500/20 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300'
-              }`}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Admin Dashboard
-            </button>
+            <>
+              <button 
+                onClick={() => navigate('/admin/upload')}
+                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                  isActive('/admin/upload') || isActive('/admin')
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md shadow-amber-500/10' 
+                    : 'border-amber-500/20 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Catalog Ingestion
+              </button>
+
+              <button 
+                onClick={() => navigate('/admin/users')}
+                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                  isActive('/admin/users')
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md shadow-amber-500/10' 
+                    : 'border-amber-500/20 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                User Management
+              </button>
+            </>
           )}
 
           <button 
-            onClick={() => navigate('/')}
-            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
+            onClick={() => navigate('/browse')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+              isActive('/browse') 
+                ? 'bg-brand-accent/18 text-brand-accent border-brand-accent/35 shadow-md shadow-blue-500/5' 
+                : 'border-transparent text-brand-textMuted hover:bg-brand-cards/50 hover:text-white'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -92,8 +112,12 @@ const Sidebar: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => navigate('/history')}
-            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
+            onClick={() => navigate('/my-list')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+              isActive('/my-list') 
+                ? 'bg-brand-accent/18 text-brand-accent border-brand-accent/35 shadow-md shadow-blue-500/5' 
+                : 'border-transparent text-brand-textMuted hover:bg-brand-cards/50 hover:text-white'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -174,7 +198,12 @@ const Sidebar: React.FC = () => {
 
         <div className="space-y-1.5 font-sans">
           <button 
-            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
+            onClick={() => navigate('/settings')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+              isActive('/settings') 
+                ? 'bg-brand-accent/18 text-brand-accent border-brand-accent/35 shadow-md shadow-blue-500/5' 
+                : 'border-transparent text-brand-textMuted hover:bg-brand-cards/50 hover:text-white'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -194,8 +223,18 @@ const Sidebar: React.FC = () => {
       </nav>
       
       {/* Footer */}
-      <div className="pt-4 border-t border-white/5 text-center text-[10px] text-neutral-600 font-sans">
-        ZePlay Platform
+      <div className="pt-4 border-t border-white/5 text-center text-[10px] text-neutral-500 font-sans space-y-1">
+        <div>ZePlay Platform</div>
+        <div>
+          <a 
+            href="https://www.zeploy.tech" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-brand-accent hover:underline font-bold tracking-wider"
+          >
+            POWERED BY ZEPLOY TECH
+          </a>
+        </div>
       </div>
     </aside>
   );

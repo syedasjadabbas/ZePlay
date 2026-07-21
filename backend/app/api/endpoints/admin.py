@@ -33,6 +33,67 @@ async def get_system_stats(
         "total_storage_bytes": total_storage
     }
 
+@router.get("/users")
+async def get_all_users(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.get_current_admin_user)
+):
+    """Admin endpoint to list all registered users."""
+    res = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = res.scalars().all()
+    return [
+        {
+            "user_id": str(u.user_id),
+            "name": u.name,
+            "email": u.email,
+            "is_verified": u.is_verified,
+            "is_admin": u.is_admin,
+            "subscription_plan": u.subscription_plan,
+            "created_at": u.created_at.isoformat() if u.created_at else None
+        }
+        for u in users
+    ]
+
+from pydantic import BaseModel
+
+class UserRoleUpdate(BaseModel):
+    is_admin: bool
+
+@router.put("/users/{user_id}/role")
+async def update_user_role(
+    user_id: UUID,
+    role_in: UserRoleUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_admin_user)
+):
+    """Admin endpoint to promote or demote user admin privileges."""
+    res = await db.execute(select(User).filter(User.user_id == user_id))
+    user = res.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+
+    if not role_in.is_admin and user.user_id == current_user.user_id:
+        total_admins = (await db.execute(select(func.count(User.user_id)).filter(User.is_admin == True))).scalar() or 0
+        if total_admins <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot remove admin role from the last remaining admin user."
+            )
+
+    user.is_admin = role_in.is_admin
+    await db.commit()
+    await db.refresh(user)
+
+    return {
+        "message": f"User {user.email} role updated successfully.",
+        "user_id": str(user.user_id),
+        "is_admin": user.is_admin
+    }
+
+
 @router.post("/movies", response_model=MovieResponse, status_code=status.HTTP_201_CREATED)
 async def create_movie(
     movie_in: MovieCreate,
