@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # Storage settings
     STORAGE_DIR: str = "storage/videos"
 
+    # Redis cache settings
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = True
+
     # Pydantic v2 configuration to find the .env file
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),

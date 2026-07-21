@@ -141,9 +141,27 @@ Tracks view counts and popularity scores for recommendation calculation.
 - **Popular Movies**: `GET /api/recommendations/popular`
 - **Recently Added**: `GET /api/recommendations/recently-added`
 - **Personalized Recommendations**: `GET /api/recommendations/personalized?profile_id={uuid}`
-- **Because You Watched**: `GET /api/recommendations/because-you-watched?profile_id={uuid}`
 - **Similar Movies**: `GET /api/recommendations/similar/{movie_id}`
 - **Track Movie View**: `POST /api/recommendations/track-view/{movie_id}`
+
+---
+
+## 7. Redis Caching Layer Pipeline (Sprint 8)
+
+### Topology & Flow
+`Frontend UI -> FastAPI -> Redis Cache Service -> Database`
+
+### Cache Strategy
+- **Read Path**: Cache First. If hit, returns deserialized JSON directly. If miss, queries database, stores payload in Redis/Memory with TTL, and returns response.
+- **Write Path**: Writes to database, then invalidates affected key namespaces (`catalog:*`, `rec:*`).
+- **Resilience Fallback**: If Redis server connection drops or is disabled, system gracefully falls back to an in-memory TTL dictionary store without raising exceptions.
+
+### Metric Tracking & Admin Endpoints
+- **Metrics Tracked**: Cache Hits, Cache Misses, Hit Rate %, Total Keys.
+- **Admin Endpoints**:
+  - `GET /api/admin/cache/stats`: Returns JSON cache performance statistics.
+  - `POST /api/admin/cache/clear`: Flushes cached keys and resets hit/miss counters.
+
 
 
 
