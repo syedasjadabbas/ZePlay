@@ -26,6 +26,11 @@ This document describes the high-level system topology, entities, authentication
                   └────────────────────┘   └────────────────────┘
 ```
 
+### 1.1 Database Path Configuration
+To ensure database persistence consistency across different runtime directories (e.g. project root vs backend folder), the SQLite datastore is configured with an **absolute database path**.
+- Relative URLs (e.g., `sqlite+aiosqlite:///./local_zeplay.db`) are dynamically resolved on startup to their absolute filesystem path relative to the `backend/` directory.
+- This ensures that both Uvicorn/FastAPI and Alembic migration tools target the exact same database file, preventing duplicate empty databases or missing table exceptions.
+
 ---
 
 ## 2. Core Entities
@@ -162,6 +167,28 @@ Tracks view counts and popularity scores for recommendation calculation.
   - `GET /api/admin/cache/stats`: Returns JSON cache performance statistics.
   - `POST /api/admin/cache/clear`: Flushes cached keys and resets hit/miss counters.
 
+---
 
+## 8. Watchlist System
 
+### Watchlist Entity
+Represents user-curated saved movies per profile, completely isolated from automated playback watch history logs.
+* Fields: `watchlist_id` (UUID PK), `user_id` (UUID FK), `profile_id` (UUID FK), `movie_id` (UUID FK), `created_at` (Timestamp).
+* Constraints: `UniqueConstraint("profile_id", "movie_id", name="uq_profile_movie_watchlist")`.
 
+### Watchlist Endpoints
+- **Add to Watchlist**: `POST /api/watchlist/` (Body: `{ profile_id, movie_id }`)
+- **Remove from Watchlist**: `DELETE /api/watchlist/{movie_id}?profile_id={uuid}`
+- **Get Profile Watchlist**: `GET /api/watchlist/?profile_id={uuid}`
+- **Check Watchlist Status**: `GET /api/watchlist/check/{movie_id}?profile_id={uuid}`
+
+---
+
+## 9. Page & Navigation Topology
+
+| Page Route | Component | System Purpose & Capabilities |
+| :--- | :--- | :--- |
+| `/` | `Home.tsx` | **Personalized Feeds**: Featured Hero, Continue Watching, Recommended For You, Because You Watched, Trending Now, Popular Movies, Recently Added. |
+| `/browse` | `Browse.tsx` | **Catalog Exploration**: Full catalog grid view, genre multi-filters, release era filters, sorting dropdowns, and inline search. |
+| `/my-list` | `MyList.tsx` | **Saved Favorites**: Profile-curated watchlist of movies saved for later viewing. |
+| `/history` | `WatchHistory.tsx` | **Playback Log**: Automated timeline of items watched with exact timestamp and progress percentage tracking. |

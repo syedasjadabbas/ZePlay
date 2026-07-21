@@ -39,12 +39,40 @@ const MovieDetails: React.FC = () => {
   const [streamType, setStreamType] = useState<'HLS' | 'MP4'>('HLS');
   const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
   const [shouldResume, setShouldResume] = useState(false);
+  const [isInWatchlist, setIsInWatchlist] = useState<boolean>(false);
+  const [watchlistSubmitting, setWatchlistSubmitting] = useState<boolean>(false);
+
+  const [ratingStats, setRatingStats] = useState<{ average_rating: number; total_ratings: number }>({ average_rating: 0, total_ratings: 0 });
+  const [userScore, setUserScore] = useState<number | null>(null);
+  const [ratingSubmitting, setRatingSubmitting] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const similarRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
   const activeProfileId = localStorage.getItem('selectedProfileId');
+
+  const handleToggleWatchlist = async () => {
+    if (!activeProfileId || !id || watchlistSubmitting) return;
+    try {
+      setWatchlistSubmitting(true);
+      if (isInWatchlist) {
+        await api.delete(`/watchlist/${id}?profile_id=${activeProfileId}`);
+        setIsInWatchlist(false);
+      } else {
+        await api.post('/watchlist/', {
+          profile_id: activeProfileId,
+          movie_id: id
+        });
+        setIsInWatchlist(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle watchlist status.", err);
+      alert("Could not update My List.");
+    } finally {
+      setWatchlistSubmitting(false);
+    }
+  };
 
   const scrollSimilar = (direction: 'left' | 'right') => {
     if (similarRef.current) {
@@ -108,6 +136,28 @@ const MovieDetails: React.FC = () => {
           } catch (e) {
             console.log("No saved progress record.", e);
           }
+
+          try {
+            const wlRes = await api.get(`/watchlist/check/${id}?profile_id=${activeProfileId}`);
+            if (wlRes.data) {
+              setIsInWatchlist(wlRes.data.is_in_watchlist);
+            }
+          } catch (e) {
+            console.log("Failed to check watchlist status.", e);
+          }
+
+          try {
+            const ratingRes = await api.get(`/ratings/movie/${id}?profile_id=${activeProfileId}`);
+            if (ratingRes.data) {
+              setRatingStats({
+                average_rating: ratingRes.data.average_rating,
+                total_ratings: ratingRes.data.total_ratings,
+              });
+              setUserScore(ratingRes.data.user_rating);
+            }
+          } catch (e) {
+            console.log("Failed to fetch rating stats.", e);
+          }
         }
       } catch (err: any) {
         setError(
@@ -123,6 +173,27 @@ const MovieDetails: React.FC = () => {
       fetchMovieDetails();
     }
   }, [id, activeProfileId]);
+
+  const handleRateMovie = async (score: number) => {
+    if (!activeProfileId || !movie || ratingSubmitting) return;
+    try {
+      setRatingSubmitting(true);
+      await api.post(`/ratings/movie/${movie.movie_id}?profile_id=${activeProfileId}`, { score });
+      setUserScore(score);
+
+      const ratingRes = await api.get(`/ratings/movie/${movie.movie_id}?profile_id=${activeProfileId}`);
+      if (ratingRes.data) {
+        setRatingStats({
+          average_rating: ratingRes.data.average_rating,
+          total_ratings: ratingRes.data.total_ratings,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to rate movie", err);
+    } finally {
+      setRatingSubmitting(false);
+    }
+  };
 
   const getFullPlaybackUrl = (urlPath: string): string => {
     if (!urlPath) return '';
@@ -391,12 +462,75 @@ const MovieDetails: React.FC = () => {
                       <span className="text-neutral-600">•</span>
                       <span>{movie.duration_minutes} minutes</span>
                       <span className="text-neutral-600">•</span>
-                      <span className="text-brand-accent font-semibold">★ {getRating(movie.title)}</span>
+                      <span className="text-brand-accent font-semibold">
+                        ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating : getRating(movie.title)}
+                        {ratingStats.total_ratings > 0 && <span className="text-[10px] font-normal text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
+                      </span>
                       <span className="ml-auto border border-white/5 px-1.5 py-0.5 rounded text-[8px] text-neutral-400">HLS / 4K</span>
                     </div>
                     <p className="text-sm text-brand-textMuted leading-relaxed pt-2 font-sans">
                       {movie.description}
                     </p>
+
+                    {/* 1-5 Star User Rating Widget */}
+                    <div className="p-4 bg-brand-background/60 border border-white/5 rounded-2xl space-y-2">
+                      <div className="flex justify-between items-center text-xs font-semibold">
+                        <span className="text-neutral-300">Rate this Movie</span>
+                        {ratingStats.average_rating > 0 && (
+                          <span className="text-amber-400 font-bold flex items-center gap-1">
+                            ★ {ratingStats.average_rating} <span className="text-neutral-500 font-normal">({ratingStats.total_ratings} votes)</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onClick={() => handleRateMovie(star)}
+                            disabled={ratingSubmitting}
+                            className="p-1 hover:scale-125 transition-transform text-2xl focus:outline-none disabled:opacity-50"
+                          >
+                            <span className={star <= (userScore || 0) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-neutral-600 hover:text-amber-200'}>
+                              ★
+                            </span>
+                          </button>
+                        ))}
+                        {userScore ? (
+                          <span className="text-xs text-amber-400 font-bold ml-2">Your Rating: {userScore}/5</span>
+                        ) : (
+                          <span className="text-[10px] text-neutral-500 ml-2">Click star to rate</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Watchlist Toggle Action Button */}
+                    <div className="pt-1">
+                      <button
+                        onClick={handleToggleWatchlist}
+                        disabled={watchlistSubmitting}
+                        className={`w-full py-3 px-5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all ${
+                          isInWatchlist
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 shadow-md'
+                            : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/40 shadow-md'
+                        }`}
+                      >
+                        {isInWatchlist ? (
+                          <>
+                            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>In My List (Click to Remove)</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>+ Add to My List</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4 pt-6 border-t border-white/5">

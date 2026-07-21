@@ -115,3 +115,120 @@ async def test_get_current_user_authorized(client: AsyncClient, db_session: Asyn
 
 # Import User model inside loop to avoid cyclic dependencies in tests
 from app.models.user import User
+
+async def test_change_password_success(client: AsyncClient, db_session: AsyncSession):
+    # 1. Register & verify email
+    await client.post(
+        "/api/auth/register",
+        json={"email": "changepwd@example.com", "name": "Change User", "password": "Password123!"}
+    )
+    res = await db_session.execute(select(EmailVerificationToken))
+    all_tokens = res.scalars().all()
+    my_token = None
+    for tr in all_tokens:
+        user_res = await db_session.execute(select(User).filter(User.user_id == tr.user_id))
+        u = user_res.scalars().first()
+        if u and u.email == "changepwd@example.com":
+            my_token = tr.token
+            break
+            
+    await client.post("/api/auth/verify-email", json={"token": my_token})
+    
+    # 2. Login
+    login_response = await client.post(
+        "/api/auth/login",
+        data={"username": "changepwd@example.com", "password": "Password123!"}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # 3. Change password successfully
+    response = await client.post(
+        "/api/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "Password123!",
+            "new_password": "NewPassword123!",
+            "confirm_password": "NewPassword123!"
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    
+    # 4. Attempt login with old password (fails)
+    old_login = await client.post(
+        "/api/auth/login",
+        data={"username": "changepwd@example.com", "password": "Password123!"}
+    )
+    assert old_login.status_code == 400
+    
+    # 5. Login with new password (succeeds)
+    new_login = await client.post(
+        "/api/auth/login",
+        data={"username": "changepwd@example.com", "password": "NewPassword123!"}
+    )
+    assert new_login.status_code == 200
+    assert "access_token" in new_login.json()
+
+async def test_change_password_failures(client: AsyncClient, db_session: AsyncSession):
+    # Register, verify, login
+    await client.post(
+        "/api/auth/register",
+        json={"email": "changepwdfail@example.com", "name": "Change User Fail", "password": "Password123!"}
+    )
+    res = await db_session.execute(select(EmailVerificationToken))
+    all_tokens = res.scalars().all()
+    my_token = None
+    for tr in all_tokens:
+        user_res = await db_session.execute(select(User).filter(User.user_id == tr.user_id))
+        u = user_res.scalars().first()
+        if u and u.email == "changepwdfail@example.com":
+            my_token = tr.token
+            break
+    await client.post("/api/auth/verify-email", json={"token": my_token})
+    
+    login_response = await client.post(
+        "/api/auth/login",
+        data={"username": "changepwdfail@example.com", "password": "Password123!"}
+    )
+    token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Mismatched passwords
+    response1 = await client.post(
+        "/api/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "Password123!",
+            "new_password": "NewPassword123!",
+            "confirm_password": "DifferentPassword123!"
+        }
+    )
+    assert response1.status_code == 400
+    assert "Mismatched" in response1.json()["detail"]
+    
+    # Incorrect current password
+    response2 = await client.post(
+        "/api/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "WrongPassword!",
+            "new_password": "NewPassword123!",
+            "confirm_password": "NewPassword123!"
+        }
+    )
+    assert response2.status_code == 400
+    assert "Incorrect current password" in response2.json()["detail"]
+    
+    # New password too short
+    response3 = await client.post(
+        "/api/auth/change-password",
+        headers=headers,
+        json={
+            "current_password": "Password123!",
+            "new_password": "short",
+            "confirm_password": "short"
+        }
+    )
+    assert response3.status_code == 422
+

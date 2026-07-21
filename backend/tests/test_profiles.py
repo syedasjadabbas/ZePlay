@@ -74,13 +74,21 @@ async def test_profile_crud_operations(client: AsyncClient, db_session: AsyncSes
     assert update_response.json()["display_name"] == "Primary User"
     assert update_response.json()["language_pref"] == "fr"
     
+    # Create 2nd profile so deletion of 1st profile is allowed
+    create2_response = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Second Profile"},
+        headers=headers
+    )
+    assert create2_response.status_code == 201
+
     # 4. Delete profile
     delete_response = await client.delete(f"/api/profiles/{profile_id}", headers=headers)
     assert delete_response.status_code == 204
     
-    # Verify profile is deleted
+    # Verify profile is deleted and 1 profile remains
     list_response_after = await client.get("/api/profiles/", headers=headers)
-    assert len(list_response_after.json()) == 0
+    assert len(list_response_after.json()) == 1
 
 async def test_profile_creation_limit(client: AsyncClient, db_session: AsyncSession):
     """Test that users are strictly prevented from creating more than 4 profiles."""
@@ -137,3 +145,48 @@ async def test_profiles_ownership_protection(client: AsyncClient, db_session: As
     assert fail_delete.status_code == 404
 
 from app.models.user import User
+
+async def test_profile_default_avatar_and_update(client: AsyncClient, db_session: AsyncSession):
+    """Test that default avatar 🍿 is assigned and updating emoji avatar works."""
+    token = await create_test_user_and_get_token(client, db_session, "avatar_test@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Create profile without avatar_url
+    create_response = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Avatar test"},
+        headers=headers
+    )
+    assert create_response.status_code == 201
+    profile = create_response.json()
+    assert profile["avatar_url"] == "🍿"  # Should default to popcorn emoji
+    profile_id = profile["profile_id"]
+    
+    # Update profile with a custom emoji avatar
+    update_response = await client.put(
+        f"/api/profiles/{profile_id}",
+        json={"avatar_url": "🤖"},
+        headers=headers
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["avatar_url"] == "🤖"
+
+async def test_cannot_delete_last_profile(client: AsyncClient, db_session: AsyncSession):
+    """Verify that deleting the last remaining profile on an account is rejected."""
+    token = await create_test_user_and_get_token(client, db_session, "only_one_prof@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Create 1 profile
+    create_response = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Only Profile"},
+        headers=headers
+    )
+    profile_id = create_response.json()["profile_id"]
+    
+    # Try deleting it
+    del_res = await client.delete(f"/api/profiles/{profile_id}", headers=headers)
+    assert del_res.status_code == 400
+    assert "Cannot delete the last remaining profile" in del_res.json()["detail"]
+
+

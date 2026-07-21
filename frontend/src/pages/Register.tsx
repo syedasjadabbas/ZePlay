@@ -234,8 +234,18 @@ const Register: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-xs text-neutral-500 font-medium relative z-10">
-          &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
+        <div className="text-xs text-neutral-500 font-medium relative z-10 space-y-1">
+          <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
+          <div>
+            <a
+              href="https://zeploy.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-accent hover:underline font-bold tracking-wider"
+            >
+              POWERED BY ZEPLOY TECH
+            </a>
+          </div>
         </div>
       </div>
 

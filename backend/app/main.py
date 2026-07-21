@@ -23,14 +23,29 @@ app.add_middleware(
 )
 
 from app.services.cache_service import cache
+from app.database import engine
+from sqlalchemy import text
+import logging
 
 # Mount Unified Router
 app.include_router(api_router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize cache service on application startup."""
+    """Initialize cache service and validate database connection on application startup."""
+    logger = logging.getLogger("uvicorn")
+    logger.info(f"Database URL in use: {settings.DATABASE_URL}")
+    
+    # Validate database connectivity
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("Database connection validation successful.")
+    except Exception as e:
+        logger.error(f"Database connection validation failed: {e}")
+        
     await cache.initialize()
+
 
 @app.get("/health", tags=["System Health"])
 async def health_check():

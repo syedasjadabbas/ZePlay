@@ -4,6 +4,7 @@ import api from '../services/api';
 
 interface TopBarProps {
   profileName: string;
+  profileAvatar?: string;
 }
 
 interface SuggestionItem {
@@ -14,7 +15,7 @@ interface SuggestionItem {
   genres: { genre_id: string; name: string }[];
 }
 
-const TopBar: React.FC<TopBarProps> = ({ profileName }) => {
+const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
@@ -22,13 +23,51 @@ const TopBar: React.FC<TopBarProps> = ({ profileName }) => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   
+  const [localProfileName, setLocalProfileName] = useState(() => localStorage.getItem('selectedProfileName') || profileName || 'User');
+  const [localProfileAvatar, setLocalProfileAvatar] = useState(() => localStorage.getItem('selectedProfileAvatar') || '🍿');
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const activeProfileId = localStorage.getItem('selectedProfileId') || 'default';
   const recentStorageKey = `recentSearches_${activeProfileId}`;
 
-  const initial = profileName ? profileName.substring(0, 1).toUpperCase() : 'A';
+  useEffect(() => {
+    if (profileName) {
+      setLocalProfileName(profileName);
+    }
+  }, [profileName]);
+
+  useEffect(() => {
+    if (profileAvatar) {
+      setLocalProfileAvatar(profileAvatar);
+    }
+  }, [profileAvatar]);
+
+
+  useEffect(() => {
+    if (activeProfileId === 'default') return;
+
+    const syncProfile = async () => {
+      try {
+        const response = await api.get('/profiles/');
+        const activeProfile = response.data.find(
+          (p: any) => p.profile_id === activeProfileId
+        );
+        if (activeProfile) {
+          setLocalProfileName(activeProfile.display_name);
+          setLocalProfileAvatar(activeProfile.avatar_url || '🍿');
+          localStorage.setItem('selectedProfileName', activeProfile.display_name);
+          localStorage.setItem('selectedProfileAvatar', activeProfile.avatar_url || '🍿');
+        }
+      } catch (err) {
+        console.error("Failed to sync profile details in TopBar", err);
+      }
+    };
+
+    syncProfile();
+  }, [activeProfileId]);
+
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -249,11 +288,17 @@ const TopBar: React.FC<TopBarProps> = ({ profileName }) => {
           onClick={() => navigate('/profiles')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-full bg-brand-accent text-white flex items-center justify-center font-bold text-sm tracking-wide shadow-md shadow-blue-500/10">
-            {initial}
-          </div>
+          {localProfileAvatar && ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', '🐸', '🐵', '🦄', '🚀', '🎮', '🍿'].includes(localProfileAvatar) ? (
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neutral-850 to-neutral-950 border border-white/5 flex items-center justify-center text-xl shadow-md select-none">
+              {localProfileAvatar}
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-brand-accent text-white flex items-center justify-center font-bold text-sm tracking-wide shadow-md shadow-blue-500/10">
+              {localProfileName ? localProfileName.substring(0, 1).toUpperCase() : 'U'}
+            </div>
+          )}
           <span className="hidden sm:inline text-sm font-semibold text-brand-textMuted group-hover:text-white transition-colors font-display">
-            {profileName}
+            {localProfileName}
           </span>
           <svg className="w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

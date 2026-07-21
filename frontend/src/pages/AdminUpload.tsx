@@ -41,11 +41,22 @@ interface CacheStats {
   cache_engine: string;
 }
 
+interface RegisteredUser {
+  user_id: string;
+  name: string;
+  email: string;
+  is_verified: boolean;
+  is_admin: boolean;
+  subscription_plan: string;
+  created_at: string | null;
+}
+
 const AdminUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
   const [movies, setMovies] = useState<MovieOption[]>([]);
   const [videos, setVideos] = useState<VideoAsset[]>([]);
+  const [registeredUsers] = useState<RegisteredUser[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [clearingCache, setClearingCache] = useState(false);
@@ -683,7 +694,106 @@ const AdminUpload: React.FC = () => {
           )}
         </section>
 
+        {/* Section 5: Registered Users Management */}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-white font-display flex items-center gap-2">
+                <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Registered Platform Users ({registeredUsers.length})
+              </h2>
+              <p className="text-xs text-brand-textMuted">
+                Admin visibility into registered accounts, verification status, and subscription plans
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="rounded-2xl border border-white/10 overflow-hidden shadow-xl"
+            style={{ background: 'rgba(16,28,64,0.5)', backdropFilter: 'blur(16px)' }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/5 text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="py-3.5 px-4">User</th>
+                    <th className="py-3.5 px-4">User ID</th>
+                    <th className="py-3.5 px-4">Verification</th>
+                    <th className="py-3.5 px-4">Role</th>
+                    <th className="py-3.5 px-4">Plan</th>
+                    <th className="py-3.5 px-4">Registered Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-neutral-300">
+                  {registeredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-neutral-500">
+                        No registered users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    registeredUsers.map((u) => (
+                      <tr key={u.user_id} className="hover:bg-white/5 transition-colors">
+                        <td className="py-3.5 px-4 font-semibold text-white">
+                          <div>{u.name}</div>
+                          <div className="text-[11px] text-brand-textMuted font-mono">{u.email}</div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[10px] text-neutral-400">{u.user_id}</td>
+                        <td className="py-3.5 px-4">
+                          {u.is_verified ? (
+                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] font-bold">
+                              ✓ Verified
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold">
+                              Unverified
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {u.is_admin ? (
+                            <span className="px-2.5 py-1 bg-purple-500/15 text-purple-300 border border-purple-500/30 rounded-lg text-[10px] font-bold">
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-white/5 text-neutral-400 border border-white/10 rounded-lg text-[10px] font-bold">
+                              User
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 uppercase font-bold text-[10px] text-brand-accent">
+                          {u.subscription_plan}
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
+                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
       </main>
+
+      {/* Footer */}
+      <footer className="p-6 text-center text-xs text-neutral-500 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm space-y-1 mt-12">
+        <div>&copy; {new Date().getFullYear()} ZePlay Platform. All rights reserved.</div>
+        <div>
+          <a
+            href="https://zeploy.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-accent hover:underline font-bold tracking-wider"
+          >
+            POWERED BY ZEPLOY TECH
+          </a>
+        </div>
+      </footer>
 
       {/* Video Player Modal */}
       {activePreviewVideo && (

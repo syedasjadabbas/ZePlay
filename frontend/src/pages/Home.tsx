@@ -28,8 +28,6 @@ interface BecauseYouWatchedState {
 
 const Home: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [genres, setGenres] = useState<Genre[]>([]);
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [profileName, setProfileName] = useState('User');
   const [loading, setLoading] = useState(true);
   const [heroMovie, setHeroMovie] = useState<Movie | null>(null);
@@ -90,15 +88,13 @@ const Home: React.FC = () => {
     try {
       setLoading(true);
 
-      const [genresRes, moviesRes, trendingRes, popularRes, recAddedRes] = await Promise.all([
-        api.get('/catalog/genres').catch(() => ({ data: [] })),
+      const [moviesRes, trendingRes, popularRes, recAddedRes] = await Promise.all([
         api.get('/catalog/movies').catch(() => ({ data: [] })),
         api.get('/recommendations/trending').catch(() => ({ data: [] })),
         api.get('/recommendations/popular').catch(() => ({ data: [] })),
         api.get('/recommendations/recently-added').catch(() => ({ data: [] }))
       ]);
 
-      setGenres(genresRes.data || []);
       const moviesData = moviesRes.data || [];
       setMovies(moviesData);
       setTrendingMovies(trendingRes.data || []);
@@ -134,10 +130,6 @@ const Home: React.FC = () => {
     fetchDashboardData();
   }, [activeProfileId]);
 
-  const displayedMovies = selectedGenre
-    ? movies.filter(movie => movie.genres.some(g => g.name === selectedGenre))
-    : movies;
-
   return (
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
@@ -153,7 +145,7 @@ const Home: React.FC = () => {
           ) : (
             <>
               {/* Featured Hero Banner */}
-              {heroMovie && !selectedGenre && (
+              {heroMovie && (
                 <div 
                   className="relative w-full h-[450px] rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(6,11,24,0.9)] flex items-end p-8 md:p-16 bg-cover bg-center"
                   style={{
@@ -213,362 +205,303 @@ const Home: React.FC = () => {
                 </div>
               )}
 
-              {/* Browse by Genre */}
-              <div className="space-y-4">
-                <h3 className="text-xl md:text-2xl font-bold tracking-tight font-display text-white">
-                  Browse by Genre
-                </h3>
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                  <button
-                    onClick={() => setSelectedGenre(null)}
-                    className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                      !selectedGenre 
-                        ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                        : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
-                    }`}
-                  >
-                    All Genres
-                  </button>
-                  {genres.map(g => (
-                    <button
-                      key={g.genre_id}
-                      onClick={() => setSelectedGenre(g.name)}
-                      className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                        selectedGenre === g.name 
-                          ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                          : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
-                      }`}
-                    >
-                      {g.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {selectedGenre ? (
-                <div className="space-y-6">
-                  <h3 className="text-2xl md:text-3xl font-bold font-display text-white mb-6 border-l-4 border-brand-accent pl-3">
-                    {selectedGenre} Category
-                  </h3>
-                  {displayedMovies.length === 0 ? (
-                    <div className="text-neutral-500 text-sm">No videos found in this genre.</div>
-                  ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                      {displayedMovies.map(movie => (
-                        <MovieCardVertical
-                          key={movie.movie_id}
-                          movie_id={movie.movie_id}
-                          title={movie.title}
-                          thumbnail_url={movie.thumbnail_url}
-                          release_year={movie.release_year}
-                          duration_minutes={movie.duration_minutes}
-                          genres={movie.genres}
-                        />
-                      ))}
-                    </div>
-                  )}
+              {movies.length === 0 ? (
+                <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-2xl">
+                  <p className="text-neutral-400 mb-2">No videos cataloged in this workspace.</p>
+                  <div className="text-xs text-neutral-600">Register catalog elements using admin endpoint.</div>
                 </div>
               ) : (
                 <>
-                  {movies.length === 0 ? (
-                    <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-2xl">
-                      <p className="text-neutral-400 mb-2">No videos cataloged in this workspace.</p>
-                      <div className="text-xs text-neutral-600">Register catalog elements using admin endpoint.</div>
+                  {/* 1. Continue Watching */}
+                  {continueWatchingItems.length > 0 && (
+                    <div className="space-y-5">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
+                          <span>Continue Watching</span>
+                          <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30 font-sans">
+                            Active ({continueWatchingItems.length})
+                          </span>
+                        </h3>
+                        <span 
+                          onClick={() => navigate('/history')}
+                          className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold flex items-center gap-1"
+                        >
+                          <span>See History</span>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
+                      </div>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(continueRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+
+                        <div 
+                          ref={continueRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {continueWatchingItems.map((item: any) => {
+                            const m = item.movie;
+                            if (!m) return null;
+                            return (
+                              <MovieCardVertical
+                                key={item.history_id}
+                                movie_id={m.movie_id}
+                                title={m.title}
+                                thumbnail_url={m.thumbnail_url}
+                                release_year={m.release_year}
+                                duration_minutes={m.duration_minutes}
+                                genres={m.genres || []}
+                                progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        <button 
+                          onClick={() => scroll(continueRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      {/* 1. Continue Watching */}
-                      {continueWatchingItems.length > 0 && (
-                        <div className="space-y-5">
-                          <div className="flex justify-between items-center">
-                            <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
-                              <span>Continue Watching</span>
-                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30 font-sans">
-                                Active ({continueWatchingItems.length})
-                              </span>
-                            </h3>
-                            <span 
-                              onClick={() => navigate('/history')}
-                              className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold flex items-center gap-1"
-                            >
-                              <span>See History</span>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </span>
-                          </div>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(continueRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
+                  )}
 
-                            <div 
-                              ref={continueRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {continueWatchingItems.map((item: any) => {
-                                const m = item.movie;
-                                if (!m) return null;
-                                return (
-                                  <MovieCardVertical
-                                    key={item.history_id}
-                                    movie_id={m.movie_id}
-                                    title={m.title}
-                                    thumbnail_url={m.thumbnail_url}
-                                    release_year={m.release_year}
-                                    duration_minutes={m.duration_minutes}
-                                    genres={m.genres || []}
-                                    progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
-                                  />
-                                );
-                              })}
-                            </div>
+                  {/* 2. Recommended For You */}
+                  {personalizedMovies.length > 0 && (
+                    <div className="space-y-5">
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
+                        <span>Recommended For You</span>
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 font-sans">
+                          Personalized
+                        </span>
+                      </h3>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(recommendedRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
 
-                            <button 
-                              onClick={() => scroll(continueRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
+                        <div 
+                          ref={recommendedRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {personalizedMovies.map(movie => (
+                            <MovieCardVertical
+                              key={movie.movie_id}
+                              movie_id={movie.movie_id}
+                              title={movie.title}
+                              thumbnail_url={movie.thumbnail_url}
+                              release_year={movie.release_year}
+                              duration_minutes={movie.duration_minutes}
+                              genres={movie.genres}
+                            />
+                          ))}
                         </div>
-                      )}
 
-                      {/* 2. Recommended For You */}
-                      {personalizedMovies.length > 0 && (
-                        <div className="space-y-5">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
-                            <span>Recommended For You</span>
-                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 font-sans">
-                              Personalized
-                            </span>
-                          </h3>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(recommendedRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
+                        <button 
+                          onClick={() => scroll(recommendedRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                            <div 
-                              ref={recommendedRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {personalizedMovies.map(movie => (
-                                <MovieCardVertical
-                                  key={movie.movie_id}
-                                  movie_id={movie.movie_id}
-                                  title={movie.title}
-                                  thumbnail_url={movie.thumbnail_url}
-                                  release_year={movie.release_year}
-                                  duration_minutes={movie.duration_minutes}
-                                  genres={movie.genres}
-                                />
-                              ))}
-                            </div>
+                  {/* 3. Because You Watched */}
+                  {becauseYouWatched.because_movie && becauseYouWatched.recommendations.length > 0 && (
+                    <div className="space-y-5">
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                        Because You Watched <span className="text-brand-accent">"{becauseYouWatched.because_movie.title}"</span>
+                      </h3>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(becauseRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
 
-                            <button 
-                              onClick={() => scroll(recommendedRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
+                        <div 
+                          ref={becauseRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {becauseYouWatched.recommendations.map(movie => (
+                            <MovieCardVertical
+                              key={movie.movie_id}
+                              movie_id={movie.movie_id}
+                              title={movie.title}
+                              thumbnail_url={movie.thumbnail_url}
+                              release_year={movie.release_year}
+                              duration_minutes={movie.duration_minutes}
+                              genres={movie.genres}
+                            />
+                          ))}
                         </div>
-                      )}
 
-                      {/* 3. Because You Watched */}
-                      {becauseYouWatched.because_movie && becauseYouWatched.recommendations.length > 0 && (
-                        <div className="space-y-5">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                            Because You Watched <span className="text-brand-accent">"{becauseYouWatched.because_movie.title}"</span>
-                          </h3>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(becauseRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
+                        <button 
+                          onClick={() => scroll(becauseRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                            <div 
-                              ref={becauseRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {becauseYouWatched.recommendations.map(movie => (
-                                <MovieCardVertical
-                                  key={movie.movie_id}
-                                  movie_id={movie.movie_id}
-                                  title={movie.title}
-                                  thumbnail_url={movie.thumbnail_url}
-                                  release_year={movie.release_year}
-                                  duration_minutes={movie.duration_minutes}
-                                  genres={movie.genres}
-                                />
-                              ))}
-                            </div>
+                  {/* 4. Trending Now */}
+                  {trendingMovies.length > 0 && (
+                    <div className="space-y-5">
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                        Trending Now
+                      </h3>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(trendingRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
 
-                            <button 
-                              onClick={() => scroll(becauseRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
+                        <div 
+                          ref={trendingRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {trendingMovies.map(movie => (
+                            <MovieCardVertical
+                              key={movie.movie_id}
+                              movie_id={movie.movie_id}
+                              title={movie.title}
+                              thumbnail_url={movie.thumbnail_url}
+                              release_year={movie.release_year}
+                              duration_minutes={movie.duration_minutes}
+                              genres={movie.genres}
+                            />
+                          ))}
                         </div>
-                      )}
 
-                      {/* 4. Trending Now */}
-                      {trendingMovies.length > 0 && (
-                        <div className="space-y-5">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                            Trending Now
-                          </h3>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(trendingRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
+                        <button 
+                          onClick={() => scroll(trendingRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                            <div 
-                              ref={trendingRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {trendingMovies.map(movie => (
-                                <MovieCardVertical
-                                  key={movie.movie_id}
-                                  movie_id={movie.movie_id}
-                                  title={movie.title}
-                                  thumbnail_url={movie.thumbnail_url}
-                                  release_year={movie.release_year}
-                                  duration_minutes={movie.duration_minutes}
-                                  genres={movie.genres}
-                                />
-                              ))}
-                            </div>
+                  {/* 5. Recently Added */}
+                  {recentlyAddedMovies.length > 0 && (
+                    <div className="space-y-5">
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                        Recently Added
+                      </h3>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(recentlyAddedRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
 
-                            <button 
-                              onClick={() => scroll(trendingRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
+                        <div 
+                          ref={recentlyAddedRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {recentlyAddedMovies.map(movie => (
+                            <MovieCardVertical
+                              key={movie.movie_id}
+                              movie_id={movie.movie_id}
+                              title={movie.title}
+                              thumbnail_url={movie.thumbnail_url}
+                              release_year={movie.release_year}
+                              duration_minutes={movie.duration_minutes}
+                              genres={movie.genres}
+                            />
+                          ))}
                         </div>
-                      )}
 
-                      {/* 5. Recently Added */}
-                      {recentlyAddedMovies.length > 0 && (
-                        <div className="space-y-5">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                            Recently Added
-                          </h3>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(recentlyAddedRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
+                        <button 
+                          onClick={() => scroll(recentlyAddedRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                            <div 
-                              ref={recentlyAddedRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {recentlyAddedMovies.map(movie => (
-                                <MovieCardVertical
-                                  key={movie.movie_id}
-                                  movie_id={movie.movie_id}
-                                  title={movie.title}
-                                  thumbnail_url={movie.thumbnail_url}
-                                  release_year={movie.release_year}
-                                  duration_minutes={movie.duration_minutes}
-                                  genres={movie.genres}
-                                />
-                              ))}
-                            </div>
+                  {/* 6. Popular Movies */}
+                  {popularMovies.length > 0 && (
+                    <div className="space-y-5">
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                        Popular Movies
+                      </h3>
+                      <div className="relative group/row">
+                        <button 
+                          onClick={() => scroll(popularRef, 'left')}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
 
-                            <button 
-                              onClick={() => scroll(recentlyAddedRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
+                        <div 
+                          ref={popularRef} 
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                        >
+                          {popularMovies.map(movie => (
+                            <MovieCardVertical
+                              key={movie.movie_id}
+                              movie_id={movie.movie_id}
+                              title={movie.title}
+                              thumbnail_url={movie.thumbnail_url}
+                              release_year={movie.release_year}
+                              duration_minutes={movie.duration_minutes}
+                              genres={movie.genres}
+                            />
+                          ))}
                         </div>
-                      )}
 
-                      {/* 6. Popular Movies */}
-                      {popularMovies.length > 0 && (
-                        <div className="space-y-5">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                            Popular Movies
-                          </h3>
-                          <div className="relative group/row">
-                            <button 
-                              onClick={() => scroll(popularRef, 'left')}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                              </svg>
-                            </button>
-
-                            <div 
-                              ref={popularRef} 
-                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-                            >
-                              {popularMovies.map(movie => (
-                                <MovieCardVertical
-                                  key={movie.movie_id}
-                                  movie_id={movie.movie_id}
-                                  title={movie.title}
-                                  thumbnail_url={movie.thumbnail_url}
-                                  release_year={movie.release_year}
-                                  duration_minutes={movie.duration_minutes}
-                                  genres={movie.genres}
-                                />
-                              ))}
-                            </div>
-
-                            <button 
-                              onClick={() => scroll(popularRef, 'right')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
-                            >
-                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </>
+                        <button 
+                          onClick={() => scroll(popularRef, 'right')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                        >
+                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </>
               )}
@@ -576,8 +509,18 @@ const Home: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
-          &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
+        <footer className="p-6 text-center text-xs text-neutral-500 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm space-y-1">
+          <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
+          <div>
+            <a 
+              href="https://zeploy.tech" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-brand-accent hover:underline font-bold tracking-wider"
+            >
+              POWERED BY ZEPLOY TECH
+            </a>
+          </div>
         </footer>
       </div>
     </div>

@@ -9,11 +9,15 @@ import Profiles from './pages/Profiles';
 import Home from './pages/Home';
 import MovieDetails from './pages/MovieDetails';
 import AdminUpload from './pages/AdminUpload';
+import AdminUsers from './pages/AdminUsers';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
 import WatchHistory from './pages/WatchHistory';
 import SearchResults from './pages/SearchResults';
+import Browse from './pages/Browse';
+import MyList from './pages/MyList';
+import Settings from './pages/Settings';
 
 const App: React.FC = () => {
   return (
@@ -44,6 +48,22 @@ const App: React.FC = () => {
           }
         />
         <Route
+          path="/browse"
+          element={
+            <ProtectedRoute>
+              <Browse />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-list"
+          element={
+            <ProtectedRoute>
+              <MyList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/search"
           element={
             <ProtectedRoute>
@@ -60,11 +80,27 @@ const App: React.FC = () => {
           }
         />
         <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/movies/:id"
           element={
             <ProtectedRoute>
               <MovieDetails />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminRoute>
+              <AdminUsers />
+            </AdminRoute>
           }
         />
         <Route

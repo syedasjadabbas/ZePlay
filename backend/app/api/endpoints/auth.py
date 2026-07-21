@@ -14,7 +14,8 @@ from app.schemas.user import (
     Token, 
     EmailVerifyRequest, 
     ForgotPasswordRequest, 
-    ResetPasswordRequest
+    ResetPasswordRequest,
+    ChangePasswordRequest
 )
 from app.core import security
 from app.api import deps
@@ -239,3 +240,32 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     await db.commit()
     
     return {"status": "success", "message": "Password successfully reset. You may now sign in."}
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Changes password for the currently authenticated user."""
+    # 1. Verify current password
+    if not security.verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password."
+        )
+        
+    # 2. Check that new password matches confirmation password
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mismatched confirmation password."
+        )
+        
+    # 3. Hash and set new password
+    hashed_password = security.get_password_hash(payload.new_password)
+    current_user.password_hash = hashed_password
+    
+    await db.commit()
+    return {"status": "success", "message": "Password successfully updated."}
+
