@@ -119,4 +119,31 @@ Multi-field substring searching using SQL `ilike` and `ANY` genre array joins ac
 - **Catalog Search**: `GET /api/catalog/search?q={term}&genre={name}&year={yyyy}&sort_by={relevance|year_desc|title}&limit={n}&offset={m}`
 - **Search Suggestions**: `GET /api/catalog/search/suggestions?q={term}&limit=5` (Fast auto-complete lookup for top matches)
 
+---
+
+## 6. Recommendation Engine Pipeline (Sprint 7)
+
+### Database Entity: `MovieStats`
+Tracks view counts and popularity scores for recommendation calculation.
+* Fields: `stats_id` (UUID PK), `movie_id` (UUID FK), `view_count` (Integer), `watch_count` (Integer), `popularity_score` (Float), `last_viewed_at` (Timestamp), `updated_at` (Timestamp).
+
+### Rule-Based Recommendation Strategies
+1. **Trending Movies**: Ranks titles by `popularity_score` and creation recency (`created_at DESC`).
+2. **Popular Movies**: Ranks titles by total `view_count` and `popularity_score`.
+3. **Recently Added**: Orders catalog titles by `created_at DESC` and `release_year DESC`.
+4. **Personalized Recommendations**: Extracts active profile's top watched genres from `WatchHistory` and recommends unwatched catalog movies matching preferred categories.
+5. **Because You Watched**: Identifies profile's most recently watched movie and recommends titles sharing 1+ matching genres.
+6. **Similar Movies**: Computes genre overlap and release proximity to recommend related content on movie detail pages.
+
+### Recommendation API Endpoints
+
+- **Trending Movies**: `GET /api/recommendations/trending`
+- **Popular Movies**: `GET /api/recommendations/popular`
+- **Recently Added**: `GET /api/recommendations/recently-added`
+- **Personalized Recommendations**: `GET /api/recommendations/personalized?profile_id={uuid}`
+- **Because You Watched**: `GET /api/recommendations/because-you-watched?profile_id={uuid}`
+- **Similar Movies**: `GET /api/recommendations/similar/{movie_id}`
+- **Track Movie View**: `POST /api/recommendations/track-view/{movie_id}`
+
+
 
