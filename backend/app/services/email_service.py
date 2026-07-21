@@ -1,14 +1,39 @@
 import os
-import httpx
+import asyncio
+import smtplib
 import logging
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from app.config import settings
 
 logger = logging.getLogger("email_service")
 
-async def send_email(to_email: str, subject: str, html_content: str):
+
+def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
+    """Synchronous SMTP email delivery using smtplib and STARTTLS."""
+    host = settings.SMTP_HOST or "smtp.gmail.com"
+    port = settings.SMTP_PORT or 587
+    user = settings.SMTP_USERNAME
+    password = (settings.SMTP_PASSWORD or "").replace(" ", "")
+    from_email = settings.SMTP_FROM or user or "noreply@zeplay.dev"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"ZePlay <{from_email}>"
+    msg["To"] = to_email
+    msg.attach(MIMEText(html_content, "html"))
+
+    with smtplib.SMTP(host, port, timeout=15.0) as server:
+        server.starttls()
+        server.login(user, password)
+        server.sendmail(from_email, [to_email], msg.as_string())
+    return True
+
+
+async def send_email(to_email: str, subject: str, html_content: str) -> bool:
     """
-    Sends an email using Resend API.
-    If the Resend API key is not configured, it writes to a local log file
+    Sends an email using Gmail SMTP.
+    If SMTP credentials are not configured, it writes to a local log file
     so development links can be easily retrieved.
     """
     # Write to local file for debug
@@ -28,36 +53,37 @@ async def send_email(to_email: str, subject: str, html_content: str):
     except Exception as e:
         logger.error(f"Failed to log email locally: {e}")
 
-    # Real Resend API delivery
-    if not settings.RESEND_API_KEY:
-        logger.warning("RESEND_API_KEY not configured. Skipping real email delivery.")
+    # Check if SMTP service is configured
+    smtp_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
+    if not smtp_configured:
+        logger.warning("SMTP_USERNAME / SMTP_PASSWORD not configured. Skipping real email delivery.")
         print(f"\n[EMAIL SIMULATOR] Sent email to {to_email}. Inspect 'local_emails.log' for links.\n")
         return True
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.resend.com/emails",
-                headers={
-                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "from": settings.RESEND_FROM_EMAIL,
-                    "to": to_email,
-                    "subject": subject,
-                    "html": html_content
-                },
-                timeout=10.0
-            )
-            if response.status_code >= 400:
-                logger.error(f"Resend returned error: {response.status_code} - {response.text}")
-                return False
-            
-            logger.info(f"Email sent successfully to {to_email} via Resend. ID: {response.json().get('id')}")
-            return True
+        await asyncio.to_thread(_send_smtp_sync, to_email, subject, html_content)
+        logger.info(f"Email sent successfully to {to_email} via Gmail SMTP.")
+        print(f"\n[OK EMAIL SENT] Email delivered to {to_email} via Gmail SMTP.\n")
+        return True
     except Exception as e:
-        logger.error(f"Exception during email delivery to {to_email}: {e}")
+        logger.error(f"Exception during SMTP email delivery to {to_email}: {e}")
+        banner = (
+            f"\n{'='*60}\n"
+            f"  [!] GMAIL SMTP EMAIL DELIVERY FAILED\n"
+            f"  To     : {to_email}\n"
+            f"  From   : {settings.SMTP_FROM or settings.SMTP_USERNAME}\n"
+            f"  Error  : {e}\n"
+            f"{'='*60}\n"
+        )
+        print(banner)
+
+        # Append the error to the local log so it's traceable offline
+        try:
+            with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(f"[SMTP ERROR] For {to_email}: {e}\n\n")
+        except Exception:
+            pass
+
         return False
 
 

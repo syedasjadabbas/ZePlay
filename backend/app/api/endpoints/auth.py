@@ -60,15 +60,16 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_token)
     await db.commit()
     
-    # Determine email delivery method
-    email_configured = bool(settings.RESEND_API_KEY)
-    dev_notice = None if email_configured else (
-        "Email service not configured. "
-        "Verification link is available in local_emails.log on the server."
-    )
-    
-    # Send verification email
-    await send_verification_email(db_user.email, db_user.name, token)
+    # Send verification email and capture actual delivery result
+    email_delivered = await send_verification_email(db_user.email, db_user.name, token)
+    email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
+
+    dev_notice = None
+    if not email_delivered:
+        dev_notice = (
+            "Email delivery failed. "
+            "Verification link is available in local_emails.log on the server."
+        )
     
     return {
         "user_id": str(db_user.user_id),
@@ -79,6 +80,7 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         "created_at": db_user.created_at,
         "updated_at": db_user.updated_at,
         "email_configured": email_configured,
+        "email_delivered": email_delivered,
         "dev_notice": dev_notice,
     }
 
@@ -178,19 +180,22 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     db.add(db_token)
     await db.commit()
     
-    # Send password reset email
-    await send_password_reset_email(user.email, user.name, token)
+    # Send password reset email and capture actual delivery result
+    email_delivered = await send_password_reset_email(user.email, user.name, token)
+    email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
 
-    email_configured = bool(settings.RESEND_API_KEY)
-    dev_notice = None if email_configured else (
-        "Email service not configured. "
-        "Reset link is available in local_emails.log on the server."
-    )
+    dev_notice = None
+    if not email_delivered:
+        dev_notice = (
+            "Email delivery failed. "
+            "Reset link is available in local_emails.log on the server."
+        )
 
     return {
         "status": "success",
         "message": "If a matching account exists, a reset link has been sent.",
         "email_configured": email_configured,
+        "email_delivered": email_delivered,
         "dev_notice": dev_notice,
     }
 

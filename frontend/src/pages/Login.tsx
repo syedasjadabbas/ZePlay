@@ -239,7 +239,6 @@ const Login: React.FC = () => {
                       : '1px solid rgba(255,255,255,0.15)',
                     boxShadow: rememberMe ? '0 0 8px rgba(59,130,246,0.3)' : 'none',
                   }}
-                  onClick={() => setRememberMe(r => !r)}
                 >
                   {rememberMe && (
                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -251,7 +250,6 @@ const Login: React.FC = () => {
               <span
                 className="text-[11px] font-medium transition-colors duration-150 select-none"
                 style={{ color: rememberMe ? '#93C5FD' : '#8895b3' }}
-                onClick={() => setRememberMe(r => !r)}
               >
                 Remember me
               </span>
