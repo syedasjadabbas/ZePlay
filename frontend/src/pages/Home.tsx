@@ -91,19 +91,19 @@ const Home: React.FC = () => {
       setLoading(true);
 
       const [genresRes, moviesRes, trendingRes, popularRes, recAddedRes] = await Promise.all([
-        api.get('/catalog/genres'),
-        api.get('/catalog/movies'),
-        api.get('/recommendations/trending'),
-        api.get('/recommendations/popular'),
-        api.get('/recommendations/recently-added')
+        api.get('/catalog/genres').catch(() => ({ data: [] })),
+        api.get('/catalog/movies').catch(() => ({ data: [] })),
+        api.get('/recommendations/trending').catch(() => ({ data: [] })),
+        api.get('/recommendations/popular').catch(() => ({ data: [] })),
+        api.get('/recommendations/recently-added').catch(() => ({ data: [] }))
       ]);
 
-      setGenres(genresRes.data);
-      const moviesData = moviesRes.data;
+      setGenres(genresRes.data || []);
+      const moviesData = moviesRes.data || [];
       setMovies(moviesData);
-      setTrendingMovies(trendingRes.data);
-      setPopularMovies(popularRes.data);
-      setRecentlyAddedMovies(recAddedRes.data);
+      setTrendingMovies(trendingRes.data || []);
+      setPopularMovies(popularRes.data || []);
+      setRecentlyAddedMovies(recAddedRes.data || []);
 
       const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
       if (interstellar) {
