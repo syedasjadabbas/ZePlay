@@ -41,6 +41,14 @@ class Movie(Base):
         lazy="selectin"
     )
 
+    # One-to-many relationship with Video assets
+    videos = relationship(
+        "Video",
+        back_populates="movie",
+        lazy="selectin",
+        cascade="all, delete-orphan"
+    )
+
     def to_search_document(self) -> dict:
         """Serialize movie attributes for indexing inside Elasticsearch."""
         return {

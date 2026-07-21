@@ -2,6 +2,7 @@ from app.schemas.user import UserBase, UserCreate, UserUpdate, UserResponse, Tok
 from app.schemas.profile import ProfileBase, ProfileCreate, ProfileUpdate, ProfileResponse
 from app.schemas.genre import GenreBase, GenreCreate, GenreResponse
 from app.schemas.movie import MovieBase, MovieCreate, MovieUpdate, MovieResponse
+from app.schemas.video import VideoBase, VideoCreate, VideoResponse, VideoStreamInfo
 
 __all__ = [
     "UserBase",
@@ -21,6 +22,10 @@ __all__ = [
     "MovieCreate",
     "MovieUpdate",
     "MovieResponse",
+    "VideoBase",
+    "VideoCreate",
+    "VideoResponse",
+    "VideoStreamInfo",
     "EmailVerifyRequest",
     "ForgotPasswordRequest",
     "ResetPasswordRequest",

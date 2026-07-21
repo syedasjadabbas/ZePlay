@@ -1,9 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Check initial cached user info
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed.is_admin) setIsAdmin(true);
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    }
+
+    // Verify user role with server
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/auth/me')
+        .then((res) => {
+          if (res.data && res.data.is_admin) {
+            setIsAdmin(true);
+            localStorage.setItem('user', JSON.stringify(res.data));
+          } else {
+            setIsAdmin(false);
+          }
+        })
+        .catch(() => {
+          // Token invalid or network error
+        });
+    }
+  }, []);
   
   const isActive = (path: string) => location.pathname === path;
 
@@ -32,6 +64,22 @@ const Sidebar: React.FC = () => {
             </svg>
             Home
           </button>
+
+          {isAdmin && (
+            <button 
+              onClick={() => navigate('/admin/upload')}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+                isActive('/admin/upload') || isActive('/admin')
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-md shadow-amber-500/10' 
+                  : 'border-amber-500/20 text-amber-400 hover:bg-amber-500/15 hover:text-amber-300'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Admin Dashboard
+            </button>
+          )}
 
           <button 
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"

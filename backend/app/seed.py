@@ -4,13 +4,37 @@ from sqlalchemy import select, delete
 from app.config import settings
 from app.models.genre import Genre
 from app.models.movie import Movie
-from app.models.genre import movie_genres
+from app.models.user import User
+from app.core import security
 
 async def seed_data():
     engine = create_async_engine(settings.DATABASE_URL)
     Session = async_sessionmaker(bind=engine, expire_on_commit=False)
     
     async with Session() as db:
+        # Seed Admin User
+        admin_email = "admin@zeplay.com"
+        result = await db.execute(select(User).filter(User.email == admin_email))
+        admin_user = result.scalars().first()
+        if not admin_user:
+            admin_user = User(
+                email=admin_email,
+                name="ZePlay Admin",
+                password_hash=security.get_password_hash("admin123"),
+                subscription_plan="premium",
+                is_verified=True,
+                is_admin=True
+            )
+            db.add(admin_user)
+            print(f"Seeded admin user: {admin_email}")
+        else:
+            admin_user.is_admin = True
+            admin_user.is_verified = True
+            admin_user.password_hash = security.get_password_hash("admin123")
+            print(f"Updated existing admin user: {admin_email}")
+        
+        await db.commit()
+
         # Clear existing movies and genres to start fresh
         await db.execute(delete(Movie))
         await db.execute(delete(Genre))

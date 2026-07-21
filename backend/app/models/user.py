@@ -18,6 +18,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     subscription_plan = Column(String, default="free", nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
 
     
     created_at = Column(

@@ -8,16 +8,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.email_verification_token import EmailVerificationToken
 
-async def create_test_user_and_get_token(client: AsyncClient, db_session: AsyncSession, email: str) -> str:
+async def create_test_user_and_get_token(client: AsyncClient, db_session: AsyncSession, email: str, is_admin: bool = True) -> str:
     """Helper method to register a user and return their token after verification."""
     await client.post(
         "/api/auth/register",
         json={"email": email, "name": "Test User", "password": "Password123!"}
     )
     
+    # Retrieve user and set is_admin
+    from app.models.user import User
+    user_res = await db_session.execute(select(User).filter(User.email == email))
+    user = user_res.scalars().first()
+    if user:
+        user.is_admin = is_admin
+        await db_session.commit()
+
     # Retrieve the verification token generated in DB
     res = await db_session.execute(select(EmailVerificationToken))
-    # We find the token matching this user / or just get the latest since in-memory DB is clean
     token_rec = res.scalars().all()
     token = token_rec[-1].token if token_rec else ""
     

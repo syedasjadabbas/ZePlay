@@ -25,10 +25,11 @@ env/
 .env.production
 !.env.example
 
-# Local dev DB & email logs
+# Local dev DB & email logs & media storage
 backend/local_zeplay.db
 backend/local_emails.log
 backend/*.db
+backend/storage/
 
 # Node / Frontend
 node_modules/
