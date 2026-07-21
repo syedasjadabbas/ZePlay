@@ -21,6 +21,12 @@ interface Movie {
   genres: Genre[];
 }
 
+interface SavedProgress {
+  current_position: number;
+  duration: number;
+  percentage_watched: number;
+}
+
 const MovieDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -29,6 +35,8 @@ const MovieDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [streamType, setStreamType] = useState<'HLS' | 'MP4'>('HLS');
+  const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
+  const [shouldResume, setShouldResume] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const navigate = useNavigate();
@@ -63,6 +71,22 @@ const MovieDetails: React.FC = () => {
         setLoading(true);
         const response = await api.get(`/catalog/movies/${id}`);
         setMovie(response.data);
+
+        // Fetch saved progress for profile & movie
+        if (activeProfileId) {
+          try {
+            const progRes = await api.get(`/watch-history/progress/${id}?profile_id=${activeProfileId}`);
+            if (progRes.data) {
+              setSavedProgress({
+                current_position: progRes.data.current_position,
+                duration: progRes.data.duration,
+                percentage_watched: progRes.data.percentage_watched
+              });
+            }
+          } catch (e) {
+            console.log("No saved progress record.", e);
+          }
+        }
       } catch (err: any) {
         setError(
           err.response?.data?.detail || 
@@ -76,7 +100,7 @@ const MovieDetails: React.FC = () => {
     if (id) {
       fetchMovieDetails();
     }
-  }, [id]);
+  }, [id, activeProfileId]);
 
   const getFullPlaybackUrl = (urlPath: string): string => {
     if (!urlPath) return '';
@@ -85,6 +109,21 @@ const MovieDetails: React.FC = () => {
     }
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
     return `${baseUrl.replace('/api', '')}${urlPath}`;
+  };
+
+  // Helper to report current playback progress to API
+  const saveProgress = async (currentTime: number, duration: number) => {
+    if (!activeProfileId || !movie || duration <= 0) return;
+    try {
+      await api.post('/watch-history/progress', {
+        profile_id: activeProfileId,
+        movie_id: movie.movie_id,
+        current_position: currentTime,
+        duration: duration
+      });
+    } catch (err) {
+      console.error("Failed to save watch history progress", err);
+    }
   };
 
   // Initialize HLS.js Player
@@ -99,6 +138,12 @@ const MovieDetails: React.FC = () => {
 
     let hls: Hls | null = null;
 
+    const handleLoadedMetadata = () => {
+      if (shouldResume && savedProgress && savedProgress.current_position > 0 && videoRef.current) {
+        videoRef.current.currentTime = savedProgress.current_position;
+      }
+    };
+
     if (isHls && Hls.isSupported()) {
       hls = new Hls({
         debug: false,
@@ -107,35 +152,61 @@ const MovieDetails: React.FC = () => {
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (shouldResume && savedProgress && savedProgress.current_position > 0 && videoRef.current) {
+          videoRef.current.currentTime = savedProgress.current_position;
+        }
         videoRef.current?.play().catch((e) => console.log('Autoplay prevented:', e));
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           console.warn('HLS.js fatal error, falling back to MP4 stream', data);
-          // Fallback to MP4 stream
           if (videoRef.current) {
             videoRef.current.src = streamUrl.replace('/hls/master.m3u8', '/stream');
+            if (shouldResume && savedProgress && savedProgress.current_position > 0) {
+              videoRef.current.currentTime = savedProgress.current_position;
+            }
             videoRef.current.play().catch(() => {});
             setStreamType('MP4');
           }
         }
       });
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl') && isHls) {
-      // Native HLS for Safari
-      videoRef.current.src = streamUrl;
-      videoRef.current.play().catch(() => {});
     } else {
-      // Standard MP4 stream fallback
       videoRef.current.src = streamUrl;
+      videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
       videoRef.current.play().catch(() => {});
     }
 
+    // Interval to automatically save progress every 5 seconds
+    const interval = setInterval(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+      }
+    }, 5000);
+
     return () => {
+      clearInterval(interval);
+      if (videoRef.current) {
+        saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+        videoRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      }
       if (hls) {
         hls.destroy();
       }
     };
-  }, [isPlaying, movie]);
+  }, [isPlaying, movie, shouldResume, savedProgress]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const hasResumeOption = savedProgress && savedProgress.current_position > 5 && savedProgress.percentage_watched < 95;
+
+  const handleStartPlay = (resume: boolean) => {
+    setShouldResume(resume);
+    setIsPlaying(true);
+  };
 
   const getRating = (name: string) => {
     switch (name.toLowerCase()) {
@@ -155,15 +226,11 @@ const MovieDetails: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
-      {/* Sidebar Section */}
       <Sidebar />
 
-      {/* Main Panel Viewport */}
       <div className="flex-1 ml-64 flex flex-col justify-between min-h-screen">
-        {/* Top Header Bar */}
         <TopBar profileName={profileName} />
 
-        {/* Content Body */}
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 flex flex-col justify-center max-w-7xl mx-auto w-full">
           <div className="mb-6 self-start">
             <button 
@@ -186,7 +253,7 @@ const MovieDetails: React.FC = () => {
               <p className="text-red-500 font-semibold">{error}</p>
               <button 
                 onClick={() => navigate('/')}
-                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] shadow-[0_0_30px_rgba(59,130,246,0.35)] text-white rounded-xl transition-colors text-sm shadow-md"
+                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-xl transition-colors text-sm shadow-md"
               >
                 Return Home
               </button>
@@ -204,15 +271,44 @@ const MovieDetails: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
                     
-                    <div className="z-10 text-center p-6 space-y-4">
-                      <button 
-                        onClick={() => setIsPlaying(true)}
-                        className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 shadow-[0_0_40px_rgba(59,130,246,0.5)] flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 transition-all duration-300 group/btn"
-                      >
-                        <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-110 transition-transform" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </button>
+                    <div className="z-10 text-center p-6 space-y-4 max-w-md">
+                      {hasResumeOption ? (
+                        <div className="space-y-3">
+                          <button 
+                            onClick={() => handleStartPlay(true)}
+                            className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-105"
+                          >
+                            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                            <span>Resume Watching ({formatTime(savedProgress.current_position)})</span>
+                          </button>
+
+                          <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className="bg-brand-accent h-full transition-all"
+                              style={{ width: `${savedProgress.percentage_watched}%` }}
+                            />
+                          </div>
+
+                          <button 
+                            onClick={() => handleStartPlay(false)}
+                            className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline"
+                          >
+                            Start Over from Beginning
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleStartPlay(false)}
+                          className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 shadow-[0_0_40px_rgba(59,130,246,0.5)] flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 transition-all duration-300 group/btn"
+                        >
+                          <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-110 transition-transform" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </button>
+                      )}
+
                       <div>
                         <h4 className="font-extrabold text-xl font-display text-white tracking-wide">
                           Watch {movie.title}
@@ -235,13 +331,19 @@ const MovieDetails: React.FC = () => {
                       controls
                       autoPlay
                       className="w-full h-full object-contain"
+                      onPause={() => {
+                        if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                      }}
                     />
                     <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                       <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded bg-brand-accent/20 text-brand-accent border border-brand-accent/30 backdrop-blur-md">
                         {streamType} Mode
                       </span>
                       <button
-                        onClick={() => setIsPlaying(false)}
+                        onClick={() => {
+                          if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                          setIsPlaying(false);
+                        }}
                         className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded border border-white/10 backdrop-blur-md transition-colors"
                       >
                         Close Player
@@ -299,7 +401,6 @@ const MovieDetails: React.FC = () => {
           ) : null}
         </main>
 
-        {/* Footer */}
         <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>

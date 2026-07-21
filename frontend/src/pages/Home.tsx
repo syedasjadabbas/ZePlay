@@ -70,6 +70,8 @@ const Home: React.FC = () => {
     fetchProfileDetails();
   }, [activeProfileId, navigate]);
 
+  const [continueWatchingItems, setContinueWatchingItems] = useState<any[]>([]);
+
   const fetchCatalog = async () => {
     try {
       setLoading(true);
@@ -86,6 +88,15 @@ const Home: React.FC = () => {
       } else if (moviesData.length > 0) {
         setHeroMovie(moviesData[0]);
       }
+
+      if (activeProfileId) {
+        try {
+          const cwRes = await api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`);
+          setContinueWatchingItems(cwRes.data);
+        } catch (e) {
+          console.error("Failed to load continue watching list", e);
+        }
+      }
     } catch (err: any) {
       console.error("Failed to load catalog data.", err);
     } finally {
@@ -95,7 +106,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     fetchCatalog();
-  }, []);
+  }, [activeProfileId]);
 
   const displayedMovies = selectedGenre
     ? movies.filter(movie => movie.genres.some(g => g.name === selectedGenre))
@@ -332,11 +343,22 @@ const Home: React.FC = () => {
                       {/* Continue Watching Slider Row */}
                       <div className="space-y-5">
                         <div className="flex justify-between items-center">
-                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                            Continue Watching
+                          <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
+                            <span>Continue Watching</span>
+                            {continueWatchingItems.length > 0 && (
+                              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30 font-sans">
+                                Active ({continueWatchingItems.length})
+                              </span>
+                            )}
                           </h3>
-                          <span className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold">
-                            See All
+                          <span 
+                            onClick={() => navigate('/history')}
+                            className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold flex items-center gap-1"
+                          >
+                            <span>See History</span>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
                           </span>
                         </div>
                         <div className="relative group/row">
@@ -355,18 +377,37 @@ const Home: React.FC = () => {
                             ref={continueRef} 
                             className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
                           >
-                            {continueMovies.map(movie => (
-                              <MovieCardVertical
-                                key={movie.movie_id}
-                                movie_id={movie.movie_id}
-                                title={movie.title}
-                                thumbnail_url={movie.thumbnail_url}
-                                release_year={movie.release_year}
-                                duration_minutes={movie.duration_minutes}
-                                genres={movie.genres}
-                                progressPercent={getMockProgress(movie.title)}
-                              />
-                            ))}
+                            {continueWatchingItems.length > 0 ? (
+                              continueWatchingItems.map((item: any) => {
+                                const m = item.movie;
+                                if (!m) return null;
+                                return (
+                                  <MovieCardVertical
+                                    key={item.history_id}
+                                    movie_id={m.movie_id}
+                                    title={m.title}
+                                    thumbnail_url={m.thumbnail_url}
+                                    release_year={m.release_year}
+                                    duration_minutes={m.duration_minutes}
+                                    genres={m.genres || []}
+                                    progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
+                                  />
+                                );
+                              })
+                            ) : (
+                              continueMovies.map(movie => (
+                                <MovieCardVertical
+                                  key={movie.movie_id}
+                                  movie_id={movie.movie_id}
+                                  title={movie.title}
+                                  thumbnail_url={movie.thumbnail_url}
+                                  release_year={movie.release_year}
+                                  duration_minutes={movie.duration_minutes}
+                                  genres={movie.genres}
+                                  progressPercent={getMockProgress(movie.title)}
+                                />
+                              ))
+                            )}
                           </div>
 
                           {/* Carousel Right arrow control */}

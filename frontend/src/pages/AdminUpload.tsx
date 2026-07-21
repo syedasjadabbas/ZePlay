@@ -148,12 +148,21 @@ const AdminUpload: React.FC = () => {
 
   const handleProcessHLS = async (videoId: string) => {
     setProcessingId(videoId);
+    setError(null);
+    setSuccessMsg(null);
+
+    // Immediately transition state in UI to 'processing' for instant feedback
+    setVideos((prev) =>
+      prev.map((v) => (v.video_id === videoId ? { ...v, status: 'processing' } : v))
+    );
+
     try {
       await api.post(`/videos/admin/${videoId}/process-hls`);
-      setSuccessMsg(`HLS VOD processing triggered for video asset.`);
-      fetchVideos();
+      setSuccessMsg(`HLS VOD processing successfully triggered and completed.`);
+      await fetchVideos();
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to trigger HLS processing.');
+      setError(err.response?.data?.detail || 'Failed to trigger HLS processing.');
+      await fetchVideos();
     } finally {
       setProcessingId(null);
     }

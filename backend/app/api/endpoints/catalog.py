@@ -43,3 +43,33 @@ async def list_genres(
 ):
     """Retrieve all available genres."""
     return await movie_service.get_genres(db)
+
+@router.get("/search", response_model=List[MovieResponse])
+async def search_catalog(
+    q: Optional[str] = None,
+    genre: Optional[str] = None,
+    year: Optional[int] = None,
+    sort_by: Optional[str] = "relevance",
+    limit: int = 50,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """
+    Search catalog movies across title, description, genre, and release year.
+    """
+    return await movie_service.search_movies(
+        db, q=q, genre_name=genre, year=year, sort_by=sort_by, limit=limit, offset=offset
+    )
+
+@router.get("/search/suggestions", response_model=List[MovieResponse])
+async def search_suggestions(
+    q: str,
+    limit: int = 5,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """
+    Fast search suggestions endpoint for live auto-complete dropdown.
+    """
+    return await movie_service.get_search_suggestions(db, q=q, limit=limit)

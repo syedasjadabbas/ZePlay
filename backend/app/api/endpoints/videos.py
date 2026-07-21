@@ -60,8 +60,14 @@ async def trigger_hls_processing(
     current_user = Depends(deps.get_current_admin_user)
 ):
     """Admin endpoint to manually trigger or re-process video asset into HLS stream format."""
-    video = await video_processing_service.process_video_to_hls(db, video_id)
-    return build_video_response(video)
+    try:
+        video = await video_processing_service.process_video_to_hls(db, video_id)
+        return build_video_response(video)
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(err)
+        )
 
 @router.get("", response_model=List[VideoResponse])
 async def list_videos(

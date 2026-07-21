@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, or_
 from sqlalchemy.orm import selectinload
 from app.models.movie import Movie
 from app.models.genre import Genre
@@ -125,3 +125,73 @@ async def delete_movie(db: AsyncSession, movie_id: uuid.UUID) -> bool:
     # Trigger search index deletion signal
     dispatch_index_event("delete", movie_id)
     return True
+
+async def search_movies(
+    db: AsyncSession,
+    q: Optional[str] = None,
+    genre_name: Optional[str] = None,
+    year: Optional[int] = None,
+    sort_by: Optional[str] = "relevance",
+    limit: int = 50,
+    offset: int = 0
+) -> List[Movie]:
+    """
+    Multi-field catalog search querying title, description, genre name, and release year.
+    """
+    query = select(Movie).options(selectinload(Movie.genres))
+    
+    if q and q.strip():
+        search_term = f"%{q.strip()}%"
+        conditions = [
+            Movie.title.ilike(search_term),
+            Movie.description.ilike(search_term),
+            Movie.genres.any(Genre.name.ilike(search_term))
+        ]
+        if q.strip().isdigit():
+            conditions.append(Movie.release_year == int(q.strip()))
+            
+        query = query.filter(or_(*conditions))
+        
+    if genre_name and genre_name.strip():
+        query = query.join(Movie.genres).filter(Genre.name.ilike(genre_name.strip()))
+        
+    if year:
+        query = query.filter(Movie.release_year == year)
+        
+    if sort_by == "year_desc":
+        query = query.order_by(Movie.release_year.desc(), Movie.title)
+    elif sort_by == "title":
+        query = query.order_by(Movie.title)
+    else:
+        query = query.order_by(Movie.created_at.desc())
+
+    query = query.offset(offset).limit(limit)
+    result = await db.execute(query)
+    return list(result.scalars().unique().all())
+
+async def get_search_suggestions(
+    db: AsyncSession,
+    q: str,
+    limit: int = 5
+) -> List[Movie]:
+    """Quick search suggestions query for live auto-complete."""
+    if not q or not q.strip():
+        return []
+        
+    search_term = f"%{q.strip()}%"
+    conditions = [
+        Movie.title.ilike(search_term),
+        Movie.genres.any(Genre.name.ilike(search_term))
+    ]
+    if q.strip().isdigit():
+        conditions.append(Movie.release_year == int(q.strip()))
+        
+    query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .filter(or_(*conditions))
+        .order_by(Movie.title)
+        .limit(limit)
+    )
+    result = await db.execute(query)
+    return list(result.scalars().unique().all())
