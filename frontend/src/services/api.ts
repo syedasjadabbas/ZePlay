@@ -7,10 +7,35 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
+// Helper utilities for auth session management (localStorage / sessionStorage)
+export const getToken = (): string | null => {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+};
+
+export const setAuthSession = (token: string, rememberMe: boolean) => {
+  if (rememberMe) {
+    localStorage.setItem('token', token);
+    localStorage.setItem('rememberMe', 'true');
+    sessionStorage.removeItem('token');
+  } else {
+    sessionStorage.setItem('token', token);
+    localStorage.removeItem('token');
+    localStorage.removeItem('rememberMe');
+  }
+};
+
+export const clearAuthSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('rememberMe');
+  localStorage.removeItem('selectedProfileId');
+  localStorage.removeItem('user');
+  sessionStorage.removeItem('token');
+};
+
 // Request interceptor to automatically attach authorization tokens
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 const ResetPassword: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
@@ -185,14 +186,12 @@ const ResetPassword: React.FC = () => {
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
                   New Password
                 </label>
-                <input
+                <PasswordInput
                   id="reset-new-password"
-                  type="password"
                   placeholder="Enter your password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={setNewPassword}
                   required
-                  className="w-full px-4 py-3 text-white rounded-xl text-sm placeholder:text-white/30 caret-brand-accent outline-none transition-all duration-200"
                   style={inputStyle}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
@@ -203,14 +202,12 @@ const ResetPassword: React.FC = () => {
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
                   Confirm Password
                 </label>
-                <input
+                <PasswordInput
                   id="reset-confirm-password"
-                  type="password"
                   placeholder="Confirm your password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={setConfirmPassword}
                   required
-                  className="w-full px-4 py-3 text-white rounded-xl text-sm placeholder:text-white/30 caret-brand-accent outline-none transition-all duration-200"
                   style={inputStyle}
                   onFocus={handleFocus}
                   onBlur={handleBlur}

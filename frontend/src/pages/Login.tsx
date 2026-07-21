@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import api from '../services/api';
+import api, { setAuthSession } from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -38,12 +39,7 @@ const Login: React.FC = () => {
       });
 
       const { access_token } = response.data;
-      if (rememberMe) {
-        localStorage.setItem('token', access_token);
-      } else {
-        sessionStorage.setItem('token', access_token);
-        localStorage.setItem('token', access_token);
-      }
+      setAuthSession(access_token, rememberMe);
       navigate('/profiles');
     } catch (err: any) {
       setError(
@@ -185,14 +181,12 @@ const Login: React.FC = () => {
                   Password
                 </label>
               </div>
-              <input
+              <PasswordInput
                 id="login-password"
-                type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
                 required
-                className="w-full px-4 py-3 text-white rounded-xl text-sm placeholder:text-white/30 caret-brand-accent outline-none transition-all duration-200"
                 style={inputStyle}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
