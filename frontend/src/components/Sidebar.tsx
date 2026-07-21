@@ -82,6 +82,7 @@ const Sidebar: React.FC = () => {
           )}
 
           <button 
+            onClick={() => navigate('/')}
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,6 +92,7 @@ const Sidebar: React.FC = () => {
           </button>
 
           <button 
+            onClick={() => navigate('/history')}
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -135,6 +137,13 @@ const Sidebar: React.FC = () => {
 
         <div className="space-y-1.5">
           <button 
+            onClick={() => {
+              if (location.pathname === '/') {
+                window.scrollTo({ top: 800, behavior: 'smooth' });
+              } else {
+                navigate('/');
+              }
+            }}
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -144,6 +153,13 @@ const Sidebar: React.FC = () => {
           </button>
 
           <button 
+            onClick={() => {
+              if (location.pathname === '/') {
+                window.scrollTo({ top: 600, behavior: 'smooth' });
+              } else {
+                navigate('/');
+              }
+            }}
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
