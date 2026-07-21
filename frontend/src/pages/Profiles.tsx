@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { clearAuthSession } from '../services/api';
 
@@ -10,6 +10,11 @@ interface ProfileData {
   language_pref: string;
 }
 
+interface Toast {
+  message: string;
+  type: 'success' | 'error';
+}
+
 const EMOJIS = ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', '🐸', '🐵', '🦄', '🚀', '🎮', '🍿'];
 
 
@@ -18,18 +23,30 @@ const Profiles: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isManageMode, setIsManageMode] = useState(false);
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<ProfileData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
-  
+
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newIsKids, setNewIsKids] = useState(false);
   const [newLang, setNewLang] = useState('en');
   const [newEmoji, setNewEmoji] = useState('🍿');
   const [editEmoji, setEditEmoji] = useState('🍿');
-  
+
+  const [toast, setToast] = useState<Toast | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const navigate = useNavigate();
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message, type });
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  };
 
   const fetchProfiles = async () => {
     try {
@@ -49,6 +66,7 @@ const Profiles: React.FC = () => {
 
   useEffect(() => {
     fetchProfiles();
+    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
   }, []);
 
   const handleLogout = () => {
@@ -86,8 +104,9 @@ const Profiles: React.FC = () => {
       setShowCreateModal(false);
       resetForm();
       fetchProfiles();
+      showToast('Profile created successfully!', 'success');
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Could not create profile.");
+      showToast(err.response?.data?.detail || "Could not create profile.", 'error');
     }
   };
 
@@ -113,21 +132,32 @@ const Profiles: React.FC = () => {
       setSelectedProfile(null);
       resetForm();
       fetchProfiles();
+      showToast('Profile updated successfully!', 'success');
     } catch (err: any) {
-      alert("Failed to update profile details.");
+      showToast("Failed to update profile details.", 'error');
     }
   };
 
-  const handleDeleteProfile = async (profileId: string) => {
-    if (!window.confirm("Are you sure you want to delete this profile? All watch history and watchlist items for this profile will be permanently removed.")) return;
+  /** Step 1: open the confirmation modal — never calls window.confirm */
+  const initiateDeleteProfile = (profile: ProfileData) => {
+    if (profiles.length <= 1) {
+      showToast("Cannot delete your last profile.", 'error');
+      return;
+    }
+    setProfileToDelete(profile);
+    setShowDeleteConfirm(true);
+  };
 
+  /** Step 2: user confirmed — call the API */
+  const confirmDeleteProfile = async () => {
+    if (!profileToDelete) return;
+    setIsDeleting(true);
     try {
-      await api.delete(`/profiles/${profileId}`);
-      
+      await api.delete(`/profiles/${profileToDelete.profile_id}`);
+
       const activeProfileId = localStorage.getItem('selectedProfileId');
-      if (activeProfileId === profileId) {
-        // If remaining profiles exist after fetch, switch or clear
-        const remaining = profiles.filter(p => p.profile_id !== profileId);
+      if (activeProfileId === profileToDelete.profile_id) {
+        const remaining = profiles.filter(p => p.profile_id !== profileToDelete.profile_id);
         if (remaining.length > 0) {
           localStorage.setItem('selectedProfileId', remaining[0].profile_id);
           localStorage.setItem('selectedProfileName', remaining[0].display_name);
@@ -139,12 +169,19 @@ const Profiles: React.FC = () => {
         }
       }
 
+      setShowDeleteConfirm(false);
       setShowEditModal(false);
       setSelectedProfile(null);
+      setProfileToDelete(null);
       resetForm();
-      fetchProfiles();
+      await fetchProfiles();
+      showToast(`"${profileToDelete.display_name}" was deleted.`, 'success');
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Could not delete profile.");
+      const detail = err.response?.data?.detail || "Could not delete profile.";
+      setShowDeleteConfirm(false);
+      showToast(detail, 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -160,12 +197,34 @@ const Profiles: React.FC = () => {
       {/* Background glowing halo */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-brand-accent/5 rounded-full blur-[110px] pointer-events-none" />
 
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 right-6 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md text-sm font-semibold transition-all animate-[fadeIn_0.25s_ease] ${
+            toast.type === 'success'
+              ? 'bg-emerald-900/80 border-emerald-500/30 text-emerald-200'
+              : 'bg-red-900/80 border-red-500/30 text-red-200'
+          }`}
+        >
+          {toast.type === 'success' ? (
+            <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {toast.message}
+        </div>
+      )}
+
       {/* Header */}
       <header className="p-6 flex justify-between items-center relative z-10">
         <h1 className="text-2xl font-black text-brand-accent tracking-wider font-display">
           ZePlay
         </h1>
-        <button 
+        <button
           onClick={handleLogout}
           className="px-4 py-2 bg-brand-surface hover:bg-brand-cards border border-white/5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
         >
@@ -196,10 +255,10 @@ const Profiles: React.FC = () => {
               {profiles.map((profile) => {
                 const isEmoji = profile.avatar_url && EMOJIS.includes(profile.avatar_url);
                 const avatarBg = !isEmoji && profile.avatar_url ? profile.avatar_url : 'from-neutral-700 to-neutral-800';
-                
+
                 return (
-                  <div 
-                    key={profile.profile_id} 
+                  <div
+                    key={profile.profile_id}
                     onClick={() => handleSelectProfile(profile)}
                     className="group flex flex-col items-center cursor-pointer relative"
                   >
@@ -241,7 +300,7 @@ const Profiles: React.FC = () => {
 
               {/* Add Profile Card */}
               {profiles.length < 4 && (
-                <div 
+                <div
                   onClick={() => {
                     resetForm();
                     setShowCreateModal(true);
@@ -260,7 +319,7 @@ const Profiles: React.FC = () => {
 
             {/* Toggle Config Mode Button */}
             <div className="pt-4">
-              <button 
+              <button
                 onClick={() => setIsManageMode(!isManageMode)}
                 className="px-6 py-3 border border-white/5 hover:border-brand-accent bg-brand-surface hover:bg-brand-cards text-brand-textMuted hover:text-white text-[10px] font-bold tracking-widest uppercase rounded-xl transition-all"
               >
@@ -276,7 +335,7 @@ const Profiles: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-brand-surface border border-white/5 w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
             <h3 className="text-2xl font-bold font-display text-white">Add Profile</h3>
-            
+
             <form onSubmit={handleCreateProfile} className="space-y-5">
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Display Name</label>
@@ -325,7 +384,7 @@ const Profiles: React.FC = () => {
 
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Language Preference</label>
-                <select 
+                <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
                   className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl outline-none border border-white/10 focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
@@ -347,7 +406,7 @@ const Profiles: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 bg-neutral-850 hover:bg-neutral-850 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
                 >
                   Cancel
                 </button>
@@ -362,7 +421,7 @@ const Profiles: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-brand-surface border border-white/5 w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
             <h3 className="text-2xl font-bold font-display text-white">Edit Profile</h3>
-            
+
             <form onSubmit={handleUpdateProfile} className="space-y-5">
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Display Name</label>
@@ -411,7 +470,7 @@ const Profiles: React.FC = () => {
 
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Language Preference</label>
-                <select 
+                <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
                   className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl outline-none border border-white/10 focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
@@ -437,16 +496,16 @@ const Profiles: React.FC = () => {
                       setShowEditModal(false);
                       setSelectedProfile(null);
                     }}
-                    className="px-5 py-2.5 bg-neutral-850 hover:bg-neutral-850 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                    className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
                   >
                     Cancel
                   </button>
                 </div>
-                
+
                 <button
                   type="button"
-                  onClick={() => handleDeleteProfile(selectedProfile.profile_id)}
-                  className="px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  onClick={() => initiateDeleteProfile(selectedProfile)}
+                  className="px-5 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
                 >
                   Delete
                 </button>
@@ -456,14 +515,61 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && profileToDelete && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-brand-surface border border-red-800/30 w-full max-w-sm p-8 rounded-2xl shadow-2xl space-y-5 text-center">
+            {/* Warning Icon */}
+            <div className="w-14 h-14 rounded-full bg-red-900/30 border border-red-700/30 flex items-center justify-center mx-auto">
+              <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-extrabold text-white font-display">Delete Profile?</h3>
+              <p className="text-xs text-brand-textMuted leading-relaxed">
+                <span className="text-white font-bold">"{profileToDelete.display_name}"</span> and all its watch history, watchlist, and ratings will be permanently removed. This cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setProfileToDelete(null); }}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-delete-profile-btn"
+                onClick={confirmDeleteProfile}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Deleting...
+                  </>
+                ) : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="p-6 text-center text-xs text-neutral-600 space-y-1">
         <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
         <div>
-          <a 
-            href="https://www.zeploy.tech" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://www.zeploy.tech"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
           >
             POWERED BY ZEPLOY TECH

@@ -19,6 +19,7 @@ interface Movie {
   thumbnail_url: string;
   video_url: string;
   genres: Genre[];
+  average_rating?: number;
 }
 
 const SearchResults: React.FC = () => {
@@ -223,6 +224,7 @@ const SearchResults: React.FC = () => {
                   release_year={movie.release_year}
                   duration_minutes={movie.duration_minutes}
                   genres={movie.genres || []}
+                  ratingScore={movie.average_rating}
                 />
               ))}
             </div>

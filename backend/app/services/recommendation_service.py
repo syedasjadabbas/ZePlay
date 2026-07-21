@@ -8,9 +8,28 @@ from app.models.movie import Movie
 from app.models.genre import Genre
 from app.models.movie_stats import MovieStats
 from app.models.watch_history import WatchHistory
+from app.models.rating import Rating
 from app.services.cache_service import cache
 
+async def populate_average_ratings(db: AsyncSession, movies: List[Movie]) -> None:
+    if not movies:
+        return
+    movie_ids = [m.movie_id for m in movies if m is not None]
+    if not movie_ids:
+        return
+    avg_res = await db.execute(
+        select(Rating.movie_id, func.avg(Rating.score))
+        .filter(Rating.movie_id.in_(movie_ids))
+        .group_by(Rating.movie_id)
+    )
+    avg_map = {row[0]: round(float(row[1] or 0.0), 1) for row in avg_res.all()}
+    for m in movies:
+        if m is not None:
+            m.average_rating = avg_map.get(m.movie_id, 0.0)
+
 def serialize_movie(movie: Movie) -> dict:
+    if movie is None:
+        return {}
     return {
         "movie_id": str(movie.movie_id),
         "title": movie.title,
@@ -19,6 +38,7 @@ def serialize_movie(movie: Movie) -> dict:
         "duration_minutes": movie.duration_minutes,
         "thumbnail_url": movie.thumbnail_url,
         "video_url": movie.video_url,
+        "average_rating": getattr(movie, "average_rating", 0.0),
         "created_at": movie.created_at.isoformat() if movie.created_at else None,
         "updated_at": movie.updated_at.isoformat() if movie.updated_at else None,
         "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
@@ -90,6 +110,7 @@ async def get_trending_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
     )
     res = await db.execute(query)
     movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
     await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
     return movies
@@ -114,6 +135,7 @@ async def get_popular_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
     )
     res = await db.execute(query)
     movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
     await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
     return movies
@@ -133,6 +155,7 @@ async def get_recently_added_movies(db: AsyncSession, limit: int = 10) -> List[M
     )
     res = await db.execute(query)
     movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
     await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
     return movies
@@ -218,6 +241,7 @@ async def get_personalized_recommendations(
         recommendations.extend(fill_movies)
 
     final_recs = recommendations[:limit]
+    await populate_average_ratings(db, final_recs)
     await cache.set(cache_key, [serialize_movie(m) for m in final_recs], ttl=120)
     return final_recs
 
@@ -269,6 +293,7 @@ async def get_because_you_watched(
     )
     res = await db.execute(rec_query)
     recommendations = list(res.scalars().unique().all())
+    await populate_average_ratings(db, [because_movie] + recommendations)
 
     serializable = {
         "because_movie": serialize_movie(because_movie),
@@ -312,6 +337,7 @@ async def get_similar_movies(
     )
     res = await db.execute(query)
     movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
     await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=300)
     return movies

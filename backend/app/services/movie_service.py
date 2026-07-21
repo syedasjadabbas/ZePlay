@@ -2,10 +2,11 @@ import logging
 import uuid
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, or_
+from sqlalchemy import select, delete, or_, func
 from sqlalchemy.orm import selectinload
 from app.models.movie import Movie
 from app.models.genre import Genre
+from app.models.rating import Rating
 from app.schemas.movie import MovieCreate, MovieUpdate
 from app.schemas.genre import GenreCreate
 
@@ -60,13 +61,28 @@ async def get_movies(
     if cached is not None:
         return cached
 
-    query = select(Movie).options(selectinload(Movie.genres))
+    avg_rating_subquery = (
+        select(Rating.movie_id, func.avg(Rating.score).label("avg_score"))
+        .group_by(Rating.movie_id)
+        .subquery()
+    )
+
+    query = (
+        select(Movie, func.coalesce(avg_rating_subquery.c.avg_score, 0.0))
+        .outerjoin(avg_rating_subquery, Movie.movie_id == avg_rating_subquery.c.movie_id)
+        .options(selectinload(Movie.genres))
+    )
     if genre_name:
         query = query.join(Movie.genres).filter(Genre.name.ilike(genre_name))
         
     query = query.order_by(Movie.title).offset(offset).limit(limit)
     result = await db.execute(query)
-    movies = list(result.scalars().all())
+    
+    movies = []
+    for row in result.unique().all():
+        movie, avg_score = row
+        movie.average_rating = round(float(avg_score or 0.0), 1)
+        movies.append(movie)
 
     serializable = [
         {
@@ -77,6 +93,7 @@ async def get_movies(
             "duration_minutes": m.duration_minutes,
             "thumbnail_url": m.thumbnail_url,
             "video_url": m.video_url,
+            "average_rating": m.average_rating,
             "created_at": m.created_at.isoformat() if m.created_at else None,
             "updated_at": m.updated_at.isoformat() if m.updated_at else None,
             "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (m.genres or [])]
@@ -93,14 +110,22 @@ async def get_movie_by_id(db: AsyncSession, movie_id: uuid.UUID) -> Optional[Mov
     if cached is not None:
         return cached
 
+    avg_rating_subquery = (
+        select(func.coalesce(func.avg(Rating.score), 0.0))
+        .filter(Rating.movie_id == movie_id)
+        .scalar_subquery()
+    )
+
     result = await db.execute(
-        select(Movie)
+        select(Movie, avg_rating_subquery)
         .options(selectinload(Movie.genres))
         .filter(Movie.movie_id == movie_id)
     )
-    movie = result.scalars().first()
-    if not movie:
+    row = result.first()
+    if not row:
         return None
+    movie, avg_score = row
+    movie.average_rating = round(float(avg_score or 0.0), 1)
 
     serializable = {
         "movie_id": str(movie.movie_id),
@@ -110,6 +135,7 @@ async def get_movie_by_id(db: AsyncSession, movie_id: uuid.UUID) -> Optional[Mov
         "duration_minutes": movie.duration_minutes,
         "thumbnail_url": movie.thumbnail_url,
         "video_url": movie.video_url,
+        "average_rating": movie.average_rating,
         "created_at": movie.created_at.isoformat() if movie.created_at else None,
         "updated_at": movie.updated_at.isoformat() if movie.updated_at else None,
         "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
@@ -217,7 +243,17 @@ async def search_movies(
     """
     Multi-field catalog search querying title, description, genre name, and release year.
     """
-    query = select(Movie).options(selectinload(Movie.genres))
+    avg_rating_subquery = (
+        select(Rating.movie_id, func.avg(Rating.score).label("avg_score"))
+        .group_by(Rating.movie_id)
+        .subquery()
+    )
+
+    query = (
+        select(Movie, func.coalesce(avg_rating_subquery.c.avg_score, 0.0))
+        .outerjoin(avg_rating_subquery, Movie.movie_id == avg_rating_subquery.c.movie_id)
+        .options(selectinload(Movie.genres))
+    )
     
     if q and q.strip():
         search_term = f"%{q.strip()}%"
@@ -246,7 +282,13 @@ async def search_movies(
 
     query = query.offset(offset).limit(limit)
     result = await db.execute(query)
-    return list(result.scalars().unique().all())
+    
+    movies = []
+    for row in result.unique().all():
+        movie, avg_score = row
+        movie.average_rating = round(float(avg_score or 0.0), 1)
+        movies.append(movie)
+    return movies
 
 async def get_search_suggestions(
     db: AsyncSession,
@@ -265,12 +307,25 @@ async def get_search_suggestions(
     if q.strip().isdigit():
         conditions.append(Movie.release_year == int(q.strip()))
         
+    avg_rating_subquery = (
+        select(Rating.movie_id, func.avg(Rating.score).label("avg_score"))
+        .group_by(Rating.movie_id)
+        .subquery()
+    )
+
     query = (
-        select(Movie)
+        select(Movie, func.coalesce(avg_rating_subquery.c.avg_score, 0.0))
+        .outerjoin(avg_rating_subquery, Movie.movie_id == avg_rating_subquery.c.movie_id)
         .options(selectinload(Movie.genres))
         .filter(or_(*conditions))
         .order_by(Movie.title)
         .limit(limit)
     )
     result = await db.execute(query)
-    return list(result.scalars().unique().all())
+    
+    movies = []
+    for row in result.unique().all():
+        movie, avg_score = row
+        movie.average_rating = round(float(avg_score or 0.0), 1)
+        movies.append(movie)
+    return movies
