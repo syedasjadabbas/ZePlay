@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api from '../services/api';
+import api, { getToken } from '../services/api';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ const Sidebar: React.FC = () => {
       }
     }
 
-    // Verify user role with server
-    const token = localStorage.getItem('token');
+    // Verify user role with server (use getToken to check both localStorage and sessionStorage)
+    const token = getToken();
     if (token) {
       api.get('/auth/me')
         .then((res) => {
