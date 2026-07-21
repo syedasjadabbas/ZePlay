@@ -86,3 +86,37 @@ Serve via HLS Endpoints & Stream in Frontend using `Hls.js`
 - **Segment Chunk**: `GET /api/videos/{video_id}/hls/{segment_name}` (`Content-Type: video/MP2T`)
 - **Admin Manual Transcode**: `POST /api/videos/admin/{video_id}/process-hls`
 - **Range Stream Fallback**: `GET /api/videos/{video_id}/stream` (`HTTP 206 Partial Content`)
+
+---
+
+## 4. Watch History & Continue Watching Pipeline (Sprint 5)
+
+### Watch History Entity
+Tracks exact playback positions per user and profile for cross-device playback resumption.
+* Fields: `history_id` (UUID PK), `user_id` (UUID FK), `profile_id` (UUID FK), `movie_id` (UUID FK), `video_id` (UUID FK, nullable), `current_position` (FLOAT seconds), `duration` (FLOAT seconds), `percentage_watched` (FLOAT 0-100%), `last_watched` (Timestamp), `created_at` (Timestamp).
+
+### Progress & Continue Watching API Endpoints
+
+- **Update Progress**: `POST /api/watch-history/progress` (Upserts progress position, updates `percentage_watched` and `last_watched`)
+- **Get Continue Watching**: `GET /api/watch-history/continue-watching?profile_id={uuid}` (Returns in-progress items `0.5% <= percentage < 95%`)
+- **Get Single Progress**: `GET /api/watch-history/progress/{movie_id}?profile_id={uuid}` (Returns saved progress position for single movie)
+- **Get Full History**: `GET /api/watch-history/?profile_id={uuid}` (Returns complete watch history log sorted by `last_watched DESC`)
+- **Delete History Entry**: `DELETE /api/watch-history/{history_id}` (Removes item from watch history)
+
+---
+
+## 5. Search & Discovery Pipeline (Sprint 6)
+
+### Search Engine Query Strategy
+Multi-field substring searching using SQL `ilike` and `ANY` genre array joins across 4 fields:
+1. **Movie Title** (`Movie.title`)
+2. **Movie Description** (`Movie.description`)
+3. **Genre Name** (`Genre.name`)
+4. **Release Year** (`Movie.release_year` for numeric search queries)
+
+### Search & Discovery Endpoints
+
+- **Catalog Search**: `GET /api/catalog/search?q={term}&genre={name}&year={yyyy}&sort_by={relevance|year_desc|title}&limit={n}&offset={m}`
+- **Search Suggestions**: `GET /api/catalog/search/suggestions?q={term}&limit=5` (Fast auto-complete lookup for top matches)
+
+

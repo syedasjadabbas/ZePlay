@@ -100,6 +100,13 @@ const Sidebar: React.FC = () => {
           </button>
 
           <button 
+            onClick={() => {
+              if (location.pathname === '/') {
+                window.scrollTo({ top: 400, behavior: 'smooth' });
+              } else {
+                navigate('/');
+              }
+            }}
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,7 +117,12 @@ const Sidebar: React.FC = () => {
           </button>
 
           <button 
-            className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"
+            onClick={() => navigate('/history')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+              isActive('/history') 
+                ? 'bg-brand-accent/18 text-brand-accent border-brand-accent/35 shadow-md shadow-blue-500/5' 
+                : 'border-transparent text-brand-textMuted hover:bg-brand-cards/50 hover:text-white'
+            }`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

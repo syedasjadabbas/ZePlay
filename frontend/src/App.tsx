@@ -12,6 +12,9 @@ import AdminUpload from './pages/AdminUpload';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 
+import WatchHistory from './pages/WatchHistory';
+import SearchResults from './pages/SearchResults';
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
@@ -37,6 +40,22 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <SearchResults />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <WatchHistory />
             </ProtectedRoute>
           }
         />
