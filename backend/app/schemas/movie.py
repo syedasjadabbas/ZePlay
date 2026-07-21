@@ -27,6 +27,7 @@ class MovieUpdate(BaseModel):
 class MovieResponse(MovieBase):
     movie_id: uuid.UUID
     genres: List[GenreResponse] = Field(default_factory=list)
+    average_rating: float = 0.0
     created_at: datetime
     updated_at: datetime
 

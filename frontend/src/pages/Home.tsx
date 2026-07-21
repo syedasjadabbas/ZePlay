@@ -19,6 +19,7 @@ interface Movie {
   thumbnail_url: string;
   video_url: string;
   genres: Genre[];
+  average_rating?: number;
 }
 
 interface BecauseYouWatchedState {
@@ -259,6 +260,7 @@ const Home: React.FC = () => {
                                 duration_minutes={m.duration_minutes}
                                 genres={m.genres || []}
                                 progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
+                                ratingScore={m.average_rating}
                               />
                             );
                           })}
@@ -308,6 +310,7 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
+                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -353,6 +356,7 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
+                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -398,6 +402,7 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
+                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -443,6 +448,7 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
+                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -488,6 +494,7 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
+                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>

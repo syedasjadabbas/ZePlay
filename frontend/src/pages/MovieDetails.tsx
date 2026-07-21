@@ -5,6 +5,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
+import StarRating from '../components/StarRating';
 
 interface Genre {
   genre_id: string;
@@ -301,22 +302,6 @@ const MovieDetails: React.FC = () => {
     setIsPlaying(true);
   };
 
-  const getRating = (name: string) => {
-    switch (name.toLowerCase()) {
-      case 'interstellar': return '8.6';
-      case 'the dark knight': return '9.0';
-      case 'inception': return '8.8';
-      case 'the matrix': return '8.7';
-      case 'dune': return '8.4';
-      case 'the batman': return '8.3';
-      case 'john wick': return '8.2';
-      case 'tenet': return '7.8';
-      case 'avatar': return '7.9';
-      case 'oppenheimer': return '8.9';
-      default: return '8.5';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
@@ -463,7 +448,7 @@ const MovieDetails: React.FC = () => {
                       <span>{movie.duration_minutes} minutes</span>
                       <span className="text-neutral-600">•</span>
                       <span className="text-brand-accent font-semibold">
-                        ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating : getRating(movie.title)}
+                        ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating.toFixed(1) : '0.0'}
                         {ratingStats.total_ratings > 0 && <span className="text-[10px] font-normal text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
                       </span>
                       <span className="ml-auto border border-white/5 px-1.5 py-0.5 rounded text-[8px] text-neutral-400">HLS / 4K</span>
@@ -478,23 +463,17 @@ const MovieDetails: React.FC = () => {
                         <span className="text-neutral-300">Rate this Movie</span>
                         {ratingStats.average_rating > 0 && (
                           <span className="text-amber-400 font-bold flex items-center gap-1">
-                            ★ {ratingStats.average_rating} <span className="text-neutral-500 font-normal">({ratingStats.total_ratings} votes)</span>
+                            ★ {ratingStats.average_rating.toFixed(1)} <span className="text-neutral-500 font-normal">({ratingStats.total_ratings} votes)</span>
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 pt-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            onClick={() => handleRateMovie(star)}
-                            disabled={ratingSubmitting}
-                            className="p-1 hover:scale-125 transition-transform text-2xl focus:outline-none disabled:opacity-50"
-                          >
-                            <span className={star <= (userScore || 0) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-neutral-600 hover:text-amber-200'}>
-                              ★
-                            </span>
-                          </button>
-                        ))}
+                        <StarRating
+                          rating={userScore || 0}
+                          onRate={handleRateMovie}
+                          readonly={ratingSubmitting}
+                          size="md"
+                        />
                         {userScore ? (
                           <span className="text-xs text-amber-400 font-bold ml-2">Your Rating: {userScore}/5</span>
                         ) : (
