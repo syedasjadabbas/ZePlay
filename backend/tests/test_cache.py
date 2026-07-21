@@ -75,3 +75,19 @@ async def test_cache_api_integration(client: AsyncClient, db_session: AsyncSessi
     clear_res = await client.post("/api/admin/cache/clear", headers=headers)
     assert clear_res.status_code == 200
     assert clear_res.json()["message"] == "Cache successfully cleared."
+
+async def test_cache_disabled_fallback():
+    from app.config import settings
+    original_setting = settings.REDIS_ENABLED
+    try:
+        settings.REDIS_ENABLED = False
+        await cache.initialize()
+        await cache.set("fallback:key", "fallback_value", ttl=60)
+        assert await cache.get("fallback:key") == "fallback_value"
+        stats = cache.get_stats()
+        assert stats["redis_connected"] is False
+        assert "In-Memory" in stats["cache_engine"]
+    finally:
+        settings.REDIS_ENABLED = original_setting
+        await cache.initialize()
+
