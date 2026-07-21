@@ -8,6 +8,19 @@ from app.models.movie import Movie
 from app.models.genre import Genre
 from app.models.movie_stats import MovieStats
 from app.models.watch_history import WatchHistory
+from app.services.cache_service import cache
+
+def serialize_movie(movie: Movie) -> dict:
+    return {
+        "movie_id": str(movie.movie_id),
+        "title": movie.title,
+        "description": movie.description,
+        "release_year": movie.release_year,
+        "duration_minutes": movie.duration_minutes,
+        "thumbnail_url": movie.thumbnail_url,
+        "video_url": movie.video_url,
+        "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
+    }
 
 async def track_movie_view(db: AsyncSession, movie_id: UUID) -> MovieStats:
     """Increment view count and recalculate popularity score for a movie."""
@@ -57,7 +70,12 @@ async def increment_watch_count(db: AsyncSession, movie_id: UUID) -> None:
     await db.commit()
 
 async def get_trending_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
-    """Retrieve trending movies sorted by popularity score and creation recency."""
+    """Retrieve trending movies sorted by popularity score and creation recency (Cache First)."""
+    cache_key = f"rec:trending:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     query = (
         select(Movie)
         .options(selectinload(Movie.genres))
@@ -69,10 +87,18 @@ async def get_trending_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
         .limit(limit)
     )
     res = await db.execute(query)
-    return list(res.scalars().unique().all())
+    movies = list(res.scalars().unique().all())
+
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
 async def get_popular_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
-    """Retrieve popular movies sorted by total view counts."""
+    """Retrieve popular movies sorted by total view counts (Cache First)."""
+    cache_key = f"rec:popular:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     query = (
         select(Movie)
         .options(selectinload(Movie.genres))
@@ -85,10 +111,18 @@ async def get_popular_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
         .limit(limit)
     )
     res = await db.execute(query)
-    return list(res.scalars().unique().all())
+    movies = list(res.scalars().unique().all())
+
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
 async def get_recently_added_movies(db: AsyncSession, limit: int = 10) -> List[Movie]:
-    """Retrieve newest releases and catalog additions."""
+    """Retrieve newest releases and catalog additions (Cache First)."""
+    cache_key = f"rec:recently_added:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     query = (
         select(Movie)
         .options(selectinload(Movie.genres))
@@ -96,7 +130,10 @@ async def get_recently_added_movies(db: AsyncSession, limit: int = 10) -> List[M
         .limit(limit)
     )
     res = await db.execute(query)
-    return list(res.scalars().unique().all())
+    movies = list(res.scalars().unique().all())
+
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
 async def get_personalized_recommendations(
     db: AsyncSession,
@@ -105,8 +142,13 @@ async def get_personalized_recommendations(
     limit: int = 10
 ) -> List[Movie]:
     """
-    Rule-based personalized recommendations based on active profile's genre preferences.
+    Rule-based personalized recommendations based on active profile's genre preferences (Cache First).
     """
+    cache_key = f"rec:personalized:{profile_id}:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     # 1. Fetch profile watch history
     wh_query = (
         select(WatchHistory)
@@ -173,7 +215,9 @@ async def get_personalized_recommendations(
         fill_movies = list(fill_res.scalars().unique().all())
         recommendations.extend(fill_movies)
 
-    return recommendations[:limit]
+    final_recs = recommendations[:limit]
+    await cache.set(cache_key, [serialize_movie(m) for m in final_recs], ttl=120)
+    return final_recs
 
 async def get_because_you_watched(
     db: AsyncSession,
@@ -182,8 +226,13 @@ async def get_because_you_watched(
     limit: int = 10
 ) -> Tuple[Optional[Movie], List[Movie]]:
     """
-    Returns (because_movie, recommendations) based on profile's most recently watched movie.
+    Returns (because_movie, recommendations) based on profile's most recently watched movie (Cache First).
     """
+    cache_key = f"rec:because_you_watched:{profile_id}:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached.get("because_movie"), cached.get("recommendations", [])
+
     # Find most recently watched movie
     last_wh_query = (
         select(WatchHistory)
@@ -219,6 +268,11 @@ async def get_because_you_watched(
     res = await db.execute(rec_query)
     recommendations = list(res.scalars().unique().all())
 
+    serializable = {
+        "because_movie": serialize_movie(because_movie),
+        "recommendations": [serialize_movie(m) for m in recommendations]
+    }
+    await cache.set(cache_key, serializable, ttl=120)
     return because_movie, recommendations
 
 async def get_similar_movies(
@@ -226,7 +280,12 @@ async def get_similar_movies(
     movie_id: UUID,
     limit: int = 10
 ) -> List[Movie]:
-    """Find similar movies sharing genres and release proximity."""
+    """Find similar movies sharing genres and release proximity (Cache First)."""
+    cache_key = f"rec:similar:{movie_id}:{limit}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     movie_res = await db.execute(
         select(Movie).options(selectinload(Movie.genres)).filter(Movie.movie_id == movie_id)
     )
@@ -250,4 +309,7 @@ async def get_similar_movies(
         .limit(limit)
     )
     res = await db.execute(query)
-    return list(res.scalars().unique().all())
+    movies = list(res.scalars().unique().all())
+
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=300)
+    return movies

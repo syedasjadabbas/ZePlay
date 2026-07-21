@@ -22,8 +22,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.services.cache_service import cache
+
 # Mount Unified Router
 app.include_router(api_router, prefix="/api")
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize cache service on application startup."""
+    await cache.initialize()
 
 @app.get("/health", tags=["System Health"])
 async def health_check():

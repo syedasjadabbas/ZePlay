@@ -73,6 +73,8 @@ async def delete_movie(
         )
     return None
 
+from app.services.cache_service import cache
+
 @router.post("/genres", response_model=GenreResponse, status_code=status.HTTP_201_CREATED)
 async def create_genre(
     genre_in: GenreCreate,
@@ -81,3 +83,18 @@ async def create_genre(
 ):
     """Admin endpoint to register a new genre category."""
     return await movie_service.create_genre(db, genre_in)
+
+@router.get("/cache/stats")
+async def get_cache_stats(
+    current_user = Depends(deps.get_current_admin_user)
+):
+    """Admin endpoint to retrieve cache performance statistics (hits, misses, hit rate)."""
+    return cache.get_stats()
+
+@router.post("/cache/clear")
+async def clear_cache(
+    current_user = Depends(deps.get_current_admin_user)
+):
+    """Admin endpoint to clear all cached keys and reset hit/miss counters."""
+    await cache.clear_all()
+    return {"message": "Cache successfully cleared."}

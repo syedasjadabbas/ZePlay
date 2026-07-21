@@ -9,6 +9,8 @@ from app.models.genre import Genre
 from app.schemas.movie import MovieCreate, MovieUpdate
 from app.schemas.genre import GenreCreate
 
+from app.services.cache_service import cache
+
 logger = logging.getLogger("ZePlay.CatalogService")
 
 def dispatch_index_event(action: str, movie_id: uuid.UUID) -> None:
@@ -16,9 +18,19 @@ def dispatch_index_event(action: str, movie_id: uuid.UUID) -> None:
     logger.info(f"[INDEX SIGNAL] Action: {action.upper()} | Movie ID: {movie_id}")
 
 async def get_genres(db: AsyncSession) -> List[Genre]:
-    """Retrieve all available genres."""
+    """Retrieve all available genres (Cache First)."""
+    cache_key = "catalog:genres:all"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     result = await db.execute(select(Genre).order_by(Genre.name))
-    return list(result.scalars().all())
+    genres = list(result.scalars().all())
+    
+    # Store in cache (600s TTL)
+    serializable = [{"genre_id": str(g.genre_id), "name": g.name} for g in genres]
+    await cache.set(cache_key, serializable, ttl=600)
+    return genres
 
 async def create_genre(db: AsyncSession, genre_in: GenreCreate) -> Genre:
     """Create a new genre category."""
@@ -32,6 +44,8 @@ async def create_genre(db: AsyncSession, genre_in: GenreCreate) -> Genre:
     db.add(db_genre)
     await db.commit()
     await db.refresh(db_genre)
+
+    await cache.invalidate_pattern("catalog:genres:*")
     return db_genre
 
 async def get_movies(
@@ -40,24 +54,68 @@ async def get_movies(
     limit: int = 50, 
     offset: int = 0
 ) -> List[Movie]:
-    """Retrieve list of movies, optionally filtered by genre name."""
+    """Retrieve list of movies, optionally filtered by genre name (Cache First)."""
+    cache_key = f"catalog:movies:{genre_name or 'all'}:{limit}:{offset}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     query = select(Movie).options(selectinload(Movie.genres))
-    
     if genre_name:
         query = query.join(Movie.genres).filter(Genre.name.ilike(genre_name))
         
     query = query.order_by(Movie.title).offset(offset).limit(limit)
     result = await db.execute(query)
-    return list(result.scalars().all())
+    movies = list(result.scalars().all())
+
+    serializable = [
+        {
+            "movie_id": str(m.movie_id),
+            "title": m.title,
+            "description": m.description,
+            "release_year": m.release_year,
+            "duration_minutes": m.duration_minutes,
+            "thumbnail_url": m.thumbnail_url,
+            "video_url": m.video_url,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+            "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (m.genres or [])]
+        }
+        for m in movies
+    ]
+    await cache.set(cache_key, serializable, ttl=300)
+    return movies
 
 async def get_movie_by_id(db: AsyncSession, movie_id: uuid.UUID) -> Optional[Movie]:
-    """Retrieve detailed movie object by ID."""
+    """Retrieve detailed movie object by ID (Cache First)."""
+    cache_key = f"catalog:movies:detail:{movie_id}"
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     result = await db.execute(
         select(Movie)
         .options(selectinload(Movie.genres))
         .filter(Movie.movie_id == movie_id)
     )
-    return result.scalars().first()
+    movie = result.scalars().first()
+    if not movie:
+        return None
+
+    serializable = {
+        "movie_id": str(movie.movie_id),
+        "title": movie.title,
+        "description": movie.description,
+        "release_year": movie.release_year,
+        "duration_minutes": movie.duration_minutes,
+        "thumbnail_url": movie.thumbnail_url,
+        "video_url": movie.video_url,
+        "created_at": movie.created_at.isoformat() if movie.created_at else None,
+        "updated_at": movie.updated_at.isoformat() if movie.updated_at else None,
+        "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
+    }
+    await cache.set(cache_key, serializable, ttl=300)
+    return movie
 
 async def create_movie(db: AsyncSession, movie_in: MovieCreate) -> Movie:
     """Create a movie entry, resolving relationship genres list."""
@@ -81,13 +139,26 @@ async def create_movie(db: AsyncSession, movie_in: MovieCreate) -> Movie:
     await db.commit()
     await db.refresh(db_movie)
     
+    # Invalidate catalog & recommendation caches
+    await cache.invalidate_pattern("catalog:*")
+    await cache.invalidate_pattern("rec:*")
+
     # Trigger search index sync signal
     dispatch_index_event("create", db_movie.movie_id)
     return db_movie
 
+async def get_movie_by_id_orm(db: AsyncSession, movie_id: uuid.UUID) -> Optional[Movie]:
+    """Retrieve detailed movie ORM model instance for database updates/deletes."""
+    result = await db.execute(
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .filter(Movie.movie_id == movie_id)
+    )
+    return result.scalars().first()
+
 async def update_movie(db: AsyncSession, movie_id: uuid.UUID, movie_in: MovieUpdate) -> Optional[Movie]:
     """Update movie catalog metadata and association categories."""
-    db_movie = await get_movie_by_id(db, movie_id)
+    db_movie = await get_movie_by_id_orm(db, movie_id)
     if not db_movie:
         return None
         
@@ -109,19 +180,27 @@ async def update_movie(db: AsyncSession, movie_id: uuid.UUID, movie_in: MovieUpd
     await db.commit()
     await db.refresh(db_movie)
     
+    # Invalidate catalog & recommendation caches
+    await cache.invalidate_pattern("catalog:*")
+    await cache.invalidate_pattern("rec:*")
+
     # Trigger search index update signal
     dispatch_index_event("update", db_movie.movie_id)
     return db_movie
 
 async def delete_movie(db: AsyncSession, movie_id: uuid.UUID) -> bool:
     """Delete a movie from datastore."""
-    db_movie = await get_movie_by_id(db, movie_id)
+    db_movie = await get_movie_by_id_orm(db, movie_id)
     if not db_movie:
         return False
         
     await db.delete(db_movie)
     await db.commit()
     
+    # Invalidate catalog & recommendation caches
+    await cache.invalidate_pattern("catalog:*")
+    await cache.invalidate_pattern("rec:*")
+
     # Trigger search index deletion signal
     dispatch_index_event("delete", movie_id)
     return True

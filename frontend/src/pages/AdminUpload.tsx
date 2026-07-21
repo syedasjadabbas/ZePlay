@@ -32,12 +32,23 @@ interface SystemStats {
   total_storage_bytes: number;
 }
 
+interface CacheStats {
+  hits: number;
+  misses: number;
+  hit_rate_pct: number;
+  total_keys: number;
+  redis_connected: boolean;
+  cache_engine: string;
+}
+
 const AdminUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
   const [movies, setMovies] = useState<MovieOption[]>([]);
   const [videos, setVideos] = useState<VideoAsset[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
+  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
+  const [clearingCache, setClearingCache] = useState(false);
   
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -52,6 +63,7 @@ const AdminUpload: React.FC = () => {
     fetchMovies();
     fetchVideos();
     fetchStats();
+    fetchCacheStats();
   }, []);
 
   const fetchMovies = async () => {
@@ -78,6 +90,28 @@ const AdminUpload: React.FC = () => {
       setStats(response.data);
     } catch (err) {
       console.error('Failed to load system stats', err);
+    }
+  };
+
+  const fetchCacheStats = async () => {
+    try {
+      const response = await api.get('/admin/cache/stats');
+      setCacheStats(response.data);
+    } catch (err) {
+      console.error('Failed to load cache stats', err);
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      setClearingCache(true);
+      await api.post('/admin/cache/clear');
+      setSuccessMsg('Redis & memory cache cleared successfully!');
+      fetchCacheStats();
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to clear cache.');
+    } finally {
+      setClearingCache(false);
     }
   };
 
@@ -347,6 +381,70 @@ const AdminUpload: React.FC = () => {
             <p className="text-[10px] text-emerald-400 font-semibold">
               {stats ? `${stats.total_admins} Admin Role(s)` : 'Admin Authorized'}
             </p>
+          </div>
+        </section>
+
+        {/* Redis Cache Control & Statistics Panel */}
+        <section
+          className="p-6 rounded-3xl border border-white/5 space-y-6"
+          style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.7) 0%, rgba(11,21,53,0.9) 100%)' }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold uppercase tracking-widest text-white">
+                  Redis Caching Layer Statistics
+                </span>
+                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
+                  cacheStats?.redis_connected
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                }`}>
+                  {cacheStats?.cache_engine || 'Connecting...'}
+                </span>
+              </div>
+              <p className="text-xs text-brand-textMuted mt-1">
+                Real-time API response caching metrics across Homepage, Recommendations, Catalog, and Movie Details VOD.
+              </p>
+            </div>
+
+            <button
+              onClick={handleClearCache}
+              disabled={clearingCache}
+              className="px-5 py-2.5 bg-rose-600/80 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-600/20 disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              {clearingCache ? 'Clearing...' : 'Clear Cache'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Hit Rate</span>
+              <span className="text-2xl font-black text-emerald-400 font-display">
+                {cacheStats ? `${cacheStats.hit_rate_pct}%` : '0%'}
+              </span>
+            </div>
+            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Hits</span>
+              <span className="text-2xl font-black text-brand-accent font-display">
+                {cacheStats ? cacheStats.hits : 0}
+              </span>
+            </div>
+            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Misses</span>
+              <span className="text-2xl font-black text-amber-400 font-display">
+                {cacheStats ? cacheStats.misses : 0}
+              </span>
+            </div>
+            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
+              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Keys Cached</span>
+              <span className="text-2xl font-black text-indigo-400 font-display">
+                {cacheStats ? cacheStats.total_keys : 0}
+              </span>
+            </div>
           </div>
         </section>
 

@@ -9,6 +9,7 @@ from app.models.profile import Profile
 from app.models.movie import Movie
 from app.models.video import Video
 from app.schemas.watch_history import ProgressUpdate
+from app.services.cache_service import cache
 
 async def verify_profile_ownership(db: AsyncSession, user_id: UUID, profile_id: UUID) -> bool:
     """Verifies that the given profile belongs to the authenticated user."""
@@ -69,6 +70,10 @@ async def upsert_playback_progress(
 
     await db.commit()
     
+    # Invalidate recommendation cache for profile
+    await cache.invalidate_pattern(f"rec:personalized:{progress_in.profile_id}:*")
+    await cache.invalidate_pattern(f"rec:because_you_watched:{progress_in.profile_id}:*")
+
     # Reload with relationships
     query = (
         select(WatchHistory)
