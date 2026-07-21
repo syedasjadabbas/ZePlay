@@ -129,8 +129,8 @@ const Register: React.FC = () => {
               </div>
             </div>
 
-            {/* Dev Notice — shown only when email service is not configured */}
-            {!registrationData.emailConfigured && (
+            {/* Dev / Sandbox Notice — shown whenever devNotice is provided by backend */}
+            {registrationData.devNotice && (
               <div
                 className="rounded-xl p-4 mb-5"
                 style={{
@@ -143,11 +143,9 @@ const Register: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <div>
-                    <p className="text-[11px] font-bold text-yellow-300 mb-1">⚡ Developer Notice</p>
+                    <p className="text-[11px] font-bold text-yellow-300 mb-1">⚡ Email Delivery Notice</p>
                     <p className="text-[11px] text-yellow-400/80 leading-relaxed">
-                      Email service not configured. Verification link is available in{' '}
-                      <code className="bg-yellow-400/10 px-1 rounded text-yellow-300">local_emails.log</code>{' '}
-                      on the server.
+                      {registrationData.devNotice}
                     </p>
                   </div>
                 </div>

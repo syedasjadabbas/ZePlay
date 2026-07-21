@@ -19,6 +19,8 @@ def serialize_movie(movie: Movie) -> dict:
         "duration_minutes": movie.duration_minutes,
         "thumbnail_url": movie.thumbnail_url,
         "video_url": movie.video_url,
+        "created_at": movie.created_at.isoformat() if movie.created_at else None,
+        "updated_at": movie.updated_at.isoformat() if movie.updated_at else None,
         "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
     }
 
