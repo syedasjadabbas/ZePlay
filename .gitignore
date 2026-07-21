@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.coverage
+.coverage
+htmlcov/
+venv/
+env/
+.venv/
+
+# Environment secrets — never commit real .env
+.env
+.env.local
+.env.production
+!.env.example
+
+# Local dev DB & email logs
+backend/local_zeplay.db
+backend/local_emails.log
+backend/*.db
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Alembic auto-generated (keep structure, not compiled cache)
+backend/alembic/__pycache__/
+backend/alembic/versions/__pycache__/

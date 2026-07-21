@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background: radial-gradient(circle at 12% 12%, rgba(59, 130, 246, 0.12) 0%, transparent 35%), 
+                radial-gradient(circle at 88% 88%, rgba(59, 130, 246, 0.05) 0%, transparent 40%), 
+                #060B18;
+    color: #FFFFFF;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    background-attachment: fixed;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  /* Force visible input text colors globally */
+  input, select, textarea {
+    color: #FFFFFF !important;
+  }
+
+  /* Support placeholder styling overrides */
+  input::placeholder {
+    color: #52525B !important;
+  }
+}
+
+/* Hide scrollbars across all browsers */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
