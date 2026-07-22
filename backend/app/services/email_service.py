@@ -2,11 +2,36 @@ import os
 import asyncio
 import smtplib
 import logging
+import resend
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.config import settings
 
 logger = logging.getLogger("email_service")
+
+
+def _send_resend_sync(to_email: str, subject: str, html_content: str) -> bool:
+    """
+    Synchronous Resend email delivery using resend-python SDK.
+    """
+    resend.api_key = settings.RESEND_API_KEY
+    from_email = settings.EMAIL_FROM
+    
+    logger.info(f"[Resend] Attempting API delivery to {to_email} from {from_email}")
+    try:
+        response = resend.Emails.send({
+            "from": f"ZePlay <{from_email}>",
+            "to": to_email,
+            "subject": subject,
+            "html": html_content
+        })
+        # Try to retrieve ID; API response for resend-python is typically a dict or model with id
+        email_id = getattr(response, "id", None) or response.get("id", "unknown-id")
+        logger.info(f"[Resend] ✓ Delivered successfully via Resend API. ID: {email_id}")
+        return True
+    except Exception as err:
+        logger.error(f"[Resend] Delivery failed: {err}", exc_info=True)
+        raise err
 
 
 def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
@@ -22,7 +47,7 @@ def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
     host = settings.SMTP_HOST or "smtp.gmail.com"
     user = settings.SMTP_USERNAME
     password = (settings.SMTP_PASSWORD or "").replace(" ", "")
-    from_email = settings.SMTP_FROM or user or "noreply@zeplay.dev"
+    from_email = settings.SMTP_FROM or user or settings.EMAIL_FROM or "noreply@zeplay.dev"
 
     # Build the message once
     msg = MIMEMultipart("alternative")
@@ -62,9 +87,8 @@ def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
 
 async def send_email(to_email: str, subject: str, html_content: str) -> bool:
     """
-    Sends an email using Gmail SMTP.
-    If SMTP credentials are not configured, it writes to a local log file
-    so development links can be easily retrieved.
+    Sends an email using configured provider (Resend or Gmail SMTP).
+    If credentials are not configured or provider is local, it writes to a local log file.
     """
     log_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     log_file_path = os.path.join(log_dir, "local_emails.log")
@@ -75,10 +99,17 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
                 f"BODY:\n{html_content}\n" \
                 f"========================================\n\n"
 
-    # Check if SMTP service is configured
-    smtp_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
-    if not smtp_configured:
-        logger.warning("SMTP_USERNAME / SMTP_PASSWORD not configured. Skipping real email delivery.")
+    provider = (settings.EMAIL_PROVIDER or "resend").lower()
+
+    # Pre-flight check / configuration fallback
+    if provider == "resend" and not settings.RESEND_API_KEY:
+        logger.warning("EMAIL_PROVIDER is set to 'resend' but RESEND_API_KEY is not configured. Falling back to local logging.")
+        provider = "local"
+    elif provider == "smtp" and not (settings.SMTP_USERNAME and settings.SMTP_PASSWORD):
+        logger.warning("EMAIL_PROVIDER is set to 'smtp' but SMTP credentials are not configured. Falling back to local logging.")
+        provider = "local"
+
+    if provider == "local":
         try:
             with open(log_file_path, "a", encoding="utf-8") as f:
                 f.write(log_entry)
@@ -88,6 +119,34 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         print(f"\n[EMAIL SIMULATOR] Sent email to {to_email}. Inspect 'local_emails.log' for links.\n")
         return True
 
+    if provider == "resend":
+        try:
+            await asyncio.to_thread(_send_resend_sync, to_email, subject, html_content)
+            logger.info(f"Email sent successfully to {to_email} via Resend API.")
+            print(f"\n[OK EMAIL SENT] Email delivered to {to_email} via Resend API.\n")
+            return True
+        except Exception as e:
+            logger.error(f"Exception during Resend email delivery to {to_email}: {e}")
+            banner = (
+                f"\n{'='*60}\n"
+                f"  [!] RESEND EMAIL DELIVERY FAILED\n"
+                f"  To     : {to_email}\n"
+                f"  From   : {settings.EMAIL_FROM}\n"
+                f"  Error  : {e}\n"
+                f"{'='*60}\n"
+            )
+            print(banner)
+
+            # Append the email content and error to the local log so it's traceable offline
+            try:
+                with open(log_file_path, "a", encoding="utf-8") as f:
+                    f.write(log_entry)
+                    f.write(f"[RESEND ERROR] For {to_email}: {e}\n\n")
+            except Exception:
+                pass
+            return False
+
+    # Otherwise SMTP
     try:
         await asyncio.to_thread(_send_smtp_sync, to_email, subject, html_content)
         logger.info(f"Email sent successfully to {to_email} via Gmail SMTP.")
@@ -99,7 +158,7 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
             f"\n{'='*60}\n"
             f"  [!] GMAIL SMTP EMAIL DELIVERY FAILED\n"
             f"  To     : {to_email}\n"
-            f"  From   : {settings.SMTP_FROM or settings.SMTP_USERNAME}\n"
+            f"  From   : {settings.SMTP_FROM or settings.SMTP_USERNAME or settings.EMAIL_FROM}\n"
             f"  Error  : {e}\n"
             f"{'='*60}\n"
         )
@@ -112,7 +171,6 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
                 f.write(f"[SMTP ERROR] For {to_email}: {e}\n\n")
         except Exception:
             pass
-
         return False
 
 

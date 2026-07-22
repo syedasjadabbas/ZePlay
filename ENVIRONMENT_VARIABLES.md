@@ -17,13 +17,16 @@ Create a `.env` file in the `backend/` directory using the following keys:
 | `STORAGE_DIR` | Directory where uploaded movie files and HLS segments are saved | `storage/videos` | `/var/lib/zeplay/storage` or persistent volume path |
 | `REDIS_URL` | Connection string for Redis cache database | `redis://localhost:6379/0` | `redis://:<password>@<redis-host>:<port>/0` |
 | `REDIS_ENABLED` | Toggle key for enabling/disabling Redis memory cache | `true` | `true` |
+| `EMAIL_PROVIDER` | Switch for email engine (`resend`, `smtp`, or `local`) | `resend` | `resend` (recommended) |
+| `EMAIL_FROM` | Default sender address for transactions | `noreply@zeploy.tech` | `noreply@zeplay.tech` (verified sender) |
 | `RESEND_API_KEY` | Resend API integration key for transactional emails | `re_...` | Your production Resend API token |
-| `RESEND_FROM_EMAIL` | Sender address for Resend emails | `onboarding@resend.dev` | `noreply@yourdomain.com` (verified sender) |
+| `RESEND_FROM_EMAIL` | Deprecated (use `EMAIL_FROM`) | `onboarding@resend.dev` | (Optional fallback) |
 | `SMTP_HOST` | Fallback SMTP mail server hostname | `smtp.gmail.com` | Production SMTP relay host |
 | `SMTP_PORT` | Fallback SMTP mail server port | `587` | `587` (TLS) or `465` (SSL) |
 | `SMTP_USERNAME` | SMTP login account username | `asjadabbaszaidi@gmail.com` | Production mail username |
 | `SMTP_PASSWORD` | SMTP login account password / app password | `bviw jdsn durr coho` | Production mail credentials |
 | `SMTP_FROM` | Sender address for fallback SMTP | `asjadabbaszaidi@gmail.com` | `noreply@yourdomain.com` |
+
 
 ---
 

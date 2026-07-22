@@ -124,3 +124,20 @@ server {
     }
 }
 ```
+
+---
+
+## Transactional Email Setup
+
+ZePlay uses **Resend** as its primary email delivery system (with Gmail SMTP as fallback). 
+
+To ensure registration and password reset emails are delivered successfully:
+1. Register on [Resend.com](https://resend.com) and verify your domain (`zeplay.tech` or `zeploy.tech`).
+2. Add the following environment variables to your production backend config:
+   ```bash
+   EMAIL_PROVIDER="resend"
+   EMAIL_FROM="noreply@zeploy.tech"
+   RESEND_API_KEY="re_your_api_key_here"
+   ```
+3. If using SMTP as a fallback, configure `EMAIL_PROVIDER="smtp"`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, and `SMTP_PASSWORD` (App Password).
+
