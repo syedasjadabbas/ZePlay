@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "noreply@zeploy.tech"
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "https://ze-play.vercel.app"
 
     # SMTP email settings (Gmail SMTP)
     SMTP_HOST: str = "smtp.gmail.com"

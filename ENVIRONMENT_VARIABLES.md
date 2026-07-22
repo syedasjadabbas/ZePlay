@@ -13,7 +13,7 @@ Create a `.env` file in the `backend/` directory using the following keys:
 | `JWT_SECRET_KEY` | Hex secret key used to sign JWT session tokens | `09d25e094faa6...` (predefined) | *Generate a strong secret* (`openssl rand -hex 32`) |
 | `JWT_ALGORITHM` | Algorithm used for JWT signatures | `HS256` | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Lifetime of generated access token sessions | `11520` (8 days) | `1440` (24 hours) or shorter |
-| `FRONTEND_URL` | The URL of the React client application (used for CORS/emails) | `http://localhost:5173` | `https://zeplay.yourdomain.com` |
+| `FRONTEND_URL` | The URL of the React client application (used for CORS/emails) | `https://ze-play.vercel.app` | `https://ze-play.vercel.app` |
 | `STORAGE_DIR` | Directory where uploaded movie files and HLS segments are saved | `storage/videos` | `/var/lib/zeplay/storage` or persistent volume path |
 | `REDIS_URL` | Connection string for Redis cache database | `redis://localhost:6379/0` | `redis://:<password>@<redis-host>:<port>/0` |
 | `REDIS_ENABLED` | Toggle key for enabling/disabling Redis memory cache | `true` | `true` |
