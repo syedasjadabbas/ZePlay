@@ -59,9 +59,13 @@ const Profiles: React.FC = () => {
         api.get('/subscription/current').catch(() => null),
       ]);
       setProfiles(profileRes.data);
-      if (subRes?.data?.plan) {
-        setMaxProfiles(subRes.data.plan.max_profiles);
-        setPlanName(subRes.data.plan.name);
+      if (subRes?.data) {
+        const isActive = subRes.data.status === 'active';
+        setMaxProfiles(isActive && subRes.data.plan?.max_profiles ? subRes.data.plan.max_profiles : 1);
+        setPlanName(isActive && subRes.data.plan?.name ? subRes.data.plan.name : 'free');
+      } else {
+        setMaxProfiles(1);
+        setPlanName('free');
       }
     } catch (err: any) {
       if (err.response?.status === 401) {

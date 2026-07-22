@@ -59,6 +59,12 @@ async def rate_movie(
 
     await db.commit()
     await db.refresh(rating_record)
+
+    # Invalidate catalog & recommendation caches
+    from app.services.cache_service import cache
+    await cache.invalidate_pattern("catalog:*")
+    await cache.invalidate_pattern("rec:*")
+
     return rating_record
 
 

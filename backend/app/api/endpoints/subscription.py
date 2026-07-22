@@ -193,6 +193,9 @@ async def cancel_subscription(
     sub.end_date = datetime.now(timezone.utc)
     sub.updated_at = datetime.now(timezone.utc)
 
+    # Keep legacy column in sync
+    current_user.subscription_plan = "free"
+
     await db.commit()
     await db.refresh(sub)
     return sub

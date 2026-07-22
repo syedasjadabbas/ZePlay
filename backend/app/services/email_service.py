@@ -10,12 +10,14 @@ logger = logging.getLogger("email_service")
 
 
 def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
-    """Synchronous SMTP email delivery using smtplib and STARTTLS."""
+    """Synchronous SMTP email delivery using smtplib and STARTTLS with detailed logs."""
     host = settings.SMTP_HOST or "smtp.gmail.com"
     port = settings.SMTP_PORT or 587
     user = settings.SMTP_USERNAME
     password = (settings.SMTP_PASSWORD or "").replace(" ", "")
     from_email = settings.SMTP_FROM or user or "noreply@zeplay.dev"
+
+    logger.info(f"Initiating SMTP mail transfer to {to_email} via {host}:{port}")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -23,11 +25,20 @@ def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
     msg["To"] = to_email
     msg.attach(MIMEText(html_content, "html"))
 
-    with smtplib.SMTP(host, port, timeout=15.0) as server:
-        server.starttls()
-        server.login(user, password)
-        server.sendmail(from_email, [to_email], msg.as_string())
-    return True
+    try:
+        logger.info(f"Connecting to SMTP server at {host}:{port}...")
+        with smtplib.SMTP(host, port, timeout=15.0) as server:
+            logger.info("SMTP socket connected. Starting TLS handshake...")
+            server.starttls()
+            logger.info(f"TLS established. Authenticating as user: {user}...")
+            server.login(user, password)
+            logger.info(f"Authentication succeeded. Sending message to: {to_email}...")
+            server.sendmail(from_email, [to_email], msg.as_string())
+            logger.info(f"Message successfully transferred to MTA for recipient: {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Detailed SMTP error during transmission: {e}", exc_info=True)
+        raise e
 
 
 async def send_email(to_email: str, subject: str, html_content: str) -> bool:
@@ -36,7 +47,6 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
     If SMTP credentials are not configured, it writes to a local log file
     so development links can be easily retrieved.
     """
-    # Write to local file for debug
     log_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     log_file_path = os.path.join(log_dir, "local_emails.log")
     
@@ -45,18 +55,17 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
                 f"SUBJECT: {subject}\n" \
                 f"BODY:\n{html_content}\n" \
                 f"========================================\n\n"
-                
-    try:
-        with open(log_file_path, "a", encoding="utf-8") as f:
-            f.write(log_entry)
-        logger.info(f"Local email copy logged to {log_file_path}")
-    except Exception as e:
-        logger.error(f"Failed to log email locally: {e}")
 
     # Check if SMTP service is configured
     smtp_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
     if not smtp_configured:
         logger.warning("SMTP_USERNAME / SMTP_PASSWORD not configured. Skipping real email delivery.")
+        try:
+            with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+            logger.info(f"Local email copy logged to {log_file_path}")
+        except Exception as e:
+            logger.error(f"Failed to log email locally: {e}")
         print(f"\n[EMAIL SIMULATOR] Sent email to {to_email}. Inspect 'local_emails.log' for links.\n")
         return True
 
@@ -77,9 +86,10 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         )
         print(banner)
 
-        # Append the error to the local log so it's traceable offline
+        # Append the email content and error to the local log so it's traceable offline
         try:
             with open(log_file_path, "a", encoding="utf-8") as f:
+                f.write(log_entry)
                 f.write(f"[SMTP ERROR] For {to_email}: {e}\n\n")
         except Exception:
             pass
