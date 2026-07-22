@@ -49,9 +49,10 @@ const Settings: React.FC = () => {
     // Load subscription plan info
     api.get('/subscription/current')
       .then((res) => {
-        if (res.data?.plan) {
-          setPlanName(res.data.plan.name);
-          setPlanMaxProfiles(res.data.plan.max_profiles);
+        if (res.data) {
+          const isActive = res.data.status === 'active';
+          setPlanName(isActive && res.data.plan?.name ? res.data.plan.name : 'free');
+          setPlanMaxProfiles(isActive && res.data.plan?.max_profiles ? res.data.plan.max_profiles : 1);
         }
       })
       .catch(() => {});

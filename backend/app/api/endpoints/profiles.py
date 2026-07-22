@@ -19,12 +19,17 @@ router = APIRouter()
 async def _get_profile_limit(db: AsyncSession, user: User) -> int:
     """Return the maximum number of profiles allowed for the user's active plan."""
     sub_result = await db.execute(
-        select(UserSubscription).filter(UserSubscription.user_id == str(user.user_id))
+        select(UserSubscription).filter(
+            UserSubscription.user_id == str(user.user_id),
+            UserSubscription.status == "active"
+        )
     )
     sub = sub_result.scalars().first()
     if sub and sub.plan:
         return sub.plan.max_profiles
-    # Default to Free limit if no subscription record exists
+    # Fallback to legacy field if active subscription model is missing or cancelled
+    if user.subscription_plan == "premium":
+        return 4
     return 1
 
 
