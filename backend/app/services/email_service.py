@@ -10,35 +10,54 @@ logger = logging.getLogger("email_service")
 
 
 def _send_smtp_sync(to_email: str, subject: str, html_content: str) -> bool:
-    """Synchronous SMTP email delivery using smtplib and STARTTLS with detailed logs."""
+    """
+    Synchronous SMTP email delivery.
+
+    Strategy:
+      1. Try port 465 with SMTP_SSL (implicit TLS) — works on Render and most cloud hosts.
+      2. Fall back to port 587 with STARTTLS — works on most local / office networks.
+
+    Gmail App Password must be used (spaces are stripped automatically).
+    """
     host = settings.SMTP_HOST or "smtp.gmail.com"
-    port = settings.SMTP_PORT or 587
     user = settings.SMTP_USERNAME
     password = (settings.SMTP_PASSWORD or "").replace(" ", "")
     from_email = settings.SMTP_FROM or user or "noreply@zeplay.dev"
 
-    logger.info(f"Initiating SMTP mail transfer to {to_email} via {host}:{port}")
-
+    # Build the message once
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = f"ZePlay <{from_email}>"
     msg["To"] = to_email
     msg.attach(MIMEText(html_content, "html"))
+    raw_msg = msg.as_string()
 
+    # ── Attempt 1: Port 465 implicit SSL ──────────────────────────────────────
     try:
-        logger.info(f"Connecting to SMTP server at {host}:{port}...")
-        with smtplib.SMTP(host, port, timeout=15.0) as server:
-            logger.info("SMTP socket connected. Starting TLS handshake...")
-            server.starttls()
-            logger.info(f"TLS established. Authenticating as user: {user}...")
+        logger.info(f"[SMTP] Attempting SSL on {host}:465 for {to_email}")
+        with smtplib.SMTP_SSL(host, 465, timeout=10.0) as server:
+            server.ehlo()
             server.login(user, password)
-            logger.info(f"Authentication succeeded. Sending message to: {to_email}...")
-            server.sendmail(from_email, [to_email], msg.as_string())
-            logger.info(f"Message successfully transferred to MTA for recipient: {to_email}")
+            server.sendmail(from_email, [to_email], raw_msg)
+        logger.info(f"[SMTP] ✓ Delivered via SSL:465 to {to_email}")
         return True
-    except Exception as e:
-        logger.error(f"Detailed SMTP error during transmission: {e}", exc_info=True)
-        raise e
+    except Exception as ssl_err:
+        logger.warning(f"[SMTP] SSL:465 failed ({type(ssl_err).__name__}: {ssl_err}). Trying STARTTLS:587 ...")
+
+    # ── Attempt 2: Port 587 STARTTLS ─────────────────────────────────────────
+    try:
+        logger.info(f"[SMTP] Attempting STARTTLS on {host}:587 for {to_email}")
+        with smtplib.SMTP(host, 587, timeout=10.0) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(user, password)
+            server.sendmail(from_email, [to_email], raw_msg)
+        logger.info(f"[SMTP] ✓ Delivered via STARTTLS:587 to {to_email}")
+        return True
+    except Exception as tls_err:
+        logger.error(f"[SMTP] STARTTLS:587 also failed ({type(tls_err).__name__}: {tls_err})", exc_info=True)
+        raise tls_err
 
 
 async def send_email(to_email: str, subject: str, html_content: str) -> bool:
