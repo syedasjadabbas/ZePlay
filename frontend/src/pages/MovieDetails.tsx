@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
-import api from '../services/api';
+import api, { API_ORIGIN } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -201,8 +201,7 @@ const MovieDetails: React.FC = () => {
     if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
       return urlPath;
     }
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-    return `${baseUrl.replace('/api', '')}${urlPath}`;
+    return `${API_ORIGIN}${urlPath}`;
   };
 
   // Helper to report current playback progress to API
