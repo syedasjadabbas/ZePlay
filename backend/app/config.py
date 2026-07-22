@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
     
     # Resend email and frontend settings
+    EMAIL_PROVIDER: str = "resend"
+    EMAIL_FROM: str = "noreply@zeploy.tech"
     RESEND_API_KEY: str = ""
     RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
     FRONTEND_URL: str = "http://localhost:5173"
