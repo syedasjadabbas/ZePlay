@@ -23,6 +23,7 @@ class Profile(Base):
     avatar_url = Column(String, nullable=True)
     is_kids_profile = Column(Boolean, default=False, nullable=False)
     language_pref = Column(String, default="en", nullable=False)
+    pin = Column(String(4), nullable=True)
     
     created_at = Column(
         DateTime(timezone=True),
@@ -32,3 +33,7 @@ class Profile(Base):
 
     # Back-reference relationship to parent User
     user = relationship("User", back_populates="profiles")
+
+    @property
+    def has_pin(self) -> bool:
+        return bool(self.pin)

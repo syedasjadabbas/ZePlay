@@ -207,3 +207,98 @@ async def test_cannot_delete_last_profile(client: AsyncClient, db_session: Async
     assert "Cannot delete the last remaining profile" in del_res.json()["detail"]
 
 
+async def test_profile_pin_protection_flow(client: AsyncClient, db_session: AsyncSession):
+    """Test full flow of setting, verifying, modifying, and clearing a profile PIN."""
+    token = await create_test_user_and_get_token(client, db_session, "pin_test@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Create a profile with an invalid PIN (non-numeric)
+    bad_res1 = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Pin Fail 1", "pin": "abcd"},
+        headers=headers
+    )
+    assert bad_res1.status_code == 422  # Validation error
+
+    # 2. Create a profile with an invalid PIN (too short)
+    bad_res2 = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Pin Fail 2", "pin": "123"},
+        headers=headers
+    )
+    assert bad_res2.status_code == 422
+
+    # 3. Create a profile with a valid 4-digit PIN
+    create_res = await client.post(
+        "/api/profiles/",
+        json={"display_name": "Locked Profile", "pin": "1234"},
+        headers=headers
+    )
+    assert create_res.status_code == 201
+    profile = create_res.json()
+    assert profile["has_pin"] is True
+    assert "pin" not in profile  # ensure plain text pin is not returned
+    profile_id = profile["profile_id"]
+
+    # 4. Verify PIN with correct pin
+    verify_ok = await client.post(
+        f"/api/profiles/{profile_id}/verify-pin",
+        json={"pin": "1234"},
+        headers=headers
+    )
+    assert verify_ok.status_code == 200
+    assert verify_ok.json()["success"] is True
+
+    # 5. Verify PIN with incorrect pin
+    verify_fail = await client.post(
+        f"/api/profiles/{profile_id}/verify-pin",
+        json={"pin": "9999"},
+        headers=headers
+    )
+    assert verify_fail.status_code == 403
+    assert "Incorrect profile PIN" in verify_fail.json()["detail"]
+
+    # 6. Update PIN to a new value
+    update_res = await client.put(
+        f"/api/profiles/{profile_id}",
+        json={"pin": "5678"},
+        headers=headers
+    )
+    assert update_res.status_code == 200
+    assert update_res.json()["has_pin"] is True
+
+    # Verify old PIN fails and new one works
+    verify_old = await client.post(
+        f"/api/profiles/{profile_id}/verify-pin",
+        json={"pin": "1234"},
+        headers=headers
+    )
+    assert verify_old.status_code == 403
+
+    verify_new = await client.post(
+        f"/api/profiles/{profile_id}/verify-pin",
+        json={"pin": "5678"},
+        headers=headers
+    )
+    assert verify_new.status_code == 200
+
+    # 7. Convert profile to kids profile and verify PIN is cleared
+    kids_update = await client.put(
+        f"/api/profiles/{profile_id}",
+        json={"is_kids_profile": True},
+        headers=headers
+    )
+    assert kids_update.status_code == 200
+    assert kids_update.json()["is_kids_profile"] is True
+    assert kids_update.json()["has_pin"] is False
+
+    # Verify no PIN is required anymore
+    verify_kids = await client.post(
+        f"/api/profiles/{profile_id}/verify-pin",
+        json={"pin": "5678"},
+        headers=headers
+    )
+    assert verify_kids.status_code == 200
+    assert "does not require a PIN" in verify_kids.json()["message"]
+
+

@@ -8,6 +8,7 @@ interface ProfileData {
   avatar_url: string | null;
   is_kids_profile: boolean;
   language_pref: string;
+  has_pin?: boolean;
 }
 
 interface Toast {
@@ -36,6 +37,15 @@ const Profiles: React.FC = () => {
   const [newLang, setNewLang] = useState('en');
   const [newEmoji, setNewEmoji] = useState('🍿');
   const [editEmoji, setEditEmoji] = useState('🍿');
+
+  // PIN states
+  const [newRequirePin, setNewRequirePin] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [profileToUnlock, setProfileToUnlock] = useState<ProfileData | null>(null);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [isVerifyingPin, setIsVerifyingPin] = useState(false);
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,18 +105,54 @@ const Profiles: React.FC = () => {
       setNewIsKids(profile.is_kids_profile);
       setNewLang(profile.language_pref);
       setEditEmoji(profile.avatar_url || '🍿');
+      setNewRequirePin(!!profile.has_pin);
+      setNewPin('');
       setShowEditModal(true);
     } else {
-      localStorage.setItem('selectedProfileId', profile.profile_id);
-      localStorage.setItem('selectedProfileName', profile.display_name);
-      localStorage.setItem('selectedProfileAvatar', profile.avatar_url || '🍿');
+      if (profile.has_pin) {
+        setProfileToUnlock(profile);
+        setEnteredPin('');
+        setPinError(null);
+        setShowPinPrompt(true);
+      } else {
+        localStorage.setItem('selectedProfileId', profile.profile_id);
+        localStorage.setItem('selectedProfileName', profile.display_name);
+        localStorage.setItem('selectedProfileAvatar', profile.avatar_url || '🍿');
+        navigate('/');
+      }
+    }
+  };
+
+  const handleVerifyPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileToUnlock || enteredPin.length !== 4) return;
+
+    setIsVerifyingPin(true);
+    setPinError(null);
+    try {
+      await api.post(`/profiles/${profileToUnlock.profile_id}/verify-pin`, { pin: enteredPin });
+      localStorage.setItem('selectedProfileId', profileToUnlock.profile_id);
+      localStorage.setItem('selectedProfileName', profileToUnlock.display_name);
+      localStorage.setItem('selectedProfileAvatar', profileToUnlock.avatar_url || '🍿');
+      setShowPinPrompt(false);
+      setProfileToUnlock(null);
+      setEnteredPin('');
       navigate('/');
+    } catch (err: any) {
+      setPinError(err.response?.data?.detail || "Incorrect PIN. Please try again.");
+      setEnteredPin('');
+    } finally {
+      setIsVerifyingPin(false);
     }
   };
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDisplayName.trim()) return;
+    if (newRequirePin && !/^\d{4}$/.test(newPin)) {
+      showToast('PIN must be exactly 4 digits.', 'error');
+      return;
+    }
 
     try {
       await api.post('/profiles/', {
@@ -114,6 +160,7 @@ const Profiles: React.FC = () => {
         is_kids_profile: newIsKids,
         language_pref: newLang,
         avatar_url: newEmoji,
+        pin: newRequirePin ? newPin : null,
       });
       setShowCreateModal(false);
       resetForm();
@@ -127,14 +174,28 @@ const Profiles: React.FC = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProfile || !newDisplayName.trim()) return;
+    if (newRequirePin && newPin && !/^\d{4}$/.test(newPin)) {
+      showToast('PIN must be exactly 4 digits.', 'error');
+      return;
+    }
 
     try {
-      await api.put(`/profiles/${selectedProfile.profile_id}`, {
+      const payload: any = {
         display_name: newDisplayName,
         is_kids_profile: newIsKids,
         language_pref: newLang,
         avatar_url: editEmoji,
-      });
+      };
+
+      if (newRequirePin) {
+        if (newPin) {
+          payload.pin = newPin;
+        }
+      } else {
+        payload.pin = null;
+      }
+
+      await api.put(`/profiles/${selectedProfile.profile_id}`, payload);
 
       const activeProfileId = localStorage.getItem('selectedProfileId');
       if (activeProfileId === selectedProfile.profile_id) {
@@ -204,6 +265,8 @@ const Profiles: React.FC = () => {
     setNewIsKids(false);
     setNewLang('en');
     setNewEmoji('🍿');
+    setNewRequirePin(false);
+    setNewPin('');
   };
 
   return (
@@ -307,6 +370,9 @@ const Profiles: React.FC = () => {
                       {profile.is_kids_profile && (
                         <span className="text-[8px] bg-brand-accent/15 border border-brand-accent/30 text-brand-accent font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">KIDS</span>
                       )}
+                      {profile.has_pin && (
+                        <span className="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">🔒</span>
+                      )}
                     </span>
                   </div>
                 );
@@ -408,13 +474,55 @@ const Profiles: React.FC = () => {
                   type="checkbox"
                   id="kids-opt"
                   checked={newIsKids}
-                  onChange={(e) => setNewIsKids(e.target.checked)}
+                  onChange={(e) => {
+                    setNewIsKids(e.target.checked);
+                    if (e.target.checked) {
+                      setNewRequirePin(false);
+                      setNewPin('');
+                    }
+                  }}
                   className="w-5 h-5 accent-brand-accent cursor-pointer rounded border-white/5"
                 />
                 <label htmlFor="kids-opt" className="text-xs cursor-pointer select-none text-brand-textMuted font-semibold">
                   Enable Kids Controls
                 </label>
               </div>
+
+              {!newIsKids && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="pin-opt"
+                      checked={newRequirePin}
+                      onChange={(e) => {
+                        setNewRequirePin(e.target.checked);
+                        if (!e.target.checked) setNewPin('');
+                      }}
+                      className="w-5 h-5 accent-brand-accent cursor-pointer rounded border-white/5"
+                    />
+                    <label htmlFor="pin-opt" className="text-xs cursor-pointer select-none text-brand-textMuted font-semibold">
+                      Require 4-digit PIN to access profile
+                    </label>
+                  </div>
+                  {newRequirePin && (
+                    <div>
+                      <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Profile PIN</label>
+                      <input
+                        type="password"
+                        pattern="\d*"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="4-digit PIN"
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                        required={newRequirePin}
+                        className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Language Preference</label>
@@ -494,13 +602,57 @@ const Profiles: React.FC = () => {
                   type="checkbox"
                   id="kids-edit"
                   checked={newIsKids}
-                  onChange={(e) => setNewIsKids(e.target.checked)}
+                  onChange={(e) => {
+                    setNewIsKids(e.target.checked);
+                    if (e.target.checked) {
+                      setNewRequirePin(false);
+                      setNewPin('');
+                    }
+                  }}
                   className="w-5 h-5 accent-brand-accent cursor-pointer rounded border-white/5"
                 />
                 <label htmlFor="kids-edit" className="text-xs cursor-pointer select-none text-brand-textMuted font-semibold">
                   Enable Kids Controls
                 </label>
               </div>
+
+              {!newIsKids && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="pin-edit"
+                      checked={newRequirePin}
+                      onChange={(e) => {
+                        setNewRequirePin(e.target.checked);
+                        if (!e.target.checked) setNewPin('');
+                      }}
+                      className="w-5 h-5 accent-brand-accent cursor-pointer rounded border-white/5"
+                    />
+                    <label htmlFor="pin-edit" className="text-xs cursor-pointer select-none text-brand-textMuted font-semibold">
+                      Require 4-digit PIN to access profile
+                    </label>
+                  </div>
+                  {newRequirePin && (
+                    <div>
+                      <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
+                        New Profile PIN {selectedProfile.has_pin && '(leave blank to keep current)'}
+                      </label>
+                      <input
+                        type="password"
+                        pattern="\d*"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder={selectedProfile.has_pin ? "••••" : "4-digit PIN"}
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                        required={newRequirePin && !selectedProfile.has_pin}
+                        className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">Language Preference</label>
@@ -592,6 +744,74 @@ const Profiles: React.FC = () => {
                 ) : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Prompt Modal */}
+      {showPinPrompt && profileToUnlock && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-md animate-[fadeIn_0.2s_ease]">
+          <div className="bg-brand-surface border border-white/5 w-full max-w-sm p-8 rounded-3xl shadow-2xl text-center space-y-6 transform scale-100 transition-transform">
+            <div className="space-y-2">
+              {/* Profile Avatar display */}
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center text-4xl mx-auto shadow-lg select-none">
+                {profileToUnlock.avatar_url || '🍿'}
+              </div>
+              <h3 className="text-xl font-bold text-white font-display uppercase tracking-wider">
+                Profile Locked
+              </h3>
+              <p className="text-xs text-brand-textMuted max-w-xs mx-auto">
+                Enter the 4-digit PIN to access <span className="text-white font-bold">{profileToUnlock.display_name}</span>.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPin} className="space-y-6">
+              <div className="flex flex-col items-center">
+                <input
+                  type="password"
+                  pattern="\d*"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="••••"
+                  value={enteredPin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setEnteredPin(val);
+                  }}
+                  autoFocus
+                  required
+                  disabled={isVerifyingPin}
+                  className="w-44 text-center bg-[#101C40] text-white border border-white/10 rounded-2xl px-4 py-3 text-3xl tracking-[0.5em] focus:outline-none focus:border-brand-accent/60 font-mono transition-all placeholder:text-white/20"
+                />
+                {pinError && (
+                  <p className="text-rose-400 text-xs font-semibold mt-3 animate-pulse">
+                    {pinError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPinPrompt(false);
+                    setProfileToUnlock(null);
+                    setEnteredPin('');
+                    setPinError(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isVerifyingPin || enteredPin.length !== 4}
+                  className="flex-1 px-4 py-2.5 bg-brand-accent hover:bg-blue-600 disabled:bg-brand-accent/40 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+                >
+                  {isVerifyingPin ? 'Verifying...' : 'Unlock'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

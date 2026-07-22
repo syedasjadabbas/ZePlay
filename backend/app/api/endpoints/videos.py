@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.schemas.video import VideoResponse, VideoStreamInfo
 from app.services import video_storage_service, video_processing_service
+from app.services.audit_log_service import log_event
 from app.models.video import Video
 from app.api import deps
 
@@ -51,6 +52,13 @@ async def upload_video(
     video = await video_storage_service.save_uploaded_video(db, file, movie_id)
     # Process video into HLS VOD package
     processed_video = await video_processing_service.process_video_to_hls(db, video.video_id)
+    await log_event(
+        db,
+        action="video_upload",
+        details=f"Video asset '{processed_video.original_filename}' uploaded and HLS processing completed.",
+        performed_by=current_user.user_id,
+        metadata_dict={"video_id": str(processed_video.video_id), "filename": processed_video.filename}
+    )
     return build_video_response(processed_video)
 
 @router.post("/admin/{video_id}/process-hls", response_model=VideoResponse)
@@ -165,7 +173,7 @@ async def delete_video(
 ):
     """Admin endpoint to delete a video asset and its physical HLS directory on disk."""
     video = await video_storage_service.get_video_by_id(db, video_id)
-    
+    video_filename = video.original_filename
     # Remove HLS directory if present
     if video.hls_path and os.path.exists(video.hls_path):
         try:
@@ -174,4 +182,11 @@ async def delete_video(
             pass
 
     await video_storage_service.delete_video_asset(db, video_id)
+    await log_event(
+        db,
+        action="video_delete",
+        details=f"Video asset '{video_filename}' deleted.",
+        performed_by=current_user.user_id,
+        metadata_dict={"video_id": str(video_id), "original_filename": video_filename}
+    )
     return None

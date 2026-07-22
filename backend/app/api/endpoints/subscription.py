@@ -16,6 +16,7 @@ from app.schemas.subscription import (
     DowngradeRequest,
 )
 from app.api import deps
+from app.services.audit_log_service import log_event
 
 router = APIRouter()
 
@@ -116,6 +117,14 @@ async def upgrade_subscription(
 
     await db.commit()
     await db.refresh(sub)
+
+    await log_event(
+        db,
+        action="subscription_upgrade",
+        details=f"Subscription upgraded to '{new_plan.name}'.",
+        performed_by=current_user.user_id,
+        metadata_dict={"plan_name": new_plan.name}
+    )
     return sub
 
 
@@ -168,6 +177,14 @@ async def downgrade_subscription(
 
     await db.commit()
     await db.refresh(sub)
+
+    await log_event(
+        db,
+        action="subscription_downgrade",
+        details=f"Subscription downgraded to '{new_plan.name}'.",
+        performed_by=current_user.user_id,
+        metadata_dict={"plan_name": new_plan.name}
+    )
     return sub
 
 
@@ -198,4 +215,12 @@ async def cancel_subscription(
 
     await db.commit()
     await db.refresh(sub)
+
+    await log_event(
+        db,
+        action="subscription_cancel",
+        details="Subscription cancelled.",
+        performed_by=current_user.user_id,
+        metadata_dict={}
+    )
     return sub

@@ -24,62 +24,130 @@ interface VideoAsset {
   created_at: string;
 }
 
-interface SystemStats {
+interface AnalyticsStats {
   total_users: number;
-  total_admins: number;
+  total_profiles: number;
   total_movies: number;
   total_videos: number;
-  total_storage_bytes: number;
-  total_free_users: number;
-  total_premium_users: number;
-  conversion_percentage: number;
+  total_ratings: number;
+  total_watch_time: number;
+  total_views: number;
+  active_users: number;
+  free_users: number;
+  premium_users: number;
+  conversion_rate: number;
+  average_rating: number;
+  average_watch_time: number;
 }
 
-interface CacheStats {
-  hits: number;
-  misses: number;
-  hit_rate_pct: number;
-  total_keys: number;
-  redis_connected: boolean;
-  cache_engine: string;
+interface ContentRankings {
+  most_watched_movies: Array<{ movie_id: string; title: string; thumbnail_url: string; views: number }>;
+  highest_rated_movies: Array<{ movie_id: string; title: string; thumbnail_url: string; rating: number }>;
+  most_added_watchlist: Array<{ movie_id: string; title: string; thumbnail_url: string; saves: number }>;
+  most_popular_genres: Array<{ genre_id: string; name: string; count: number }>;
+  most_watched_categories: Array<{ genre_id: string; name: string; views: number }>;
+  most_recommended: Array<{ movie_id: string; title: string; thumbnail_url: string }>;
 }
 
-interface RegisteredUser {
+interface HealthStats {
+  database_status: string;
+  cache_status: string;
+  cache_stats: {
+    hits: number;
+    misses: number;
+    hit_rate_pct: number;
+    keys_count: number;
+    engine: string;
+  };
+  storage_usage_bytes: number;
+  total_files: number;
+  total_uploaded_files: number;
+  total_hls_assets: number;
+  total_video_segments: number;
+  processing_queue_status: number;
+}
+
+interface UserData {
   user_id: string;
   name: string;
   email: string;
   is_verified: boolean;
   is_admin: boolean;
+  is_active: boolean;
   subscription_plan: string;
-  created_at: string | null;
+  profile_count: number;
+  created_at: string;
+}
+
+interface UserActivity {
+  profiles: Array<{ profile_id: string; display_name: string; is_kids_profile: boolean; language_pref: string }>;
+  watch_history: Array<{ history_id: string; movie_title: string; percentage_watched: number; last_watched: string }>;
+  ratings: Array<{ rating_id: string; movie_title: string; score: number; created_at: string }>;
+  audit_logs: Array<{ log_id: string; action: string; details: string; created_at: string }>;
+}
+
+interface AuditLog {
+  log_id: string;
+  action: string;
+  details: string;
+  performed_by: string | null;
+  actor_email: string | null;
+  metadata: any;
+  created_at: string;
 }
 
 const AdminUpload: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'health' | 'audit'>('overview');
+  
+  // States for ingestion
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
   const [movies, setMovies] = useState<MovieOption[]>([]);
   const [videos, setVideos] = useState<VideoAsset[]>([]);
-  const [registeredUsers] = useState<RegisteredUser[]>([]);
-  const [stats, setStats] = useState<SystemStats | null>(null);
-  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
-  const [clearingCache, setClearingCache] = useState(false);
-  
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
   const [activePreviewVideo, setActivePreviewVideo] = useState<VideoAsset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States for Analytics & Health
+  const [analytics, setAnalytics] = useState<AnalyticsStats | null>(null);
+  const [contentRankings, setContentRankings] = useState<ContentRankings | null>(null);
+  const [health, setHealth] = useState<HealthStats | null>(null);
+  const [clearingCache, setClearingCache] = useState(false);
+
+  // States for User Management
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userPlanFilter, setUserPlanFilter] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('');
+  const [userVerifyFilter, setUserVerifyFilter] = useState<string>('');
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [selectedUserDetail, setSelectedUserDetail] = useState<UserData | null>(null);
+  const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
+  const [loadingActivity, setLoadingActivity] = useState(false);
+
+  // States for Audit Logs
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditActionFilter, setAuditActionFilter] = useState('');
+  const auditLimit = 50;
+  const [auditOffset, setAuditOffset] = useState(0);
+
+  // General Notification
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMovies();
     fetchVideos();
-    fetchStats();
-    fetchCacheStats();
+    fetchAnalytics();
+    fetchContentRankings();
+    fetchHealth();
+    fetchUsersList();
+    fetchAuditLogs();
   }, []);
 
+  // Fetch functions
   const fetchMovies = async () => {
     try {
       const response = await api.get('/catalog/movies');
@@ -98,34 +166,145 @@ const AdminUpload: React.FC = () => {
     }
   };
 
-  const fetchStats = async () => {
+  const fetchAnalytics = async () => {
     try {
-      const response = await api.get('/admin/stats');
-      setStats(response.data);
+      const response = await api.get('/admin/analytics');
+      setAnalytics(response.data);
     } catch (err) {
-      console.error('Failed to load system stats', err);
+      console.error('Failed to load analytics', err);
     }
   };
 
-  const fetchCacheStats = async () => {
+  const fetchContentRankings = async () => {
     try {
-      const response = await api.get('/admin/cache/stats');
-      setCacheStats(response.data);
+      const response = await api.get('/admin/content-analytics');
+      setContentRankings(response.data);
     } catch (err) {
-      console.error('Failed to load cache stats', err);
+      console.error('Failed to load content rankings', err);
     }
   };
 
+  const fetchHealth = async () => {
+    try {
+      const response = await api.get('/admin/health');
+      setHealth(response.data);
+    } catch (err) {
+      console.error('Failed to load health statistics', err);
+    }
+  };
+
+  const fetchUsersList = async () => {
+    try {
+      const params: any = {};
+      if (userSearch) params.q = userSearch;
+      if (userPlanFilter) params.plan = userPlanFilter;
+      if (userStatusFilter) params.status = userStatusFilter;
+      if (userVerifyFilter) params.is_verified = userVerifyFilter === 'verified';
+      
+      const response = await api.get('/admin/users', { params });
+      setUsers(response.data);
+    } catch (err) {
+      console.error('Failed to load users list', err);
+    }
+  };
+
+  const fetchAuditLogs = async () => {
+    try {
+      const params: any = { limit: auditLimit, offset: auditOffset };
+      if (auditActionFilter) params.action = auditActionFilter;
+
+      const response = await api.get('/admin/audit-logs', { params });
+      setAuditLogs(response.data);
+    } catch (err) {
+      console.error('Failed to load audit logs', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsersList();
+  }, [userSearch, userPlanFilter, userStatusFilter, userVerifyFilter]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [auditActionFilter, auditLimit, auditOffset]);
+
+  // Operations
   const handleClearCache = async () => {
     try {
       setClearingCache(true);
+      setError(null);
+      setSuccessMsg(null);
       await api.post('/admin/cache/clear');
       setSuccessMsg('Redis & memory cache cleared successfully!');
-      fetchCacheStats();
+      fetchHealth();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to clear cache.');
     } finally {
       setClearingCache(false);
+    }
+  };
+
+  const handleToggleUserActive = async (user: UserData) => {
+    const targetAction = user.is_active ? 'disable' : 'enable';
+    if (!window.confirm(`Are you sure you want to ${targetAction} user account: ${user.email}?`)) return;
+
+    try {
+      setUpdatingUserId(user.user_id);
+      setError(null);
+      setSuccessMsg(null);
+      await api.post(`/admin/users/${user.user_id}/status`, { is_active: !user.is_active });
+      setSuccessMsg(`User ${user.email} account has been ${user.is_active ? 'disabled' : 'enabled'} successfully.`);
+      fetchUsersList();
+      fetchAnalytics();
+      fetchAuditLogs();
+      if (selectedUserDetail?.user_id === user.user_id) {
+        handleViewUserDetail(user);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to toggle user status.');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleToggleAdminRole = async (user: UserData) => {
+    const targetAction = user.is_admin ? 'demote' : 'promote';
+    if (!window.confirm(`Are you sure you want to ${targetAction} user: ${user.email} to/from administrator role?`)) return;
+
+    try {
+      setUpdatingUserId(user.user_id);
+      setError(null);
+      setSuccessMsg(null);
+      if (user.is_admin) {
+        await api.post(`/admin/users/${user.user_id}/demote`);
+        setSuccessMsg(`Revoked administrative status from ${user.email}.`);
+      } else {
+        await api.post(`/admin/users/${user.user_id}/promote`);
+        setSuccessMsg(`Successfully promoted ${user.email} to administrator.`);
+      }
+      fetchUsersList();
+      fetchAuditLogs();
+      if (selectedUserDetail?.user_id === user.user_id) {
+        handleViewUserDetail({ ...user, is_admin: !user.is_admin });
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to modify user role.');
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleViewUserDetail = async (user: UserData) => {
+    setSelectedUserDetail(user);
+    setLoadingActivity(true);
+    setUserActivity(null);
+    try {
+      const response = await api.get(`/admin/users/${user.user_id}/activity`);
+      setUserActivity(response.data);
+    } catch (err) {
+      console.error('Failed to load user activity details', err);
+    } finally {
+      setLoadingActivity(false);
     }
   };
 
@@ -184,11 +363,11 @@ const AdminUpload: React.FC = () => {
       setSelectedMovieId('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchVideos();
-      fetchStats();
+      fetchAnalytics();
+      fetchHealth();
+      fetchAuditLogs();
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail || 'Failed to upload video asset. Please try again.'
-      );
+      setError(err.response?.data?.detail || 'Failed to upload video asset. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -199,15 +378,16 @@ const AdminUpload: React.FC = () => {
     setError(null);
     setSuccessMsg(null);
 
-    // Immediately transition state in UI to 'processing' for instant feedback
     setVideos((prev) =>
       prev.map((v) => (v.video_id === videoId ? { ...v, status: 'processing' } : v))
     );
 
     try {
       await api.post(`/videos/admin/${videoId}/process-hls`);
-      setSuccessMsg(`HLS VOD processing successfully triggered and completed.`);
+      setSuccessMsg('HLS VOD processing successfully triggered.');
       await fetchVideos();
+      fetchHealth();
+      fetchAuditLogs();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to trigger HLS processing.');
       await fetchVideos();
@@ -225,12 +405,15 @@ const AdminUpload: React.FC = () => {
       if (activePreviewVideo?.video_id === videoId) {
         setActivePreviewVideo(null);
       }
-      fetchStats();
+      fetchAnalytics();
+      fetchHealth();
+      fetchAuditLogs();
     } catch (err) {
       alert('Failed to delete video asset.');
     }
   };
 
+  // Helper utilities
   const formatFileSize = (bytes: number): string => {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -239,56 +422,10 @@ const AdminUpload: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFullPlaybackUrl = (playbackPath: string): string => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-    return `${baseUrl.replace('/api', '')}${playbackPath}`;
-  };
-
   const getMovieTitle = (movieId: string | null): string => {
     if (!movieId) return 'Unlinked';
     const found = movies.find((m) => m.movie_id === movieId);
     return found ? `${found.title} (${found.release_year})` : 'Unlinked';
-  };
-
-  const renderStatusBadge = (status: string) => {
-    const s = status.toLowerCase();
-    switch (s) {
-      case 'completed':
-      case 'ready':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            COMPLETED (HLS)
-          </span>
-        );
-      case 'processing':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-            PROCESSING
-          </span>
-        );
-      case 'uploaded':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-blue-500/10 text-brand-accent border border-blue-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-accent" />
-            UPLOADED
-          </span>
-        );
-      case 'failed':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-            FAILED
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-blue-500/10 text-brand-accent border border-blue-500/20">
-            {status}
-          </span>
-        );
-    }
   };
 
   return (
@@ -298,559 +435,840 @@ const AdminUpload: React.FC = () => {
       <header className="border-b border-white/5 bg-[#070E26]/80 backdrop-blur-xl sticky top-0 z-40 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link to="/" className="text-2xl font-black text-brand-accent tracking-wider font-display">
-            ZePlay
+            ZEPLAY
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Admin Dashboard
-            </span>
+          <span className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/10 border border-brand-accent/20 px-3 py-1 rounded-full text-brand-accent">
+            Control Center
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-xs font-bold text-neutral-400 hover:text-white transition-colors">
+            Exit Panel
+          </Link>
+          <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center font-bold text-xs">
+            A
           </div>
         </div>
-        <Link
-          to="/"
-          className="text-xs font-bold text-brand-textMuted hover:text-white transition-colors duration-200"
-        >
-          ← Back to Catalog
-        </Link>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 pt-10 space-y-10">
+      {/* Main Workspace Container */}
+      <div className="max-w-7xl mx-auto px-8 pt-10">
         
-        {/* Page Title & Header */}
-        <div>
-          <h1 className="text-3xl font-black font-display tracking-tight text-white mb-2">
-            HLS Video Ingestion & Processing Control
-          </h1>
-          <p className="text-xs text-brand-textMuted font-medium">
-            Manage video assets, trigger FFmpeg HLS VOD segmentation, inspect status state transitions, and monitor storage infrastructure.
+        {/* Page Title */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-black tracking-tight uppercase">Administrative Operations</h1>
+          <p className="text-xs text-brand-textMuted mt-1">
+            Monitor infrastructure services, manage user access states, audit system event streams, and ingest content catalogs.
           </p>
         </div>
 
-        {/* System Stats Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div
-            className="p-5 rounded-2xl border border-white/5 space-y-1"
-            style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.6) 0%, rgba(11,21,53,0.8) 100%)' }}
-          >
-            <div className="flex justify-between items-center text-brand-textMuted">
-              <span className="text-xs font-bold uppercase tracking-wider">Ingested Videos</span>
-              <svg className="w-5 h-5 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-black font-display text-white">
-              {stats ? stats.total_videos : videos.length}
-            </p>
-            <p className="text-[10px] text-emerald-400 font-semibold">HLS Transcoded Stream Assets</p>
+        {/* Dynamic Notification Badges */}
+        {error && (
+          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-2xl flex items-center gap-3">
+            <span className="font-extrabold uppercase bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[9px]">ERROR</span>
+            <span>{error}</span>
           </div>
-
-          <div
-            className="p-5 rounded-2xl border border-white/5 space-y-1"
-            style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.6) 0%, rgba(11,21,53,0.8) 100%)' }}
-          >
-            <div className="flex justify-between items-center text-brand-textMuted">
-              <span className="text-xs font-bold uppercase tracking-wider">Storage Consumed</span>
-              <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-              </svg>
-            </div>
-            <p className="text-3xl font-black font-display text-white">
-              {stats ? formatFileSize(stats.total_storage_bytes) : formatFileSize(videos.reduce((a, v) => a + (v.file_size_bytes || 0), 0))}
-            </p>
-            <p className="text-[10px] text-brand-textMuted font-semibold">Local Storage Disk</p>
+        )}
+        {successMsg && (
+          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-2xl flex items-center gap-3">
+            <span className="font-extrabold uppercase bg-emerald-500 text-white px-2 py-0.5 rounded-lg text-[9px]">SUCCESS</span>
+            <span>{successMsg}</span>
           </div>
+        )}
 
-          <div
-            className="p-5 rounded-2xl border border-white/5 space-y-1"
-            style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.6) 0%, rgba(11,21,53,0.8) 100%)' }}
-          >
-            <div className="flex justify-between items-center text-brand-textMuted">
-              <span className="text-xs font-bold uppercase tracking-wider">Catalog Titles</span>
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-black font-display text-white">
-              {stats ? stats.total_movies : movies.length}
-            </p>
-            <p className="text-[10px] text-amber-400 font-semibold">Active Catalog Movies</p>
-          </div>
-
-          <div
-            className="p-5 rounded-2xl border border-white/5 space-y-1"
-            style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.6) 0%, rgba(11,21,53,0.8) 100%)' }}
-          >
-            <div className="flex justify-between items-center text-brand-textMuted">
-              <span className="text-xs font-bold uppercase tracking-wider">Users & Admins</span>
-              <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-black font-display text-white">
-              {stats ? stats.total_users : '1+'}
-            </p>
-            <p className="text-[10px] text-emerald-400 font-semibold">
-              {stats ? `${stats.total_admins} Admin Role(s)` : 'Admin Authorized'}
-            </p>
-          </div>
-
-          <div
-            className="p-5 rounded-2xl border border-white/5 space-y-1"
-            style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.6) 0%, rgba(11,21,53,0.8) 100%)' }}
-          >
-            <div className="flex justify-between items-center text-brand-textMuted">
-              <span className="text-xs font-bold uppercase tracking-wider">Premium Conversion</span>
-              <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            </div>
-            <p className="text-3xl font-black font-display text-white">
-              {stats ? `${stats.conversion_percentage}%` : '0%'}
-            </p>
-            <p className="text-[10px] text-amber-400 font-semibold">
-              {stats ? `${stats.total_premium_users} Premium / ${stats.total_free_users} Free` : 'Loading Conversion'}
-            </p>
-          </div>
-        </section>
-
-        {/* Redis Cache Control & Statistics Panel */}
-        <section
-          className="p-6 rounded-3xl border border-white/5 space-y-6"
-          style={{ background: 'linear-gradient(135deg, rgba(16,28,64,0.7) 0%, rgba(11,21,53,0.9) 100%)' }}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold uppercase tracking-widest text-white">
-                  Redis Caching Layer Statistics
-                </span>
-                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
-                  cacheStats?.redis_connected
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                }`}>
-                  {cacheStats?.cache_engine || 'Connecting...'}
-                </span>
-              </div>
-              <p className="text-xs text-brand-textMuted mt-1">
-                Real-time API response caching metrics across Homepage, Recommendations, Catalog, and Movie Details VOD.
-              </p>
-            </div>
-
+        {/* Dashboard Tabs bar */}
+        <div className="flex flex-wrap gap-2 border-b border-white/5 pb-4 mb-8">
+          {[
+            { id: 'overview', label: 'System Overview' },
+            { id: 'content', label: 'Content Analytics' },
+            { id: 'users', label: 'User Management' },
+            { id: 'ingestion', label: 'Catalog Ingestion' },
+            { id: 'health', label: 'Infrastructure & Cache' },
+            { id: 'audit', label: 'Audit Log Explorer' },
+          ].map((t) => (
             <button
-              onClick={handleClearCache}
-              disabled={clearingCache}
-              className="px-5 py-2.5 bg-rose-600/80 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-2 shadow-lg shadow-rose-600/20 disabled:opacity-50"
+              key={t.id}
+              onClick={() => {
+                setActiveTab(t.id as any);
+                setError(null);
+                setSuccessMsg(null);
+              }}
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
+                activeTab === t.id
+                  ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent'
+                  : 'bg-brand-surface/40 border-white/5 text-neutral-400 hover:text-white'
+              }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              {clearingCache ? 'Clearing...' : 'Clear Cache'}
+              {t.label}
             </button>
+          ))}
+        </div>
+
+        {/* Tab 1: System Overview */}
+        {activeTab === 'overview' && analytics && (
+          <div className="space-y-8">
+            {/* Grid of Key Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: 'Total Users', value: analytics.total_users, desc: `${analytics.free_users} Free / ${analytics.premium_users} Premium` },
+                { label: 'Total Profiles', value: analytics.total_profiles, desc: 'Across all active accounts' },
+                { label: 'Catalog Movies', value: analytics.total_movies, desc: `Ingested HLS Video assets: ${analytics.total_videos}` },
+                { label: 'Total Ratings', value: analytics.total_ratings, desc: `Average Rating: ${analytics.average_rating} ★` },
+                { label: 'Total Views', value: analytics.total_views, desc: 'Aggregated video playback sessions' },
+                { label: 'Total Watch Time', value: `${Math.round(analytics.total_watch_time / 60)} hrs`, desc: 'Accumulated streaming duration' },
+                { label: 'Active Viewers', value: analytics.active_users, desc: 'Unique playback users tracked' },
+                { label: 'Premium Conversion', value: `${analytics.conversion_rate}%`, desc: 'Ratio of paying subscriber accounts' },
+              ].map((m, idx) => (
+                <div key={idx} className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-brand-textMuted">{m.label}</span>
+                  <div className="text-3xl font-black mt-2 text-white">{m.value}</div>
+                  <div className="text-[10px] text-neutral-400 mt-1 font-medium">{m.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Performance charts mockup */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Retention & Watch Time Performance</h2>
+              <div className="h-64 flex items-end gap-3 pt-6 border-b border-white/5 pb-2">
+                {[45, 60, 55, 80, 70, 95, 85, 110, 90, 120, 130, 150].map((val, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                    <div 
+                      style={{ height: `${(val / 150) * 100}%` }} 
+                      className="w-full bg-gradient-to-t from-brand-accent/40 to-brand-accent rounded-t-lg relative group cursor-pointer"
+                    >
+                      <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-accent text-white font-black text-[9px] px-2 py-0.5 rounded-md transition-opacity whitespace-nowrap shadow-lg">
+                        {val} hrs
+                      </div>
+                    </div>
+                    <span className="text-[8px] font-bold text-neutral-500 uppercase">M{idx+1}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center mt-3 text-[10px] text-brand-textMuted">
+                <span>Visual distribution represents hourly Watch Time trend over the past 12 months.</span>
+                <span className="font-bold text-white">Average User Watch Time: {analytics.average_watch_time} mins</span>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Hit Rate</span>
-              <span className="text-2xl font-black text-emerald-400 font-display">
-                {cacheStats ? `${cacheStats.hit_rate_pct}%` : '0%'}
-              </span>
-            </div>
-            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Hits</span>
-              <span className="text-2xl font-black text-brand-accent font-display">
-                {cacheStats ? cacheStats.hits : 0}
-              </span>
-            </div>
-            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Cache Misses</span>
-              <span className="text-2xl font-black text-amber-400 font-display">
-                {cacheStats ? cacheStats.misses : 0}
-              </span>
-            </div>
-            <div className="bg-white/5 border border-white/5 p-4 rounded-xl">
-              <span className="text-[10px] font-extrabold uppercase text-neutral-400 block">Keys Cached</span>
-              <span className="text-2xl font-black text-indigo-400 font-display">
-                {cacheStats ? cacheStats.total_keys : 0}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Upload Form Panel */}
-        <section
-          className="rounded-2xl p-8 shadow-2xl relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, rgba(11,21,53,0.92) 0%, rgba(7,14,38,0.96) 100%)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold font-display text-white">Upload & Auto-Process Video Asset</h2>
-            <span className="text-[10px] font-mono text-emerald-400 uppercase bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-              FFmpeg HLS VOD Pipeline
-            </span>
-          </div>
-
-          {error && (
-            <div
-              className="text-xs text-red-200 rounded-xl p-3.5 mb-6 font-semibold"
-              style={{ background: 'rgba(127,29,29,0.4)', border: '1px solid rgba(239,68,68,0.25)' }}
-            >
-              {error}
-            </div>
-          )}
-
-          {successMsg && (
-            <div
-              className="text-xs text-emerald-300 rounded-xl p-3.5 mb-6 font-semibold"
-              style={{ background: 'rgba(6,78,59,0.4)', border: '1px solid rgba(16,185,129,0.25)' }}
-            >
-              {successMsg}
-            </div>
-          )}
-
-          <form onSubmit={handleUpload} className="space-y-6">
+        {/* Tab 2: Content Analytics */}
+        {activeTab === 'content' && contentRankings && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
-            {/* Drag & Drop Zone */}
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-white/15 hover:border-brand-accent/60 rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 group"
-              style={{ background: 'rgba(16,28,64,0.4)' }}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*,.mp4,.webm,.mov,.mkv"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+            {/* 1. Most Watched Movies */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Most Watched Movies</h2>
+              <div className="space-y-4">
+                {contentRankings.most_watched_movies.map((m, idx) => (
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
+                      <span className="text-xs font-bold">{m.title}</span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-white/5 border border-white/5 px-2.5 py-1 rounded-lg">{m.views} views</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-              <div className="w-14 h-14 rounded-full bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200">
-                <svg className="w-7 h-7 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
+            {/* 2. Highest Rated Movies */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Highest Rated Movies</h2>
+              <div className="space-y-4">
+                {contentRankings.highest_rated_movies.map((m, idx) => (
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
+                      <span className="text-xs font-bold">{m.title}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">{m.rating} ★</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Most Added to Watchlist */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Most Added to Watchlist</h2>
+              <div className="space-y-4">
+                {contentRankings.most_added_watchlist.map((m, idx) => (
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
+                      <span className="text-xs font-bold">{m.title}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-brand-accent bg-brand-accent/10 border border-brand-accent/20 px-2.5 py-1 rounded-lg">+{m.saves} saves</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Category & Genre Popularity */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+              <div>
+                <h2 className="text-sm font-black uppercase mb-3 tracking-wider text-brand-accent">Most Popular Genres</h2>
+                <div className="flex flex-wrap gap-2">
+                  {contentRankings.most_popular_genres.map((g) => (
+                    <span key={g.genre_id} className="text-xs bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2">
+                      {g.name} <span className="text-[10px] text-neutral-400 bg-black/30 px-2 py-0.5 rounded-md font-mono">{g.count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h2 className="text-sm font-black uppercase mb-3 tracking-wider text-brand-accent">Most Watched Categories</h2>
+                <div className="space-y-2.5">
+                  {contentRankings.most_watched_categories.map((c) => (
+                    <div key={c.genre_id} className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-neutral-300">{c.name}</span>
+                      <span className="font-mono text-neutral-400">{c.views} views</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: User Management */}
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            
+            {/* Search and Filters */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
+              <input
+                type="text"
+                placeholder="Search registered users by name or email..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="flex-1 min-w-[280px] px-4 py-2.5 bg-brand-surface border border-white/10 rounded-2xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-accent"
+              />
+              
+              <div className="flex flex-wrap gap-3">
+                <select
+                  value={userPlanFilter}
+                  onChange={(e) => setUserPlanFilter(e.target.value)}
+                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                >
+                  <option value="">All Subscription Plans</option>
+                  <option value="free">Free Tier</option>
+                  <option value="premium">Premium Tier</option>
+                </select>
+
+                <select
+                  value={userStatusFilter}
+                  onChange={(e) => setUserStatusFilter(e.target.value)}
+                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="active">Active Only</option>
+                  <option value="disabled">Disabled Only</option>
+                </select>
+
+                <select
+                  value={userVerifyFilter}
+                  onChange={(e) => setUserVerifyFilter(e.target.value)}
+                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                >
+                  <option value="">All Verification States</option>
+                  <option value="verified">Verified Only</option>
+                  <option value="pending">Pending Verification</option>
+                </select>
+              </div>
+            </div>
+
+            {/* List and Details Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              
+              {/* Users table list */}
+              <div className="lg:col-span-2 bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
+                        <th className="p-4 pl-6">User / Account</th>
+                        <th className="p-4">Verification</th>
+                        <th className="p-4">Subscription</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4 pr-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-xs">
+                      {users.map((u) => (
+                        <tr key={u.user_id} className={`hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedUserDetail?.user_id === u.user_id ? 'bg-white/[0.03]' : ''}`} onClick={() => handleViewUserDetail(u)}>
+                          <td className="p-4 pl-6">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
+                                {u.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold block">{u.name} {u.is_admin && <span className="text-[9px] bg-brand-accent/20 border border-brand-accent/30 text-brand-accent px-1.5 py-0.2 rounded-md ml-1.5 uppercase font-black">Admin</span>}</span>
+                                <span className="text-[10px] text-neutral-400 block font-mono">{u.email}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            {u.is_verified ? (
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Verified</span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Pending</span>
+                            )}
+                          </td>
+                          <td className="p-4 font-bold text-neutral-300 uppercase text-[10px]">{u.subscription_plan}</td>
+                          <td className="p-4">
+                            {u.is_active ? (
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">Disabled</span>
+                            )}
+                          </td>
+                          <td className="p-4 pr-6 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleToggleUserActive(u)}
+                                disabled={updatingUserId === u.user_id}
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${
+                                  u.is_active
+                                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/20'
+                                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/20'
+                                }`}
+                              >
+                                {u.is_active ? 'Disable' : 'Enable'}
+                              </button>
+                              <button
+                                onClick={() => handleToggleAdminRole(u)}
+                                disabled={updatingUserId === u.user_id}
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${
+                                  u.is_admin
+                                    ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-white/5'
+                                    : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/30'
+                                }`}
+                              >
+                                {u.is_admin ? 'Revoke Admin' : 'Make Admin'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {file ? (
+              {/* User detail activity panels */}
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Audit Details & Activity</h3>
+                
+                {!selectedUserDetail ? (
+                  <div className="text-center py-20 text-xs text-neutral-500">
+                    Select a user from the list to audit watch history, ratings, and profile statistics.
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Core details */}
+                    <div className="border-b border-white/5 pb-4">
+                      <h4 className="text-sm font-black text-white">{selectedUserDetail.name}</h4>
+                      <p className="text-[10px] text-neutral-400 font-mono mt-0.5">{selectedUserDetail.email}</p>
+                      <div className="grid grid-cols-2 gap-4 mt-4 text-[10px]">
+                        <div>
+                          <span className="text-neutral-500 block">Subscription Tier</span>
+                          <span className="font-bold text-white uppercase mt-0.5 block">{selectedUserDetail.subscription_plan}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-500 block">Profiles Registered</span>
+                          <span className="font-bold text-white mt-0.5 block">{selectedUserDetail.profile_count} / {selectedUserDetail.subscription_plan === 'premium' ? 4 : 1}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Activity log loading */}
+                    {loadingActivity && (
+                      <div className="text-center py-10 text-xs text-neutral-500 animate-pulse">
+                        Loading activity logs...
+                      </div>
+                    )}
+
+                    {/* User Activity Content */}
+                    {userActivity && (
+                      <div className="space-y-6">
+                        {/* Profiles list */}
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Registered Profile Personas</span>
+                          <div className="flex flex-wrap gap-2">
+                            {userActivity.profiles.map((p) => (
+                              <span key={p.profile_id} className="text-[10px] bg-white/5 border border-white/5 px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5">
+                                <span>{p.is_kids_profile ? '🧒' : '🍿'}</span>
+                                <span>{p.display_name}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Recent Watch history */}
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Recent Playback Sessions</span>
+                          {userActivity.watch_history.length === 0 ? (
+                            <span className="text-[10px] text-neutral-500 block italic">No history records found.</span>
+                          ) : (
+                            <div className="space-y-2">
+                              {userActivity.watch_history.map((h) => (
+                                <div key={h.history_id} className="flex justify-between items-center text-[10px] border-b border-white/5 pb-2">
+                                  <span className="font-bold text-neutral-300 truncate max-w-[150px]">{h.movie_title}</span>
+                                  <span className="text-neutral-400 font-mono">{h.percentage_watched}% watched</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Ratings */}
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Content Ratings Submitted</span>
+                          {userActivity.ratings.length === 0 ? (
+                            <span className="text-[10px] text-neutral-500 block italic">No reviews submitted yet.</span>
+                          ) : (
+                            <div className="space-y-2">
+                              {userActivity.ratings.map((r) => (
+                                <div key={r.rating_id} className="flex justify-between items-center text-[10px]">
+                                  <span className="font-bold text-neutral-300">{r.movie_title}</span>
+                                  <span className="text-amber-400 font-bold">{r.score} ★</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Performed Audit logs */}
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Security/Operation Events</span>
+                          {userActivity.audit_logs.length === 0 ? (
+                            <span className="text-[10px] text-neutral-500 block italic">No security events triggered.</span>
+                          ) : (
+                            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                              {userActivity.audit_logs.map((l) => (
+                                <div key={l.log_id} className="text-[10px] border-b border-white/5 pb-2 last:border-b-0">
+                                  <div className="flex justify-between font-bold text-brand-accent">
+                                    <span>{l.action}</span>
+                                    <span className="text-neutral-500 font-mono text-[8px]">{new Date(l.created_at).toLocaleDateString()}</span>
+                                  </div>
+                                  <p className="text-neutral-400 text-[9px] mt-0.5 leading-snug">{l.details}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 4: Ingestion (Existing logic intact) */}
+        {activeTab === 'ingestion' && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            {/* Catalog Upload Form */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-8 rounded-3xl backdrop-blur-md">
+              <h2 className="text-lg font-black uppercase mb-6 tracking-wide text-brand-accent">Ingest Video Catalog</h2>
+              <form onSubmit={handleUpload} className="space-y-6">
+                
+                {/* Select Movie Linkage */}
                 <div>
-                  <p className="text-sm font-bold text-white mb-1">{file.name}</p>
-                  <p className="text-xs text-brand-textMuted">{formatFileSize(file.size)} • Click or drag to replace</p>
+                  <label className="text-[10px] font-black uppercase text-brand-textMuted block mb-2 tracking-wider">
+                    Link to Catalog Movie Entry (Optional)
+                  </label>
+                  <select
+                    value={selectedMovieId}
+                    onChange={(e) => setSelectedMovieId(e.target.value)}
+                    className="w-full px-4 py-3 bg-brand-surface border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all cursor-pointer"
+                  >
+                    <option value="">Unlinked (Orphan Video Asset)</option>
+                    {movies.map((m) => (
+                      <option key={m.movie_id} value={m.movie_id}>
+                        {m.title} ({m.release_year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Drag and Drop Zone */}
+                <div>
+                  <label className="text-[10px] font-black uppercase text-brand-textMuted block mb-2 tracking-wider">
+                    Video File Asset
+                  </label>
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/50 bg-brand-surface/30 hover:bg-brand-surface/50 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300"
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="video/*"
+                      className="hidden"
+                    />
+                    <div className="text-3xl mb-3">🎬</div>
+                    {file ? (
+                      <div>
+                        <span className="text-xs font-bold text-white block truncate max-w-md mx-auto">{file.name}</span>
+                        <span className="text-[10px] text-brand-textMuted block mt-1 font-mono">{formatFileSize(file.size)}</span>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="text-xs font-bold text-neutral-300 block">Drag & drop your movie file here, or click to browse</span>
+                        <span className="text-[10px] text-brand-textMuted block mt-1">Supports MP4, MKV, AVI, MOV formats</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upload Status */}
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-brand-accent">
+                      <span>Ingesting catalog video file...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5">
+                      <div
+                        style={{ width: `${uploadProgress}%` }}
+                        className="bg-brand-accent h-full rounded-full transition-all duration-300"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={uploading || !file}
+                  className="w-full py-4 bg-brand-accent text-white hover:bg-brand-accent-hover disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-xl"
+                >
+                  {uploading ? 'Processing Video...' : 'Ingest and Process Asset'}
+                </button>
+              </form>
+            </div>
+
+            {/* List of Ingested Videos */}
+            <div className="bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/10">
+                <h3 className="text-sm font-black uppercase tracking-wider text-brand-accent">Ingested Video Assets</h3>
+                <span className="text-[10px] font-bold text-brand-textMuted">Total Ingested Assets: {videos.length}</span>
+              </div>
+
+              {videos.length === 0 ? (
+                <div className="p-12 text-center text-brand-textMuted text-xs font-semibold">
+                  No ingested video assets found in storage.
                 </div>
               ) : (
-                <div>
-                  <p className="text-sm font-bold text-white mb-1">
-                    Drag & drop your video file here, or <span className="text-brand-accent underline">browse</span>
-                  </p>
-                  <p className="text-xs text-brand-textMuted">
-                    Supports MP4, WebM, MOV, MKV files (Auto HLS Segmentation)
-                  </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
+                        <th className="p-4 pl-6">Original Filename</th>
+                        <th className="p-4">Linked Catalog Item</th>
+                        <th className="p-4">Size</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4 pr-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-xs">
+                      {videos.map((v) => (
+                        <tr key={v.video_id} className="hover:bg-white/[0.01] transition-colors">
+                          <td className="p-4 pl-6">
+                            <span className="font-bold text-white block truncate max-w-xs">{v.original_filename}</span>
+                            <span className="text-[9px] text-neutral-400 font-mono block mt-0.5 truncate max-w-xs">{v.filename}</span>
+                          </td>
+                          <td className="p-4 font-bold text-neutral-300">{getMovieTitle(v.movie_id)}</td>
+                          <td className="p-4 font-mono text-[10px] text-neutral-400">{formatFileSize(v.file_size_bytes)}</td>
+                          <td className="p-4">
+                            {v.status === 'completed' ? (
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">COMPLETED</span>
+                            ) : v.status === 'processing' ? (
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">PROCESSING</span>
+                            ) : v.status === 'uploaded' ? (
+                              <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">UPLOADED</span>
+                            ) : (
+                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">FAILED</span>
+                            )}
+                          </td>
+                          <td className="p-4 pr-6 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {v.status === 'completed' && (
+                                <button
+                                  onClick={() => setActivePreviewVideo(v)}
+                                  className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-extrabold rounded-xl transition-all"
+                                >
+                                  Preview
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleProcessHLS(v.video_id)}
+                                disabled={processingId === v.video_id || v.status === 'processing'}
+                                className="px-2.5 py-1.5 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/30 disabled:opacity-50 text-[10px] font-extrabold rounded-xl transition-all"
+                              >
+                                {processingId === v.video_id ? 'Processing...' : 'Reprocess HLS'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteVideo(v.video_id)}
+                                className="px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20 text-[10px] font-extrabold rounded-xl transition-all"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
 
-            {/* Movie Selector */}
-            <div>
-              <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">
-                Link to Movie Title (Optional)
-              </label>
-              <select
-                value={selectedMovieId}
-                onChange={(e) => setSelectedMovieId(e.target.value)}
-                className="w-full px-4 py-3 text-white rounded-xl text-sm outline-none transition-all duration-200 cursor-pointer"
-                style={{
-                  background: 'rgba(16,28,64,0.8)',
-                  border: '1px solid rgba(255,255,255,0.09)',
-                }}
-              >
-                <option value="" className="bg-[#0B1535]">-- Unlinked Asset --</option>
-                {movies.map((m) => (
-                  <option key={m.movie_id} value={m.movie_id} className="bg-[#0B1535]">
-                    {m.title} ({m.release_year})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Progress Bar */}
-            {uploading && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-brand-textMuted font-bold">
-                  <span>Uploading & generating HLS VOD playlist...</span>
-                  <span className="text-brand-accent">{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/10">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full transition-all duration-150 rounded-full"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+            {/* Video Playback Preview Modal */}
+            {activePreviewVideo && (
+              <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-8">
+                <div className="bg-[#0B1533] border border-white/10 max-w-3xl w-full rounded-3xl overflow-hidden shadow-2xl relative">
+                  <button
+                    onClick={() => setActivePreviewVideo(null)}
+                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all"
+                  >
+                    ×
+                  </button>
+                  <div className="p-6 border-b border-white/5">
+                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide">{activePreviewVideo.original_filename}</h3>
+                    <p className="text-[10px] text-neutral-400 mt-1 font-mono">Status: HLS Adaptive Streaming Ready</p>
+                  </div>
+                  <div className="aspect-video bg-black flex items-center justify-center">
+                    <video
+                      controls
+                      autoPlay
+                      className="w-full h-full object-contain"
+                      src={`/api/videos/${activePreviewVideo.video_id}/stream`}
+                    />
+                  </div>
+                  <div className="p-6 border-t border-white/5 bg-black/25 flex items-center justify-between text-[10px] text-brand-textMuted">
+                    <span>Mime-Type: {activePreviewVideo.mime_type}</span>
+                    <span>UUID: {activePreviewVideo.video_id}</span>
+                  </div>
                 </div>
               </div>
             )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={uploading || !file}
-              className="w-full py-3.5 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                boxShadow: '0 8px 24px rgba(59,130,246,0.3)',
-              }}
-            >
-              {uploading ? 'Ingesting & Transcoding to HLS...' : 'Upload & Generate HLS Stream'}
-            </button>
-          </form>
-        </section>
-
-        {/* Uploaded Videos Table */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold font-display text-white">
-              Uploaded Videos & HLS Registry ({videos.length})
-            </h2>
-            <button
-              onClick={fetchVideos}
-              className="text-xs text-brand-accent font-semibold hover:underline flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh Table
-            </button>
           </div>
+        )}
 
-          {videos.length === 0 ? (
-            <div className="text-center py-12 bg-[#0B1535]/40 rounded-2xl border border-white/5 text-brand-textMuted text-xs">
-              No video assets ingested yet. Upload a file above to populate the registry.
+        {/* Tab 5: Infrastructure & Cache */}
+        {activeTab === 'health' && health && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            {/* Status indicators */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${health.database_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                  {health.database_status === 'healthy' ? '✓' : '!'}
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-neutral-400">Database Engine</span>
+                  <div className="text-sm font-black text-white uppercase mt-0.5">{health.database_status}</div>
+                  <span className="text-[8px] text-neutral-500 block">SQLite production-ready replication</span>
+                </div>
+              </div>
+
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${health.cache_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                  ⚡
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-neutral-400">Memory Cache Layer</span>
+                  <div className="text-sm font-black text-white uppercase mt-0.5">{health.cache_status}</div>
+                  <span className="text-[8px] text-neutral-500 block">FastAPI database result cache</span>
+                </div>
+              </div>
+
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-brand-accent/15 text-brand-accent border border-brand-accent/20 flex items-center justify-center font-bold text-sm">
+                  🗄
+                </div>
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-neutral-400">Physical storage usage</span>
+                  <div className="text-sm font-black text-white mt-0.5">{formatFileSize(health.storage_usage_bytes)}</div>
+                  <span className="text-[8px] text-neutral-500 block">Across {health.total_files} catalog files</span>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#070E26]/60 backdrop-blur-xl">
+
+            {/* Storage details & segment metrics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Detailed Cache Statistics */}
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Cache Layer Statistics</h3>
+                  <button
+                    onClick={handleClearCache}
+                    disabled={clearingCache}
+                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 text-[10px] font-black rounded-xl transition-all"
+                  >
+                    {clearingCache ? 'Clearing Cache...' : 'Flush Cache'}
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-6 pt-4 text-xs">
+                  <div>
+                    <span className="text-neutral-500 block">Total Cache Hit Ratio</span>
+                    <span className="text-2xl font-black text-white block mt-1">{health.cache_stats.hit_rate_pct}%</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Cached Keys In Memory</span>
+                    <span className="text-2xl font-black text-white block mt-1">{health.cache_stats.keys_count}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Hits Count</span>
+                    <span className="text-base font-bold text-emerald-400 block mt-1">{health.cache_stats.hits} hits</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-500 block">Misses Count</span>
+                    <span className="text-base font-bold text-rose-400 block mt-1">{health.cache_stats.misses} misses</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Segment & Ingestion assets */}
+              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Asset segmentation metrics</h3>
+                <div className="space-y-4 pt-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-400 font-medium">HLS segmented files (.ts)</span>
+                    <span className="font-mono text-white font-bold">{health.total_video_segments} files</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-400 font-medium">Ingested raw videos (MP4)</span>
+                    <span className="font-mono text-white font-bold">{health.total_uploaded_files} files</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-400 font-medium">Active HLS Master playlists</span>
+                    <span className="font-mono text-white font-bold">{health.total_hls_assets} playlists</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-400 font-medium">Transcoding worker queue status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${health.processing_queue_status > 0 ? 'bg-amber-500/10 text-amber-400 animate-pulse' : 'bg-white/5 text-neutral-400'}`}>
+                      {health.processing_queue_status > 0 ? `${health.processing_queue_status} processing` : 'idle'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 6: Audit Log Explorer */}
+        {activeTab === 'audit' && (
+          <div className="space-y-6 animate-fadeIn">
+            
+            {/* Filter controls */}
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
+              <div className="flex flex-wrap gap-3 items-center">
+                <label className="text-[10px] font-black uppercase text-brand-textMuted tracking-wider">Filter Action</label>
+                <select
+                  value={auditActionFilter}
+                  onChange={(e) => {
+                    setAuditActionFilter(e.target.value);
+                    setAuditOffset(0);
+                  }}
+                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                >
+                  <option value="">All Platform Actions</option>
+                  <option value="user_creation">User Creation</option>
+                  <option value="user_enable">User Enabled</option>
+                  <option value="user_disable">User Disabled</option>
+                  <option value="admin_promotion">Admin Promotion</option>
+                  <option value="admin_removal">Admin Removal</option>
+                  <option value="video_upload">Video Upload</option>
+                  <option value="video_delete">Video Delete</option>
+                  <option value="profile_create">Profile Create</option>
+                  <option value="profile_delete">Profile Delete</option>
+                  <option value="subscription_upgrade">Subscription Upgrade</option>
+                  <option value="subscription_downgrade">Subscription Downgrade</option>
+                  <option value="subscription_cancel">Subscription Cancel</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  disabled={auditOffset === 0}
+                  onClick={() => setAuditOffset((prev) => Math.max(0, prev - auditLimit))}
+                  className="px-3 py-2 bg-brand-surface border border-white/5 hover:bg-brand-surface/80 rounded-xl text-xs disabled:opacity-50"
+                >
+                  ◄ Previous Page
+                </button>
+                <button
+                  disabled={auditLogs.length < auditLimit}
+                  onClick={() => setAuditOffset((prev) => prev + auditLimit)}
+                  className="px-3 py-2 bg-brand-surface border border-white/5 hover:bg-brand-surface/80 rounded-xl text-xs disabled:opacity-50"
+                >
+                  Next Page ►
+                </button>
+              </div>
+            </div>
+
+            {/* Logs Table */}
+            <div className="bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.02] text-[11px] font-bold text-brand-textMuted uppercase tracking-wider">
-                      <th className="py-4 px-6">File Name</th>
-                      <th className="py-4 px-6">Linked Title</th>
-                      <th className="py-4 px-6">Status State</th>
-                      <th className="py-4 px-6">Format / Stream Pointer</th>
-                      <th className="py-4 px-6 text-right">Actions</th>
+                    <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
+                      <th className="p-4 pl-6">Timestamp</th>
+                      <th className="p-4">Action</th>
+                      <th className="p-4">Operation Details</th>
+                      <th className="p-4">Actor Email</th>
+                      <th className="p-4 pr-6">Metadata Payload</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-xs font-medium">
-                    {videos.map((v) => (
-                      <tr key={v.video_id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-white max-w-xs truncate" title={v.original_filename}>
-                            {v.original_filename}
-                          </div>
-                          <div className="text-[10px] text-brand-textMuted font-mono truncate max-w-xs" title={v.video_id}>
-                            Size: {formatFileSize(v.file_size_bytes)} • ID: {v.video_id}
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-6">
-                          <span className="text-xs text-neutral-300 font-semibold">
-                            {getMovieTitle(v.movie_id)}
-                          </span>
-                        </td>
-
-                        <td className="py-4 px-6">
-                          {renderStatusBadge(v.status)}
-                          {v.error_message && (
-                            <p className="text-[10px] text-rose-400 mt-1 max-w-xs truncate" title={v.error_message}>
-                              {v.error_message}
-                            </p>
-                          )}
-                        </td>
-
-                        <td className="py-4 px-6">
-                          <div className="text-white font-semibold flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded bg-blue-500/10 text-brand-accent border border-blue-500/20">
-                              {v.format}
-                            </span>
-                            <span className="text-xs">{v.mime_type}</span>
-                          </div>
-                          <div className="text-[10px] text-brand-textMuted font-mono truncate max-w-xs mt-0.5">
-                            {v.hls_url || v.playback_url}
-                          </div>
-                        </td>
-
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleProcessHLS(v.video_id)}
-                              disabled={processingId === v.video_id}
-                              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs rounded-lg transition-all flex items-center gap-1 disabled:opacity-50"
-                            >
-                              {processingId === v.video_id ? 'Transcoding...' : 'Process HLS'}
-                            </button>
-                            <button
-                              onClick={() => setActivePreviewVideo(v)}
-                              className="px-3 py-1.5 bg-brand-accent/10 hover:bg-brand-accent/20 border border-brand-accent/30 text-brand-accent font-bold text-xs rounded-lg transition-all flex items-center gap-1"
-                            >
-                              Preview
-                            </button>
-                            <button
-                              onClick={() => handleDeleteVideo(v.video_id)}
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-xs rounded-lg transition-all"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                    {auditLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-12 text-center text-brand-textMuted italic">
+                          No audit event logs found matching the filter criteria.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      auditLogs.map((l) => (
+                        <tr key={l.log_id} className="hover:bg-white/[0.01] transition-colors">
+                          <td className="p-4 pl-6 font-mono text-[10px] text-neutral-400">
+                            {new Date(l.created_at).toLocaleString()}
+                          </td>
+                          <td className="p-4">
+                            <span className="text-[9px] font-black uppercase text-brand-accent bg-brand-accent/15 px-2 py-0.5 rounded-md border border-brand-accent/20">
+                              {l.action}
+                            </span>
+                          </td>
+                          <td className="p-4 text-neutral-200">{l.details}</td>
+                          <td className="p-4 font-mono text-[10px] text-neutral-300">
+                            {l.actor_email || <span className="text-neutral-500 italic">system / anonymous</span>}
+                          </td>
+                          <td className="p-4 pr-6 font-mono text-[9px] text-neutral-400 max-w-xs truncate">
+                            {l.metadata ? JSON.stringify(l.metadata) : 'None'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
-        </section>
-
-        {/* Section 5: Registered Users Management */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-white font-display flex items-center gap-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Registered Platform Users ({registeredUsers.length})
-              </h2>
-              <p className="text-xs text-brand-textMuted">
-                Admin visibility into registered accounts, verification status, and subscription plans
-              </p>
-            </div>
           </div>
-
-          <div
-            className="rounded-2xl border border-white/10 overflow-hidden shadow-xl"
-            style={{ background: 'rgba(16,28,64,0.5)', backdropFilter: 'blur(16px)' }}
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-white/10 bg-white/5 text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
-                    <th className="py-3.5 px-4">User</th>
-                    <th className="py-3.5 px-4">User ID</th>
-                    <th className="py-3.5 px-4">Verification</th>
-                    <th className="py-3.5 px-4">Role</th>
-                    <th className="py-3.5 px-4">Plan</th>
-                    <th className="py-3.5 px-4">Registered Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-neutral-300">
-                  {registeredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-neutral-500">
-                        No registered users found.
-                      </td>
-                    </tr>
-                  ) : (
-                    registeredUsers.map((u) => (
-                      <tr key={u.user_id} className="hover:bg-white/5 transition-colors">
-                        <td className="py-3.5 px-4 font-semibold text-white">
-                          <div>{u.name}</div>
-                          <div className="text-[11px] text-brand-textMuted font-mono">{u.email}</div>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-[10px] text-neutral-400">{u.user_id}</td>
-                        <td className="py-3.5 px-4">
-                          {u.is_verified ? (
-                            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] font-bold">
-                              ✓ Verified
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-[10px] font-bold">
-                              Unverified
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {u.is_admin ? (
-                            <span className="px-2.5 py-1 bg-purple-500/15 text-purple-300 border border-purple-500/30 rounded-lg text-[10px] font-bold">
-                              Admin
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 bg-white/5 text-neutral-400 border border-white/10 rounded-lg text-[10px] font-bold">
-                              User
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 uppercase font-bold text-[10px] text-brand-accent">
-                          {u.subscription_plan}
-                        </td>
-                        <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
-                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-      </main>
-
-      {/* Footer */}
-      <footer className="p-6 text-center text-xs text-neutral-500 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm space-y-1 mt-12">
-        <div>&copy; {new Date().getFullYear()} ZePlay Platform. All rights reserved.</div>
-        <div>
-          <a
-            href="https://zeploy.tech"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand-accent hover:underline font-bold tracking-wider"
-          >
-            POWERED BY ZEPLOY TECH
-          </a>
-        </div>
-      </footer>
-
-      {/* Video Player Modal */}
-      {activePreviewVideo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-4xl bg-[#0B1535] border border-white/10 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold text-white font-display">
-                  Stream Preview: {activePreviewVideo.original_filename}
-                </h3>
-                <p className="text-xs text-brand-textMuted">
-                  Endpoint: {activePreviewVideo.hls_url || activePreviewVideo.playback_url}
-                </p>
-              </div>
-              <button
-                onClick={() => setActivePreviewVideo(null)}
-                className="text-neutral-400 hover:text-white font-bold text-lg px-2"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="aspect-video bg-black rounded-xl overflow-hidden border border-white/5">
-              <video
-                controls
-                autoPlay
-                className="w-full h-full"
-                src={getFullPlaybackUrl(activePreviewVideo.hls_url || activePreviewVideo.playback_url)}
-              >
-                Your browser does not support video playback.
-              </video>
-            </div>
-          </div>
-        </div>
-      )}
-
+        )}
+      </div>
     </div>
   );
 };

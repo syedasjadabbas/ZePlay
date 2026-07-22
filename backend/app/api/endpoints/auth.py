@@ -22,6 +22,7 @@ from app.schemas.user import (
 from app.core import security
 from app.api import deps
 from app.services.email_service import send_verification_email, send_password_reset_email
+from app.services.audit_log_service import log_event
 from app.config import settings
 
 router = APIRouter()
@@ -51,6 +52,14 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+
+    await log_event(
+        db,
+        action="user_creation",
+        details=f"User {db_user.email} registered.",
+        performed_by=db_user.user_id,
+        metadata_dict={"user_id": str(db_user.user_id), "email": db_user.email}
+    )
 
     # Automatically assign the Free subscription plan to every new user
     free_plan_result = await db.execute(
@@ -118,6 +127,13 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect email or password."
+        )
+    
+    # Enforce active account status
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been disabled."
         )
     
     # Enforce verified email status

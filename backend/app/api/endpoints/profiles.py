@@ -10,8 +10,9 @@ from app.models.watch_history import WatchHistory
 from app.models.watchlist import Watchlist
 from app.models.user_subscription import UserSubscription
 from app.models.subscription_plan import SubscriptionPlan
-from app.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate
+from app.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate, ProfilePinVerify
 from app.api import deps
+from app.services.audit_log_service import log_event
 
 router = APIRouter()
 
@@ -75,11 +76,20 @@ async def create_profile(
         display_name=profile_in.display_name,
         avatar_url=profile_in.avatar_url or "🍿",
         is_kids_profile=profile_in.is_kids_profile or False,
-        language_pref=profile_in.language_pref or "en"
+        language_pref=profile_in.language_pref or "en",
+        pin=None if (profile_in.is_kids_profile or False) else profile_in.pin
     )
     db.add(db_profile)
     await db.commit()
     await db.refresh(db_profile)
+
+    await log_event(
+        db,
+        action="profile_create",
+        details=f"Profile '{db_profile.display_name}' created.",
+        performed_by=current_user.user_id,
+        metadata_dict={"profile_id": str(db_profile.profile_id), "display_name": db_profile.display_name}
+    )
     return db_profile
 
 
@@ -109,6 +119,9 @@ async def update_profile(
     update_data = profile_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(profile, field, value)
+    
+    if profile.is_kids_profile:
+        profile.pin = None
     
     await db.commit()
     await db.refresh(profile)
@@ -146,11 +159,54 @@ async def delete_profile(
             detail="Cannot delete the last remaining profile on your account."
         )
 
+    profile_name = profile.display_name
     # Clean up dependent records explicitly
     await db.execute(delete(WatchHistory).filter(WatchHistory.profile_id == profile_id))
     await db.execute(delete(Watchlist).filter(Watchlist.profile_id == profile_id))
 
     await db.delete(profile)
     await db.commit()
+
+    await log_event(
+        db,
+        action="profile_delete",
+        details=f"Profile '{profile_name}' deleted.",
+        performed_by=current_user.user_id,
+        metadata_dict={"profile_id": str(profile_id), "display_name": profile_name}
+    )
     return None
+
+
+@router.post("/{profile_id}/verify-pin", status_code=status.HTTP_200_OK)
+async def verify_profile_pin(
+    profile_id: UUID,
+    verify_in: ProfilePinVerify,
+    current_user: User = Depends(deps.get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Verify the PIN of a profile for access control."""
+    result = await db.execute(
+        select(Profile).filter(
+            Profile.profile_id == profile_id,
+            Profile.user_id == current_user.user_id
+        )
+    )
+    profile = result.scalars().first()
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found or access denied."
+        )
+    
+    if not profile.pin:
+        return {"success": True, "message": "Profile does not require a PIN."}
+        
+    if profile.pin != verify_in.pin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Incorrect profile PIN."
+        )
+        
+    return {"success": True}
+
 
