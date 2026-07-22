@@ -69,13 +69,16 @@ const Profiles: React.FC = () => {
         api.get('/subscription/current').catch(() => null),
       ]);
       setProfiles(profileRes.data);
+      const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const isAdmin = cachedUser.is_admin === true;
       if (subRes?.data) {
-        const isActive = subRes.data.status === 'active';
-        setMaxProfiles(isActive && subRes.data.plan?.max_profiles ? subRes.data.plan.max_profiles : 1);
-        setPlanName(isActive && subRes.data.plan?.name ? subRes.data.plan.name : 'free');
+        const status = subRes.data.status;
+        const isActive = status === 'active' || status === 'Administrator Account' || isAdmin;
+        setMaxProfiles(isActive && subRes.data.plan?.max_profiles ? subRes.data.plan.max_profiles : (isAdmin ? 999 : 1));
+        setPlanName(isActive && subRes.data.plan?.name ? subRes.data.plan.name : (isAdmin ? 'premium' : 'free'));
       } else {
-        setMaxProfiles(1);
-        setPlanName('free');
+        setMaxProfiles(isAdmin ? 999 : 1);
+        setPlanName(isAdmin ? 'premium' : 'free');
       }
     } catch (err: any) {
       if (err.response?.status === 401) {

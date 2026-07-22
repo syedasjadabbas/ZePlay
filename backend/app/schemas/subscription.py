@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class SubscriptionPlanResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     name: str
     description: Optional[str] = None
     max_profiles: int
@@ -17,9 +17,9 @@ class SubscriptionPlanResponse(BaseModel):
 
 
 class UserSubscriptionResponse(BaseModel):
-    id: str
-    user_id: str
-    plan_id: str
+    id: uuid.UUID
+    user_id: uuid.UUID
+    plan_id: uuid.UUID
     status: str
     start_date: datetime
     end_date: Optional[datetime] = None

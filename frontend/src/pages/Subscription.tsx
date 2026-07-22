@@ -134,14 +134,18 @@ const Subscription: React.FC = () => {
     }
   };
 
-  const isPremium = subscription?.plan.name === 'premium' && subscription?.status === 'active';
-  const isActive = subscription?.status === 'active';
-  const isCancelled = subscription?.status === 'cancelled';
+  const userObj = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdminUser = userObj.is_admin === true;
+
+  const isPremium = isAdminUser || (subscription?.plan.name === 'premium' && subscription?.status === 'active');
+  const isActive = !isAdminUser && subscription?.status === 'active';
+  const isCancelled = !isAdminUser && subscription?.status === 'cancelled';
 
   const statusColors: Record<string, string> = {
     active: 'text-emerald-400 bg-emerald-400/10 border-emerald-500/30',
     cancelled: 'text-rose-400 bg-rose-400/10 border-rose-500/30',
     expired: 'text-amber-400 bg-amber-400/10 border-amber-500/30',
+    'Administrator Account': 'text-amber-400 bg-amber-400/10 border-amber-500/30',
   };
 
   return (

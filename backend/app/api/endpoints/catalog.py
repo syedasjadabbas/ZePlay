@@ -7,6 +7,7 @@ from app.schemas.movie import MovieResponse
 from app.schemas.genre import GenreResponse
 from app.services import movie_service
 from app.api import deps
+from app.services.cache_service import cache
 
 router = APIRouter()
 
@@ -25,7 +26,7 @@ async def list_movies(
 async def get_movie(
     movie_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(deps.get_current_user)
+    current_user = Depends(deps.verify_user_entitlement)
 ):
     """Retrieve detailed metadata records for a single movie entry."""
     db_movie = await movie_service.get_movie_by_id(db, movie_id)
@@ -72,4 +73,16 @@ async def search_suggestions(
     """
     Fast search suggestions endpoint for live auto-complete dropdown.
     """
-    return await movie_service.get_search_suggestions(db, q=q, limit=limit)
+    cache_key = f"suggestions:{q.lower().strip()}:{limit}"
+    cached_data = await cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+
+    suggestions = await movie_service.get_search_suggestions(db, q=q, limit=limit)
+    
+    # Serialize suggestions list to dictionaries to store in cache safely
+    from fastapi.encoders import jsonable_encoder
+    serialized = jsonable_encoder(suggestions)
+    await cache.set(cache_key, serialized, ttl=300)
+    
+    return suggestions

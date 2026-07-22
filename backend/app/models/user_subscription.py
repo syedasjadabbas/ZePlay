@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -10,19 +10,19 @@ class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
 
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
         index=True
     )
     user_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
     plan_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
         nullable=False
     )

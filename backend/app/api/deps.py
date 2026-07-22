@@ -59,3 +59,29 @@ async def get_current_admin_user(
         )
     return current_user
 
+
+async def verify_user_entitlement(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """Verifies that the user has an active subscription or is an administrator."""
+    if current_user.is_admin:
+        return current_user
+
+    # Query active subscription
+    from app.models.user_subscription import UserSubscription
+    sub_result = await db.execute(
+        select(UserSubscription).filter(
+            UserSubscription.user_id == current_user.user_id,
+            UserSubscription.status == "active"
+        )
+    )
+    sub = sub_result.scalars().first()
+    
+    if not sub and current_user.subscription_plan != "premium":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Active subscription required to access this content. Please upgrade."
+        )
+    return current_user
+

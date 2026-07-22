@@ -55,10 +55,10 @@ async def test_hls_processing_and_endpoints(client: AsyncClient, db_session: Asy
     assert playlist_res.status_code == 200
     assert "application/x-mpegURL" in playlist_res.headers["content-type"]
     assert "#EXTM3U" in playlist_res.text
-    assert "segment_000.ts" in playlist_res.text
+    assert "480p/index.m3u8" in playlist_res.text
 
     # 4. Test GET HLS TS Segment (.ts)
-    segment_res = await client.get(f"/api/videos/{video_id}/hls/segment_000.ts")
+    segment_res = await client.get(f"/api/videos/{video_id}/hls/480p/segment_000.ts")
     assert segment_res.status_code == 200
     assert "video/MP2T" in segment_res.headers["content-type"]
     assert len(segment_res.content) > 0

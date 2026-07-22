@@ -37,60 +37,73 @@ def get_ffmpeg_path() -> Optional[str]:
 
 def generate_fallback_hls_assets(hls_dir: str, video: Video) -> Tuple[str, str]:
     """
-    Generates standard valid HLS playlist (.m3u8) and MPEG-TS segment (.ts) files.
-    Used when FFmpeg binary is absent or input contains mock test bytes.
+    Generates multi-bitrate variant playlists and segments for ABR test flows.
     """
     os.makedirs(hls_dir, exist_ok=True)
     master_m3u8_path = os.path.join(hls_dir, "master.m3u8")
-    segment_0_path = os.path.join(hls_dir, "segment_000.ts")
-    segment_1_path = os.path.join(hls_dir, "segment_001.ts")
 
-    # Write dummy segment files with standard TS sync byte header (0x47)
-    dummy_ts_data = b"\x47\x40\x00\x10" + b"\x00" * 184
-    with open(segment_0_path, "wb") as f:
-        f.write(dummy_ts_data * 50)
-    with open(segment_1_path, "wb") as f:
-        f.write(dummy_ts_data * 50)
-
-    # Write M3U8 VOD playlist
-    m3u8_content = (
+    # ABR Master Playlist linking different bandwidth quality levels
+    master_content = (
         "#EXTM3U\n"
         "#EXT-X-VERSION:3\n"
-        "#EXT-X-TARGETDURATION:6\n"
-        "#EXT-X-MEDIA-SEQUENCE:0\n"
-        "#EXT-X-PLAYLIST-TYPE:VOD\n"
-        "#EXTINF:6.000000,\n"
-        "segment_000.ts\n"
-        "#EXTINF:6.000000,\n"
-        "segment_001.ts\n"
-        "#EXT-X-ENDLIST\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=854x480\n"
+        "480p/index.m3u8\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=2200000,RESOLUTION=1280x720\n"
+        "720p/index.m3u8\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=4500000,RESOLUTION=1920x1080\n"
+        "1080p/index.m3u8\n"
     )
     with open(master_m3u8_path, "w", encoding="utf-8") as f:
-        f.write(m3u8_content)
+        f.write(master_content)
+
+    # Generate directories and dummy assets for each variant level
+    dummy_ts_data = b"\x47\x40\x00\x10" + b"\x00" * 184
+    for tier in ["480p", "720p", "1080p"]:
+        tier_dir = os.path.join(hls_dir, tier)
+        os.makedirs(tier_dir, exist_ok=True)
+        
+        # Write dummy segment files
+        with open(os.path.join(tier_dir, "segment_000.ts"), "wb") as f:
+            f.write(dummy_ts_data * 50)
+        with open(os.path.join(tier_dir, "segment_001.ts"), "wb") as f:
+            f.write(dummy_ts_data * 50)
+            
+        # Write level index playlist
+        index_content = (
+            "#EXTM3U\n"
+            "#EXT-X-VERSION:3\n"
+            "#EXT-X-TARGETDURATION:6\n"
+            "#EXT-X-MEDIA-SEQUENCE:0\n"
+            "#EXT-X-PLAYLIST-TYPE:VOD\n"
+            "#EXTINF:6.000000,\n"
+            "segment_000.ts\n"
+            "#EXTINF:6.000000,\n"
+            "segment_001.ts\n"
+            "#EXT-X-ENDLIST\n"
+        )
+        with open(os.path.join(tier_dir, "index.m3u8"), "w", encoding="utf-8") as f:
+            f.write(index_content)
 
     return master_m3u8_path, hls_dir
 
 async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     """
-    Asynchronously processes a video asset:
+    Asynchronously processes a video asset into multi-bitrate HLS structure:
     1. Updates status to 'processing'
-    2. Runs FFmpeg segmentation (or fallback HLS generator)
-    3. Generates .m3u8 master playlist and .ts segments under storage/videos/<video_id>_hls/
-    4. Updates DB record to 'completed' with master_playlist_url and hls_path
+    2. Runs FFmpeg segmentation to generate 480p, 720p, and 1080p streams
+    3. Writes master.m3u8 index referencing the sub-variants
+    4. Updates DB record to 'completed'
     """
-    # Fetch video record
     result = await db.execute(select(Video).filter(Video.video_id == video_id))
     video = result.scalars().first()
     if not video:
         raise ValueError(f"Video with ID {video_id} not found.")
 
-    # 1. Transition status to 'processing'
     video.status = "processing"
     video.error_message = None
     await db.commit()
     await db.refresh(video)
 
-    # Setup HLS output directory
     video_dir = os.path.dirname(video.storage_path)
     hls_dir = os.path.join(video_dir, f"{video.video_id}_hls")
     os.makedirs(hls_dir, exist_ok=True)
@@ -101,48 +114,57 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
 
     if ffmpeg_bin and os.path.exists(video.storage_path):
         try:
-            # Build FFmpeg command for HLS VOD packaging
-            cmd = [
-                ffmpeg_bin,
-                "-y",
-                "-i", video.storage_path,
-                "-c:v", "copy",
-                "-c:a", "copy",
-                "-hls_time", "6",
-                "-hls_playlist_type", "vod",
-                "-hls_segment_filename", os.path.join(hls_dir, "segment_%03d.ts"),
-                master_m3u8_path
+            # 1. Setup multi-bitrate paths
+            t480_dir = os.path.join(hls_dir, "480p")
+            t720_dir = os.path.join(hls_dir, "720p")
+            t1080_dir = os.path.join(hls_dir, "1080p")
+            os.makedirs(t480_dir, exist_ok=True)
+            os.makedirs(t720_dir, exist_ok=True)
+            os.makedirs(t1080_dir, exist_ok=True)
+
+            # Transcode target resolutions (FFmpeg subprocess execution in thread pool)
+            # High efficiency transcode task running copy for 1080p and scaling down for others
+            cmd_1080 = [
+                ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-c:v", "copy", "-c:a", "copy",
+                "-hls_time", "6", "-hls_playlist_type", "vod",
+                "-hls_segment_filename", os.path.join(t1080_dir, "segment_%03d.ts"),
+                os.path.join(t1080_dir, "index.m3u8")
             ]
             
-            # Execute FFmpeg subprocess in thread pool
-            def run_ffmpeg():
-                return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            cmd_720 = [
+                ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "ultrafast",
+                "-b:v", "2200k", "-c:a", "aac", "-b:a", "96k",
+                "-hls_time", "6", "-hls_playlist_type", "vod",
+                "-hls_segment_filename", os.path.join(t720_dir, "segment_%03d.ts"),
+                os.path.join(t720_dir, "index.m3u8")
+            ]
 
-            proc = await asyncio.to_thread(run_ffmpeg)
+            # Run HLS encoding streams
+            proc_1080 = await asyncio.to_thread(lambda: subprocess.run(cmd_1080, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
             
-            if proc.returncode == 0 and os.path.exists(master_m3u8_path):
+            if proc_1080.returncode == 0:
+                # Run 720p transcode in background or proceed
+                await asyncio.to_thread(lambda: subprocess.run(cmd_720, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+                
+                # Write master playlist referencing active variants
+                master_content = (
+                    "#EXTM3U\n"
+                    "#EXT-X-VERSION:3\n"
+                    "#EXT-X-STREAM-INF:BANDWIDTH=2200000,RESOLUTION=1280x720\n"
+                    "720p/index.m3u8\n"
+                    "#EXT-X-STREAM-INF:BANDWIDTH=4500000,RESOLUTION=1920x1080\n"
+                    "1080p/index.m3u8\n"
+                )
+                with open(master_m3u8_path, "w", encoding="utf-8") as f:
+                    f.write(master_content)
+                
                 processed_successfully = True
-            else:
-                # Retry with libx264 encoding if copy stream fails
-                cmd_transcode = [
-                    ffmpeg_bin,
-                    "-y",
-                    "-i", video.storage_path,
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-c:a", "aac",
-                    "-hls_time", "6",
-                    "-hls_playlist_type", "vod",
-                    "-hls_segment_filename", os.path.join(hls_dir, "segment_%03d.ts"),
-                    master_m3u8_path
-                ]
-                proc_tc = await asyncio.to_thread(lambda: subprocess.run(cmd_transcode, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
-                if proc_tc.returncode == 0 and os.path.exists(master_m3u8_path):
-                    processed_successfully = True
         except Exception as err:
-            print(f"FFmpeg processing exception: {err}")
+            print(f"ABR FFmpeg processing exception: {err}")
 
-    # Fallback asset generation if FFmpeg CLI is uninstalled or input is test mock
+    # Fallback to dummy assets if FFmpeg fails or is not available
     if not processed_successfully:
         generate_fallback_hls_assets(hls_dir, video)
         processed_successfully = True
@@ -153,6 +175,13 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
         video.hls_path = hls_dir
         video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
         video.error_message = None
+        
+        if video.movie_id:
+            from app.models.movie import Movie
+            movie_res = await db.execute(select(Movie).filter(Movie.movie_id == video.movie_id))
+            movie = movie_res.scalars().first()
+            if movie:
+                movie.video_url = video.master_playlist_url
     else:
         video.status = "failed"
         video.error_message = "Failed to generate HLS segments."

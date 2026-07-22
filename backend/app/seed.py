@@ -1,17 +1,42 @@
 import asyncio
+import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import select, delete
 from app.config import settings
 from app.models.genre import Genre
 from app.models.movie import Movie
 from app.models.user import User
+from app.models.subscription_plan import SubscriptionPlan
 from app.core import security
+
+FREE_PLAN_ID = uuid.UUID("f0000000-0000-0000-0000-000000000001")
+PREMIUM_PLAN_ID = uuid.UUID("f0000000-0000-0000-0000-000000000002")
 
 async def seed_data():
     engine = create_async_engine(settings.DATABASE_URL)
     Session = async_sessionmaker(bind=engine, expire_on_commit=False)
     
     async with Session() as db:
+        # Seed default subscription plans
+        for p_id, name, desc, max_p, s_4k, s_md in [
+            (FREE_PLAN_ID, "free", "Standard streaming with 1 profile.", 1, False, False),
+            (PREMIUM_PLAN_ID, "premium", "Premium badge, up to 4 profiles, 4K and multi-device ready.", 4, True, True)
+        ]:
+            res = await db.execute(select(SubscriptionPlan).filter(SubscriptionPlan.id == p_id))
+            existing_plan = res.scalars().first()
+            if not existing_plan:
+                plan = SubscriptionPlan(
+                    id=p_id,
+                    name=name,
+                    description=desc,
+                    max_profiles=max_p,
+                    supports_4k=s_4k,
+                    supports_multi_device=s_md
+                )
+                db.add(plan)
+                print(f"Seeded plan: {name}")
+        await db.commit()
+
         # Seed Admin User
         admin_email = "admin@zeplay.com"
         result = await db.execute(select(User).filter(User.email == admin_email))

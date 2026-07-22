@@ -18,10 +18,13 @@ router = APIRouter()
 
 
 async def _get_profile_limit(db: AsyncSession, user: User) -> int:
-    """Return the maximum number of profiles allowed for the user's active plan."""
+    """Return max profiles allowed based on active subscription (Admins bypass limits)."""
+    if user.is_admin:
+        return 999
+        
     sub_result = await db.execute(
         select(UserSubscription).filter(
-            UserSubscription.user_id == str(user.user_id),
+            UserSubscription.user_id == user.user_id,
             UserSubscription.status == "active"
         )
     )

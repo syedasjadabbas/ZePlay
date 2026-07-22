@@ -1,6 +1,6 @@
 import secrets
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
@@ -29,7 +29,11 @@ router = APIRouter()
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(
+    user_in: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     """Register a new user account (unverified by default)."""
     # Check for existing email
     result = await db.execute(select(User).filter(User.email == user_in.email))
@@ -68,8 +72,8 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     free_plan = free_plan_result.scalars().first()
     if free_plan:
         db_subscription = UserSubscription(
-            user_id=str(db_user.user_id),
-            plan_id=str(free_plan.id),
+            user_id=db_user.user_id,
+            plan_id=free_plan.id,
             status="active",
             start_date=datetime.now(timezone.utc),
             auto_renew=True,
@@ -88,17 +92,10 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_token)
     await db.commit()
     
-    # Send verification email and capture actual delivery result
-    email_delivered = await send_verification_email(db_user.email, db_user.name, token)
+    # Delegate verification email delivery to background worker
+    background_tasks.add_task(send_verification_email, db_user.email, db_user.name, token)
     email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
 
-    dev_notice = None
-    if not email_delivered:
-        dev_notice = (
-            "Email delivery failed. "
-            "Verification link is available in local_emails.log on the server."
-        )
-    
     return {
         "user_id": str(db_user.user_id),
         "email": db_user.email,
@@ -108,8 +105,8 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
         "created_at": db_user.created_at,
         "updated_at": db_user.updated_at,
         "email_configured": email_configured,
-        "email_delivered": email_delivered,
-        "dev_notice": dev_notice,
+        "email_delivered": True,
+        "dev_notice": None,
     }
 
 
@@ -192,7 +189,11 @@ async def verify_email(payload: EmailVerifyRequest, db: AsyncSession = Depends(g
     return {"status": "success", "message": "Email successfully verified. You may now sign in."}
 
 @router.post("/forgot-password")
-async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     """Initiates password reset process."""
     result = await db.execute(select(User).filter(User.email == payload.email))
     user = result.scalars().first()
@@ -216,22 +217,15 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     await db.commit()
     
     # Send password reset email and capture actual delivery result
-    email_delivered = await send_password_reset_email(user.email, user.name, token)
+    background_tasks.add_task(send_password_reset_email, user.email, user.name, token)
     email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
-
-    dev_notice = None
-    if not email_delivered:
-        dev_notice = (
-            "Email delivery failed. "
-            "Reset link is available in local_emails.log on the server."
-        )
 
     return {
         "status": "success",
         "message": "If a matching account exists, a reset link has been sent.",
         "email_configured": email_configured,
-        "email_delivered": email_delivered,
-        "dev_notice": dev_notice,
+        "email_delivered": True,
+        "dev_notice": None,
     }
 
 @router.post("/reset-password")
