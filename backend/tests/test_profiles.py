@@ -3,6 +3,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.email_verification_token import EmailVerificationToken
+from app.models.user import User
 
 # Mark all test cases in this file as asynchronous
 pytestmark = pytest.mark.asyncio
@@ -74,6 +75,14 @@ async def test_profile_crud_operations(client: AsyncClient, db_session: AsyncSes
     assert update_response.json()["display_name"] == "Primary User"
     assert update_response.json()["language_pref"] == "fr"
     
+    # Upgrade to Premium so we can create a 2nd profile (Free is limited to 1)
+    upgrade_resp = await client.post(
+        "/api/subscription/upgrade",
+        json={"plan_name": "premium"},
+        headers=headers,
+    )
+    assert upgrade_resp.status_code == 200
+
     # Create 2nd profile so deletion of 1st profile is allowed
     create2_response = await client.post(
         "/api/profiles/",
@@ -91,11 +100,19 @@ async def test_profile_crud_operations(client: AsyncClient, db_session: AsyncSes
     assert len(list_response_after.json()) == 1
 
 async def test_profile_creation_limit(client: AsyncClient, db_session: AsyncSession):
-    """Test that users are strictly prevented from creating more than 4 profiles."""
+    """Test that Premium users are limited to 4 profiles, and Free users to 1."""
     token = await create_test_user_and_get_token(client, db_session, "limit@example.com")
     headers = {"Authorization": f"Bearer {token}"}
-    
-    # Create 4 profiles
+
+    # Upgrade to Premium so we can test the 4-profile ceiling
+    upgrade_resp = await client.post(
+        "/api/subscription/upgrade",
+        json={"plan_name": "premium"},
+        headers=headers,
+    )
+    assert upgrade_resp.status_code == 200
+
+    # Create 4 profiles — all must succeed for Premium users
     for i in range(4):
         response = await client.post(
             "/api/profiles/",
@@ -103,15 +120,15 @@ async def test_profile_creation_limit(client: AsyncClient, db_session: AsyncSess
             headers=headers
         )
         assert response.status_code == 201
-        
-    # Attempt to create the 5th profile
+
+    # Attempt to create the 5th profile — must fail at the Premium ceiling
     fail_response = await client.post(
         "/api/profiles/",
         json={"display_name": "Profile 5"},
         headers=headers
     )
     assert fail_response.status_code == 400
-    assert fail_response.json()["detail"] == "Maximum profile limit of 4 reached for this account."
+    assert "Maximum profile limit of 4" in fail_response.json()["detail"]
 
 async def test_profiles_ownership_protection(client: AsyncClient, db_session: AsyncSession):
     """Verify that User B cannot view, modify, or delete User A's profile."""

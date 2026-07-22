@@ -40,6 +40,9 @@ const Profiles: React.FC = () => {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [maxProfiles, setMaxProfiles] = useState<number>(4);  // will be fetched from subscription
+  const [planName, setPlanName] = useState<string>('free');
+
   const navigate = useNavigate();
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -51,8 +54,15 @@ const Profiles: React.FC = () => {
   const fetchProfiles = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/profiles/');
-      setProfiles(response.data);
+      const [profileRes, subRes] = await Promise.all([
+        api.get('/profiles/'),
+        api.get('/subscription/current').catch(() => null),
+      ]);
+      setProfiles(profileRes.data);
+      if (subRes?.data?.plan) {
+        setMaxProfiles(subRes.data.plan.max_profiles);
+        setPlanName(subRes.data.plan.name);
+      }
     } catch (err: any) {
       if (err.response?.status === 401) {
         handleLogout();
@@ -298,8 +308,8 @@ const Profiles: React.FC = () => {
                 );
               })}
 
-              {/* Add Profile Card */}
-              {profiles.length < 4 && (
+              {/* Add Profile Card or Upgrade CTA */}
+              {profiles.length < maxProfiles ? (
                 <div
                   onClick={() => {
                     resetForm();
@@ -314,7 +324,27 @@ const Profiles: React.FC = () => {
                     Add Profile
                   </span>
                 </div>
-              )}
+              ) : planName === 'free' ? (
+                /* Free limit upgrade CTA */
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-full border border-dashed border-amber-400/30 bg-amber-500/5 flex items-center justify-center">
+                    <svg className="w-10 h-10 text-amber-400/60" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-bold text-white">Free Plan Limit Reached</p>
+                    <p className="text-xs text-brand-textMuted">Upgrade to Premium for up to 4 profiles</p>
+                    <button
+                      onClick={() => navigate('/subscription')}
+                      className="mt-1 px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider"
+                    >
+                      Upgrade to Premium
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
             </div>
 
             {/* Toggle Config Mode Button */}

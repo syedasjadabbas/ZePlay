@@ -6,6 +6,7 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [planName, setPlanName] = useState<string>('free');
 
   useEffect(() => {
     // Check initial cached user info
@@ -34,6 +35,13 @@ const Sidebar: React.FC = () => {
         .catch(() => {
           // Token invalid or network error
         });
+
+      // Fetch subscription plan for badge
+      api.get('/subscription/current')
+        .then((res) => {
+          if (res.data?.plan?.name) setPlanName(res.data.plan.name);
+        })
+        .catch(() => {});
     }
   }, []);
   
@@ -42,11 +50,28 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-[#081225] border-r border-white/5 flex flex-col h-screen fixed left-0 top-0 z-30 p-6">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 mb-10 cursor-pointer" onClick={() => navigate('/')}>
+      <div className="flex items-center justify-between mb-2 cursor-pointer" onClick={() => navigate('/')}>
         <span className="text-2xl font-black text-brand-accent tracking-wider font-display">
           ZePlay
         </span>
+        {/* Plan badge */}
+        <button
+          onClick={(e) => { e.stopPropagation(); navigate('/subscription'); }}
+          className={`inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full border transition-all hover:scale-105 ${
+            planName === 'premium'
+              ? 'bg-amber-500/15 border-amber-400/40 text-amber-300 hover:bg-amber-500/25'
+              : 'bg-blue-500/10 border-blue-400/25 text-blue-300 hover:bg-blue-500/20'
+          }`}
+        >
+          {planName === 'premium' && (
+            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+          )}
+          {planName.toUpperCase()}
+        </button>
       </div>
+      <div className="mb-8" />
 
       {/* Navigation list */}
       <nav className="flex-1 space-y-6 overflow-y-auto pr-1 scrollbar-hide">
@@ -210,6 +235,26 @@ const Sidebar: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             Settings
+          </button>
+          <button 
+            onClick={() => navigate('/subscription')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
+              isActive('/subscription')
+                ? 'bg-brand-accent/18 text-brand-accent border-brand-accent/35 shadow-md shadow-blue-500/5'
+                : 'border-transparent text-brand-textMuted hover:bg-brand-cards/50 hover:text-white'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+            Subscription
+            <span className={`ml-auto text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+              planName === 'premium'
+                ? 'bg-amber-500/15 border-amber-400/30 text-amber-300'
+                : 'bg-blue-500/10 border-blue-400/25 text-blue-300'
+            }`}>
+              {planName.toUpperCase()}
+            </span>
           </button>
           <button 
             className="w-full flex items-center gap-4 px-4 py-3 border border-transparent rounded-xl text-sm font-semibold text-brand-textMuted hover:bg-brand-cards/50 hover:text-white transition-all duration-200"

@@ -192,3 +192,30 @@ Represents user-curated saved movies per profile, completely isolated from autom
 | `/browse` | `Browse.tsx` | **Catalog Exploration**: Full catalog grid view, genre multi-filters, release era filters, sorting dropdowns, and inline search. |
 | `/my-list` | `MyList.tsx` | **Saved Favorites**: Profile-curated watchlist of movies saved for later viewing. |
 | `/history` | `WatchHistory.tsx` | **Playback Log**: Automated timeline of items watched with exact timestamp and progress percentage tracking. |
+| `/subscription` | `Subscription.tsx` | **Membership Panel**: Details current tier plan features, status, renewal state, upgrade/downgrade, and cancellation controls. |
+
+---
+
+## 10. Subscription & Plans System (Sprint 9)
+
+### Topology & Flow
+`Frontend UI -> FastAPI -> Subscription Service -> DB`
+
+### Database Models
+- **SubscriptionPlan**: Defines plan features and limits.
+  * Fields: `id` (String PK), `name` (VARCHAR unique: `free` / `premium`), `description` (VARCHAR), `max_profiles` (INT), `supports_4k` (BOOLEAN), `supports_multi_device` (BOOLEAN), `created_at` (Timestamp).
+- **UserSubscription**: Records the active subscription state for each user account.
+  * Fields: `id` (String PK), `user_id` (String FK), `plan_id` (String FK), `status` (VARCHAR active/cancelled/expired), `start_date` (Timestamp), `end_date` (Timestamp, nullable), `auto_renew` (BOOLEAN), `created_at` (Timestamp), `updated_at` (Timestamp).
+
+### Business Rules
+- **Registration**: All newly registered users are automatically assigned to the `free` subscription plan.
+- **Profile Limit Enforcements**:
+  - `free` plan allows a maximum of 1 profile.
+  - `premium` plan allows a maximum of 4 profiles.
+  - Users are blocked from creating a profile if the limit is exceeded.
+- **Downgrade Validation**: Users cannot downgrade from `premium` to `free` unless they have already deleted excess profiles to satisfy the 1-profile limit.
+
+### Admin Dashboard Conversion Statistics
+- **Metrics Tracked**: Total Free Users, Total Premium Users, Premium Conversion % (Premium / Total active membership subscribers).
+- **Endpoint**: `GET /api/admin/stats` updated to return these subscription metrics.
+

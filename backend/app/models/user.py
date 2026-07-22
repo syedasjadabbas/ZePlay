@@ -40,3 +40,13 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+
+    # Relationship to user subscription (one active record expected)
+    subscription = relationship(
+        "UserSubscription",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+        lazy="selectin",
+        foreign_keys="UserSubscription.user_id",
+    )

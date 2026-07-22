@@ -8,10 +8,25 @@ from app.models.user import User
 from app.models.profile import Profile
 from app.models.watch_history import WatchHistory
 from app.models.watchlist import Watchlist
+from app.models.user_subscription import UserSubscription
+from app.models.subscription_plan import SubscriptionPlan
 from app.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate
 from app.api import deps
 
 router = APIRouter()
+
+
+async def _get_profile_limit(db: AsyncSession, user: User) -> int:
+    """Return the maximum number of profiles allowed for the user's active plan."""
+    sub_result = await db.execute(
+        select(UserSubscription).filter(UserSubscription.user_id == str(user.user_id))
+    )
+    sub = sub_result.scalars().first()
+    if sub and sub.plan:
+        return sub.plan.max_profiles
+    # Default to Free limit if no subscription record exists
+    return 1
+
 
 @router.get("/", response_model=List[ProfileResponse])
 async def get_profiles(
@@ -30,18 +45,26 @@ async def create_profile(
     current_user: User = Depends(deps.get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create a new profile. Max 4 profiles per account limit enforced."""
-    # Count profiles
+    """Create a new profile. Limit enforced based on user's active subscription plan."""
+    # Count existing profiles
     count_result = await db.execute(
         select(func.count(Profile.profile_id)).filter(Profile.user_id == current_user.user_id)
     )
     count = count_result.scalar() or 0
-    if count >= 4:
+
+    max_profiles = await _get_profile_limit(db, current_user)
+
+    if count >= max_profiles:
+        if max_profiles <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Upgrade to Premium to create additional profiles."
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum profile limit of 4 reached for this account."
+            detail=f"Maximum profile limit of {max_profiles} reached for this account."
         )
-    
+
     db_profile = Profile(
         user_id=current_user.user_id,
         display_name=profile_in.display_name,
@@ -53,6 +76,7 @@ async def create_profile(
     await db.commit()
     await db.refresh(db_profile)
     return db_profile
+
 
 @router.put("/{profile_id}", response_model=ProfileResponse)
 async def update_profile(

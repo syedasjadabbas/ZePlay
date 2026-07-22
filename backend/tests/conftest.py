@@ -1,4 +1,6 @@
 import asyncio
+import uuid
+from datetime import datetime, timezone
 import pytest
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -9,24 +11,55 @@ from app.main import app
 # SQLite in-memory URL for fast async unit tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
+# Fixed plan UUIDs matching migration seed
+FREE_PLAN_ID    = uuid.UUID("00000000-0000-0000-0000-000000000001")
+PREMIUM_PLAN_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+
 
 @pytest.fixture(scope="session")
 async def db_engine():
-    """Setup async connection engine and build database schemas."""
+    """Setup async connection engine, build schemas, and seed subscription plans."""
     engine = create_async_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        
+
+    # Seed default subscription plans required by all tests
+    from sqlalchemy.ext.asyncio import async_sessionmaker as _asm
+    _Session = _asm(bind=engine, class_=AsyncSession, expire_on_commit=False)
+    from app.models.subscription_plan import SubscriptionPlan
+    now = datetime.now(timezone.utc)
+    async with _Session() as seed_session:
+        async with seed_session.begin():
+            seed_session.add(SubscriptionPlan(
+                id=str(FREE_PLAN_ID),
+                name="free",
+                description="Standard streaming with 1 profile.",
+                max_profiles=1,
+                supports_4k=False,
+                supports_multi_device=False,
+                created_at=now,
+            ))
+            seed_session.add(SubscriptionPlan(
+                id=str(PREMIUM_PLAN_ID),
+                name="premium",
+                description="Premium badge, up to 4 profiles, 4K and multi-device ready.",
+                max_profiles=4,
+                supports_4k=True,
+                supports_multi_device=True,
+                created_at=now,
+            ))
+
     yield engine
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
+
 
 @pytest.fixture
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
