@@ -98,6 +98,10 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Netflix-style adaptive stream preparation.
 - **Features Built**: FFmpeg background transcoding pipelines, HLS segmenting.
 
+### Sprint 11A: Local ABR & PostgreSQL Migration Verification
+- **Objective**: Execute database migrations against PostgreSQL dialect, implement multi-bitrate HLS structure, and write Locust load testing configs.
+- **Features Built**: ABR playlist index master.m3u8, 480p/720p/1080p transcoder tasks, autocomplete suggestion caching, and locustfile.py suite.
+
 ---
 
 ## 4. Feature Inventory
