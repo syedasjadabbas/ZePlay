@@ -74,7 +74,7 @@ async def get_analytics(
     if free_plan:
         free_users = (await db.execute(
             select(func.count(UserSubscription.id)).filter(
-                UserSubscription.plan_id == str(free_plan.id),
+                UserSubscription.plan_id == free_plan.id,
                 UserSubscription.status == "active"
             )
         )).scalar() or 0
@@ -82,7 +82,7 @@ async def get_analytics(
     if premium_plan:
         premium_users = (await db.execute(
             select(func.count(UserSubscription.id)).filter(
-                UserSubscription.plan_id == str(premium_plan.id),
+                UserSubscription.plan_id == premium_plan.id,
                 UserSubscription.status == "active"
             )
         )).scalar() or 0

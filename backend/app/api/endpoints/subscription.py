@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -43,7 +44,7 @@ async def _get_plan_by_name(db: AsyncSession, name: str) -> SubscriptionPlan:
 async def _get_or_create_subscription(db: AsyncSession, user: User) -> UserSubscription:
     """Return the user's active subscription. Creates a Free one if missing."""
     result = await db.execute(
-        select(UserSubscription).filter(UserSubscription.user_id == str(user.user_id))
+        select(UserSubscription).filter(UserSubscription.user_id == user.user_id)
     )
     sub = result.scalars().first()
     if sub:
@@ -52,8 +53,8 @@ async def _get_or_create_subscription(db: AsyncSession, user: User) -> UserSubsc
     # Auto-create Free subscription for legacy users that predate Sprint 9
     free_plan = await _get_plan_by_name(db, "free")
     sub = UserSubscription(
-        user_id=str(user.user_id),
-        plan_id=str(free_plan.id),
+        user_id=user.user_id,
+        plan_id=free_plan.id,
         status="active",
         start_date=datetime.now(timezone.utc),
         auto_renew=True,
@@ -83,6 +84,23 @@ async def get_current_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Return the current user's active subscription with plan details."""
+    if current_user.is_admin:
+        premium_plan = await _get_plan_by_name(db, "premium")
+        # Return a synthetic subscription object for admins with valid UUID fields
+        admin_uuid = uuid.uuid5(uuid.NAMESPACE_DNS, f"admin-{current_user.user_id}")
+        return UserSubscription(
+            id=admin_uuid,
+            user_id=current_user.user_id,
+            plan_id=premium_plan.id,
+            status="Administrator Account",
+            start_date=current_user.created_at,
+            end_date=None,
+            auto_renew=True,
+            created_at=current_user.created_at,
+            updated_at=current_user.created_at,
+            plan=premium_plan
+        )
+        
     sub = await _get_or_create_subscription(db, current_user)
     return sub
 
@@ -97,6 +115,12 @@ async def upgrade_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Upgrade user's subscription to the specified plan (default: premium)."""
+    if current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts do not participate in subscriptions."
+        )
+
     new_plan = await _get_plan_by_name(db, upgrade_in.plan_name)
     sub = await _get_or_create_subscription(db, current_user)
 
@@ -106,7 +130,7 @@ async def upgrade_subscription(
             detail=f"You are already on the '{new_plan.name}' plan."
         )
 
-    sub.plan_id = str(new_plan.id)
+    sub.plan_id = new_plan.id
     sub.status = "active"
     sub.start_date = datetime.now(timezone.utc)
     sub.end_date = None
@@ -138,6 +162,12 @@ async def downgrade_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Downgrade user's subscription (default: free). Validates profile count."""
+    if current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts do not participate in subscriptions."
+        )
+
     new_plan = await _get_plan_by_name(db, downgrade_in.plan_name)
 
     # Count existing profiles
@@ -166,7 +196,7 @@ async def downgrade_subscription(
             detail=f"You are already on the '{new_plan.name}' plan."
         )
 
-    sub.plan_id = str(new_plan.id)
+    sub.plan_id = new_plan.id
     sub.status = "active"
     sub.start_date = datetime.now(timezone.utc)
     sub.end_date = None
@@ -197,6 +227,12 @@ async def cancel_subscription(
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel the current user's subscription (sets status to 'cancelled')."""
+    if current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts do not participate in subscriptions."
+        )
+
     sub = await _get_or_create_subscription(db, current_user)
 
     if sub.status == "cancelled":

@@ -14,9 +14,18 @@ app = FastAPI(
 )
 
 # Setup CORS middleware for local frontend connectivity
+origins = [
+    settings.FRONTEND_URL,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+origins = [org.rstrip("/") for org in origins if org]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict this to designated domain list in production
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,9 +58,14 @@ async def startup_event():
 
 @app.get("/health", tags=["System Health"])
 async def health_check():
-    """Simple service checking endpoint."""
+    """Simple service checking endpoint including cache status."""
+    cache_stats = cache.get_stats()
     return {
         "status": "online",
         "service": settings.PROJECT_NAME,
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "cache": {
+            "engine": cache_stats["cache_engine"],
+            "redis_connected": cache_stats["redis_connected"],
+        }
     }

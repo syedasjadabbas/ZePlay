@@ -12,8 +12,8 @@ from app.main import app
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 # Fixed plan UUIDs matching migration seed
-FREE_PLAN_ID    = uuid.UUID("00000000-0000-0000-0000-000000000001")
-PREMIUM_PLAN_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+FREE_PLAN_ID    = uuid.UUID("f0000000-0000-0000-0000-000000000001")
+PREMIUM_PLAN_ID = uuid.UUID("f0000000-0000-0000-0000-000000000002")
 
 
 @pytest.fixture(scope="session")
@@ -36,7 +36,7 @@ async def db_engine():
     async with _Session() as seed_session:
         async with seed_session.begin():
             seed_session.add(SubscriptionPlan(
-                id=str(FREE_PLAN_ID),
+                id=FREE_PLAN_ID,
                 name="free",
                 description="Standard streaming with 1 profile.",
                 max_profiles=1,
@@ -45,7 +45,7 @@ async def db_engine():
                 created_at=now,
             ))
             seed_session.add(SubscriptionPlan(
-                id=str(PREMIUM_PLAN_ID),
+                id=PREMIUM_PLAN_ID,
                 name="premium",
                 description="Premium badge, up to 4 profiles, 4K and multi-device ready.",
                 max_profiles=4,

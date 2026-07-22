@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, Integer, DateTime
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, UUID
 from app.database import Base
 
 
@@ -9,9 +9,9 @@ class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
 
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
         index=True
     )
     name = Column(String, unique=True, nullable=False, index=True)   # "free" | "premium"
@@ -25,3 +25,4 @@ class SubscriptionPlan(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
+

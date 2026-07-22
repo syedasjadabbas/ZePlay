@@ -139,30 +139,35 @@ async def get_hls_master_playlist(
         filename="master.m3u8"
     )
 
-@router.get("/{video_id}/hls/{segment_name}")
-async def get_hls_segment(
+@router.get("/{video_id}/hls/{file_path:path}")
+async def get_hls_file(
     video_id: UUID,
-    segment_name: str,
+    file_path: str,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Serves individual MPEG-TS video segment chunk files (.ts) for HLS streaming.
+    Serves HLS files (variant playlists, segment chunks) supporting multi-bitrate subdirectory layouts.
     """
     video = await video_storage_service.get_video_by_id(db, video_id)
     video_dir = os.path.dirname(video.storage_path)
     hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
-    segment_path = os.path.join(hls_dir, segment_name)
+    target_path = os.path.join(hls_dir, file_path)
 
-    if not os.path.exists(segment_path):
+    if not os.path.exists(target_path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"HLS segment '{segment_name}' not found."
+            detail=f"HLS asset '{file_path}' not found."
         )
 
+    # Resolve media type dynamically
+    media_type = "application/x-mpegURL"
+    if file_path.endswith(".ts"):
+        media_type = "video/MP2T"
+
     return FileResponse(
-        segment_path,
-        media_type="video/MP2T",
-        filename=segment_name
+        target_path,
+        media_type=media_type,
+        filename=os.path.basename(file_path)
     )
 
 @router.delete("/admin/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
