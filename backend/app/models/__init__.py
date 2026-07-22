@@ -10,21 +10,25 @@ from app.models.watchlist import Watchlist
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.rating import Rating
+from app.models.subscription_plan import SubscriptionPlan
+from app.models.user_subscription import UserSubscription
 
 __all__ = [
-    "Base", 
-    "User", 
-    "Profile", 
-    "Genre", 
-    "movie_genres", 
-    "Movie", 
+    "Base",
+    "User",
+    "Profile",
+    "Genre",
+    "movie_genres",
+    "Movie",
     "Video",
     "WatchHistory",
     "MovieStats",
     "Watchlist",
-    "EmailVerificationToken", 
+    "EmailVerificationToken",
     "PasswordResetToken",
-    "Rating"
+    "Rating",
+    "SubscriptionPlan",
+    "UserSubscription",
 ]
 
 

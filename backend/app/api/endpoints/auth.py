@@ -8,12 +8,14 @@ from app.database import get_db
 from app.models.user import User
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.password_reset_token import PasswordResetToken
+from app.models.subscription_plan import SubscriptionPlan
+from app.models.user_subscription import UserSubscription
 from app.schemas.user import (
-    UserCreate, 
-    UserResponse, 
-    Token, 
-    EmailVerifyRequest, 
-    ForgotPasswordRequest, 
+    UserCreate,
+    UserResponse,
+    Token,
+    EmailVerifyRequest,
+    ForgotPasswordRequest,
     ResetPasswordRequest,
     ChangePasswordRequest
 )
@@ -49,6 +51,22 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+
+    # Automatically assign the Free subscription plan to every new user
+    free_plan_result = await db.execute(
+        select(SubscriptionPlan).filter(SubscriptionPlan.name == "free")
+    )
+    free_plan = free_plan_result.scalars().first()
+    if free_plan:
+        db_subscription = UserSubscription(
+            user_id=str(db_user.user_id),
+            plan_id=str(free_plan.id),
+            status="active",
+            start_date=datetime.now(timezone.utc),
+            auto_renew=True,
+        )
+        db.add(db_subscription)
+        await db.commit()
     
     # Generate Email Verification Token
     token = secrets.token_urlsafe(32)

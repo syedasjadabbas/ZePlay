@@ -3,6 +3,7 @@ from app.schemas.profile import ProfileBase, ProfileCreate, ProfileUpdate, Profi
 from app.schemas.genre import GenreBase, GenreCreate, GenreResponse
 from app.schemas.movie import MovieBase, MovieCreate, MovieUpdate, MovieResponse
 from app.schemas.video import VideoBase, VideoCreate, VideoResponse, VideoStreamInfo
+from app.schemas.subscription import SubscriptionPlanResponse, UserSubscriptionResponse, UpgradeRequest, DowngradeRequest
 
 __all__ = [
     "UserBase",
@@ -29,5 +30,10 @@ __all__ = [
     "EmailVerifyRequest",
     "ForgotPasswordRequest",
     "ResetPasswordRequest",
+    "SubscriptionPlanResponse",
+    "UserSubscriptionResponse",
+    "UpgradeRequest",
+    "DowngradeRequest",
 ]
+
 

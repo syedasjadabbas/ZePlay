@@ -9,6 +9,8 @@ from app.services import movie_service
 from app.models.movie import Movie
 from app.models.video import Video
 from app.models.user import User
+from app.models.subscription_plan import SubscriptionPlan
+from app.models.user_subscription import UserSubscription
 from app.api import deps
 
 router = APIRouter()
@@ -25,12 +27,54 @@ async def get_system_stats(
     total_videos = (await db.execute(select(func.count(Video.video_id)))).scalar() or 0
     total_storage = (await db.execute(select(func.sum(Video.file_size_bytes)))).scalar() or 0
 
+    # Subscription statistics
+    free_plan_result = await db.execute(
+        select(SubscriptionPlan).filter(SubscriptionPlan.name == "free")
+    )
+    free_plan = free_plan_result.scalars().first()
+
+    premium_plan_result = await db.execute(
+        select(SubscriptionPlan).filter(SubscriptionPlan.name == "premium")
+    )
+    premium_plan = premium_plan_result.scalars().first()
+
+    total_free_users = 0
+    total_premium_users = 0
+
+    if free_plan:
+        total_free_users = (
+            await db.execute(
+                select(func.count(UserSubscription.id)).filter(
+                    UserSubscription.plan_id == str(free_plan.id),
+                    UserSubscription.status == "active"
+                )
+            )
+        ).scalar() or 0
+
+    if premium_plan:
+        total_premium_users = (
+            await db.execute(
+                select(func.count(UserSubscription.id)).filter(
+                    UserSubscription.plan_id == str(premium_plan.id),
+                    UserSubscription.status == "active"
+                )
+            )
+        ).scalar() or 0
+
+    conversion_percentage = 0.0
+    subscribed_users = total_free_users + total_premium_users
+    if subscribed_users > 0:
+        conversion_percentage = round((total_premium_users / subscribed_users) * 100, 2)
+
     return {
         "total_users": total_users,
         "total_admins": total_admins,
         "total_movies": total_movies,
         "total_videos": total_videos,
-        "total_storage_bytes": total_storage
+        "total_storage_bytes": total_storage,
+        "total_free_users": total_free_users,
+        "total_premium_users": total_premium_users,
+        "conversion_percentage": conversion_percentage,
     }
 
 @router.get("/users")

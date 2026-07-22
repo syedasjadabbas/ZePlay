@@ -12,6 +12,7 @@ import AdminUpload from './pages/AdminUpload';
 import AdminUsers from './pages/AdminUsers';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import Subscription from './pages/Subscription';
 
 import WatchHistory from './pages/WatchHistory';
 import SearchResults from './pages/SearchResults';
@@ -84,6 +85,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subscription"
+          element={
+            <ProtectedRoute>
+              <Subscription />
             </ProtectedRoute>
           }
         />
