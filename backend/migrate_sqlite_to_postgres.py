@@ -12,21 +12,29 @@ POSTGRES_DSN = "host=localhost dbname=zeplay user=postgres password=postgres por
 def clean_uuid(val):
     if val is None:
         return None
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, uuid.UUID):
+        return str(val)
     if isinstance(val, int):
-        return str(uuid.UUID(int=val))
-    if isinstance(val, str):
-        # Remove any dashes or spaces
-        clean_val = val.replace("-", "").replace(" ", "")
-        if len(clean_val) == 32:
-            return str(uuid.UUID(hex=clean_val))
         try:
-            return str(uuid.UUID(int=int(val)))
+            return str(uuid.UUID(int=val))
         except ValueError:
-            try:
-                return str(uuid.UUID(val))
-            except ValueError:
-                return val
-    return str(val)
+            return str(val)
+    val_str = str(val)
+    clean_val = val_str.replace("-", "").replace(" ", "")
+    if len(clean_val) == 32:
+        try:
+            return str(uuid.UUID(hex=clean_val))
+        except ValueError:
+            pass
+    try:
+        return str(uuid.UUID(int=int(val_str)))
+    except ValueError:
+        try:
+            return str(uuid.UUID(val_str))
+        except ValueError:
+            return val_str
 
 def clean_bool(val):
     if val is None:
