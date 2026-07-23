@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
@@ -7,23 +7,34 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const query = new URLSearchParams(location.search);
-  const initialToken = query.get('token') || '';
+  const passedEmail = location.state?.email || '';
 
-  const [otp, setOtp] = useState(initialToken);
+  const [email, setEmail] = useState(passedEmail);
+  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
 
-    if (!otp || otp.trim().length === 0) {
-      setError('Please enter the 6-digit OTP reset code.');
+    const cleanOtp = otp.trim();
+    if (cleanOtp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP reset code.');
       return;
     }
 
@@ -41,18 +52,39 @@ const ResetPassword: React.FC = () => {
 
     try {
       await api.post('/auth/reset-password', {
-        token: otp.trim(),
+        token: cleanOtp,
         new_password: newPassword,
       });
       setSuccessMessage('Password successfully reset! Redirecting to sign in...');
       setTimeout(() => {
         navigate('/login', { state: { message: 'Password reset successful. Please sign in with your new password.' } });
-      }, 2500);
+      }, 2000);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
           'Failed to reset password. The 6-digit OTP code may be invalid or expired.'
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendResetOtp = async () => {
+    if (!email || !email.includes('@')) {
+      setError('Please enter your email address to resend reset code.');
+      return;
+    }
+
+    setResendMessage(null);
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await api.post('/auth/forgot-password', { email });
+      setResendMessage(res.data.message || 'A new 6-digit reset code has been sent to your email.');
+      setResendCooldown(30);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to resend reset code. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -130,8 +162,23 @@ const ResetPassword: React.FC = () => {
 
           <div className="space-y-2 mb-6 relative z-10">
             <h2 className="text-3xl font-extrabold tracking-tight text-white font-display">Reset Password</h2>
-            <p className="text-xs text-brand-textMuted font-medium">Enter your 6-digit OTP reset code and choose a new password.</p>
+            <p className="text-xs text-brand-textMuted font-medium">
+              Enter the 6-digit OTP code sent to{' '}
+              <span className="text-brand-accent font-semibold">{email || 'your email'}</span> and choose a new password.
+            </p>
           </div>
+
+          {resendMessage && (
+            <div
+              className="text-xs text-emerald-300 rounded-xl p-3.5 mb-5 font-semibold flex items-center gap-2"
+              style={{ background: 'rgba(6,78,59,0.4)', border: '1px solid rgba(16,185,129,0.25)' }}
+            >
+              <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              {resendMessage}
+            </div>
+          )}
 
           {successMessage && (
             <div
@@ -154,7 +201,26 @@ const ResetPassword: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
+          <form onSubmit={handleResetPassword} className="space-y-4 relative z-10">
+            {!passedEmail && (
+              <div>
+                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 text-sm text-white rounded-xl placeholder:text-white/20 outline-none"
+                  style={inputStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
                 6-Digit OTP Reset Code
@@ -165,9 +231,10 @@ const ResetPassword: React.FC = () => {
                 maxLength={6}
                 placeholder="123456"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 required
-                className="w-full px-4 py-3 text-center text-xl tracking-[6px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
+                autoFocus
+                className="w-full px-4 py-3 text-center text-2xl tracking-[10px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
                 style={inputStyle}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
@@ -209,7 +276,7 @@ const ResetPassword: React.FC = () => {
             <button
               id="reset-submit"
               type="submit"
-              disabled={loading || !!successMessage}
+              disabled={loading || !!successMessage || otp.length < 6}
               className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
@@ -230,8 +297,16 @@ const ResetPassword: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 text-brand-textMuted text-xs text-center font-medium relative z-10">
-            Remember your password?{' '}
+          <div className="flex items-center justify-between mt-6 text-brand-textMuted text-xs font-medium relative z-10">
+            <button
+              type="button"
+              onClick={handleResendResetOtp}
+              disabled={resendCooldown > 0 || loading}
+              className="text-brand-accent font-bold hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Reset OTP'}
+            </button>
+
             <Link to="/login" className="text-brand-accent hover:text-blue-400 font-bold transition-colors duration-150">
               Sign In
             </Link>

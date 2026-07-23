@@ -41,12 +41,7 @@ const Register: React.FC = () => {
         name,
         password,
       });
-      setRegistrationData({
-        emailConfigured: response.data.email_configured,
-        devNotice: response.data.dev_notice,
-        userEmail: response.data.email,
-        verificationToken: response.data.verification_token,
-      });
+      navigate('/verify-email', { state: { email: response.data.email || email } });
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||

@@ -189,6 +189,42 @@ async def verify_email(payload: EmailVerifyRequest, db: AsyncSession = Depends(g
     
     return {"status": "success", "message": "Email successfully verified. You may now sign in."}
 
+
+@router.post("/resend-verification")
+async def resend_verification(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
+    """Resends a new 6-digit verification OTP code to user's email."""
+    result = await db.execute(select(User).filter(User.email == payload.email))
+    user = result.scalars().first()
+    
+    if not user:
+        return {"status": "success", "message": "If an unverified account exists, a new 6-digit OTP code has been sent."}
+
+    if user.is_verified:
+        return {"status": "success", "message": "This email account is already verified."}
+
+    # Delete existing verification tokens
+    await db.execute(delete(EmailVerificationToken).filter(EmailVerificationToken.user_id == user.user_id))
+    
+    # Generate new 6-digit OTP
+    token = f"{secrets.randbelow(900000) + 100000}"
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
+    db_token = EmailVerificationToken(
+        user_id=user.user_id,
+        token=token,
+        expires_at=expires_at
+    )
+    db.add(db_token)
+    await db.commit()
+    
+    background_tasks.add_task(send_verification_email, user.email, user.name, token)
+
+    return {"status": "success", "message": "A new 6-digit verification OTP code has been sent to your email."}
+
+
 @router.post("/forgot-password")
 async def forgot_password(
     payload: ForgotPasswordRequest,
