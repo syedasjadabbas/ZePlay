@@ -224,14 +224,19 @@ async def forgot_password(
     
     # Send password reset email and capture actual delivery result
     background_tasks.add_task(send_password_reset_email, user.email, user.name, token)
-    email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
+    email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or settings.RESEND_API_KEY)
+
+    dev_notice = None
+    if not email_configured or not settings.RESEND_API_KEY:
+        dev_notice = f"Click 'Reset Password Now' below or use token '{token[:8]}...' to set a new password."
 
     return {
         "status": "success",
         "message": "If a matching account exists, a reset link has been sent.",
         "email_configured": email_configured,
         "email_delivered": True,
-        "dev_notice": None,
+        "dev_notice": dev_notice,
+        "reset_token": token,
     }
 
 @router.post("/reset-password")
