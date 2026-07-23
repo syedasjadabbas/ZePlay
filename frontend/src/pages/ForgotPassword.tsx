@@ -204,10 +204,25 @@ const ForgotPassword: React.FC = () => {
                   Check Your Email
                 </h2>
                 <p className="text-[11px] text-brand-textMuted leading-relaxed">
-                  If a matching account exists, a password reset link has been sent to{' '}
+                  If a matching account exists, a 6-digit OTP reset code has been sent to{' '}
                   <span className="text-brand-accent font-semibold">{email}</span>.
                 </p>
               </div>
+
+              <button
+                id="enter-reset-code"
+                onClick={() => navigate('/reset-password')}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Enter Reset Code
+              </button>
 
               <button
                 id="forgot-back-to-login"
