@@ -13,6 +13,7 @@ const Register: React.FC = () => {
     emailConfigured: boolean;
     devNotice: string | null;
     userEmail: string;
+    verificationToken?: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -44,6 +45,7 @@ const Register: React.FC = () => {
         emailConfigured: response.data.email_configured,
         devNotice: response.data.dev_notice,
         userEmail: response.data.email,
+        verificationToken: response.data.verification_token,
       });
     } catch (err: any) {
       setError(
@@ -153,6 +155,23 @@ const Register: React.FC = () => {
             )}
 
             <div className="space-y-3 mt-2">
+              {registrationData.verificationToken && (
+                <button
+                  id="verify-email-now"
+                  onClick={() => navigate(`/verify-email?token=${registrationData.verificationToken}`)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    boxShadow: '0 8px 24px rgba(16,185,129,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Verify Email Now
+                </button>
+              )}
+
               {registrationData.emailConfigured && (
                 <a
                   id="open-email-app"

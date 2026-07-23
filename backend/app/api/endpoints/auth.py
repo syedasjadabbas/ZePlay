@@ -95,7 +95,11 @@ async def register(
     
     # Delegate verification email delivery to background worker
     background_tasks.add_task(send_verification_email, db_user.email, db_user.name, token)
-    email_configured = bool(settings.SMTP_USERNAME and settings.SMTP_PASSWORD)
+    email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or settings.RESEND_API_KEY)
+
+    dev_notice = None
+    if not email_configured or not settings.RESEND_API_KEY:
+        dev_notice = f"Click 'Verify Email Now' below or use token '{token[:8]}...' to complete account activation."
 
     return {
         "user_id": str(db_user.user_id),
@@ -107,7 +111,8 @@ async def register(
         "updated_at": db_user.updated_at,
         "email_configured": email_configured,
         "email_delivered": True,
-        "dev_notice": None,
+        "dev_notice": dev_notice,
+        "verification_token": token,
     }
 
 
