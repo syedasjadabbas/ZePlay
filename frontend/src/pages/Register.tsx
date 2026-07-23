@@ -146,7 +146,6 @@ const Register: React.FC = () => {
                   </svg>
                   Open Email App
                 </a>
-              )}
 
               <button
                 id="back-to-signin"
