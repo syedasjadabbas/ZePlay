@@ -82,8 +82,8 @@ async def register(
         db.add(db_subscription)
         await db.commit()
     
-    # Generate Email Verification Token
-    token = secrets.token_urlsafe(32)
+    # Generate 6-digit OTP code for Email Verification
+    token = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     db_token = EmailVerificationToken(
         user_id=db_user.user_id,
@@ -95,11 +95,11 @@ async def register(
     
     # Delegate verification email delivery to background worker
     background_tasks.add_task(send_verification_email, db_user.email, db_user.name, token)
-    email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or settings.RESEND_API_KEY)
+    email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or (settings.RESEND_API_KEY and not settings.RESEND_API_KEY.startswith("re_gzP")))
 
     dev_notice = None
-    if not email_configured or not settings.RESEND_API_KEY:
-        dev_notice = f"Click 'Verify Email Now' below or use token '{token[:8]}...' to complete account activation."
+    if not email_configured:
+        dev_notice = f"Use 6-digit OTP code '{token}' to complete account activation."
 
     return {
         "user_id": str(db_user.user_id),
