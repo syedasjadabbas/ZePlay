@@ -21,7 +21,6 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-# Ensure backend/ is on sys.path when run as `python import_video.py`
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
@@ -29,7 +28,11 @@ if _BACKEND_DIR not in sys.path:
 
 def log(message: str) -> None:
     timestamp = datetime.now().strftime("%H:%M:%S")
-    print(f"[{timestamp}] {message}", flush=True)
+    clean_msg = message.replace("→", "->").replace("…", "...")
+    try:
+        print(f"[{timestamp}] {clean_msg}", flush=True)
+    except UnicodeEncodeError:
+        print(f"[{timestamp}] {clean_msg.encode('ascii', errors='ignore').decode()}", flush=True)
 
 
 def format_bytes(num_bytes: int) -> str:
@@ -216,32 +219,79 @@ async def run_import(
         else:
             log("Could not probe duration — using 120 min placeholder for catalog.")
 
-        # Step 2: Create catalog movie entry
-        log("Step 2/5 — Creating catalog movie entry …")
-        placeholder_thumb = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80"
-        movie_in = MovieCreate(
-            title=movie_title,
-            description=movie_description,
-            release_year=release_year,
-            duration_minutes=duration_minutes,
-            thumbnail_url=placeholder_thumb,
-            video_url="pending",
-            genre_ids=[],
-        )
+        # Duplicate Prevention Check
+        from app.models.movie import Movie
 
-        if genre_name:
-            genre_result = await db.execute(
-                select(Genre).filter(Genre.name.ilike(genre_name.strip()))
+        orig_basename = os.path.basename(source_path)
+        vid_res = await db.execute(
+            select(Video).filter(
+                Video.original_filename == orig_basename,
+                Video.file_size_bytes == file_size,
             )
-            genre = genre_result.scalars().first()
-            if genre:
-                movie_in.genre_ids = [genre.genre_id]
-                log(f"Linked genre: {genre.name}")
-            else:
-                log(f"WARN  Genre '{genre_name}' not found — movie created without genre.")
+        )
+        existing_video = vid_res.scalars().first()
+        if existing_video and existing_video.status in ("completed", "processing", "READY"):
+            log("-" * 60)
+            log("WARN  Duplicate video import prevented!")
+            log(f"Video file '{orig_basename}' ({format_bytes(file_size)}) is already imported.")
+            log(f"Movie ID        : {existing_video.movie_id}")
+            log(f"Video ID        : {existing_video.video_id}")
+            log(f"Status          : {existing_video.status}")
+            log(f"HLS Master      : {existing_video.master_playlist_url}")
+            log("-" * 60)
+            return
 
-        movie = await movie_service.create_movie(db, movie_in)
-        log(f"Movie created → ID: {movie.movie_id}")
+        movie_res = await db.execute(
+            select(Movie).filter(Movie.title.ilike(movie_title.strip()))
+        )
+        existing_movie = movie_res.scalars().first()
+        if existing_movie:
+            m_vid_res = await db.execute(
+                select(Video).filter(
+                    Video.movie_id == existing_movie.movie_id,
+                    Video.status.in_(["completed", "processing", "READY"]),
+                )
+            )
+            existing_m_vid = m_vid_res.scalars().first()
+            if existing_m_vid:
+                log("-" * 60)
+                log("WARN  Duplicate movie import prevented!")
+                log(f"Movie '{existing_movie.title}' already exists in catalog with an attached video asset.")
+                log(f"Movie ID        : {existing_movie.movie_id}")
+                log(f"Video ID        : {existing_m_vid.video_id}")
+                log(f"Status          : {existing_m_vid.status}")
+                log(f"HLS Master      : {existing_m_vid.master_playlist_url}")
+                log("-" * 60)
+                return
+            log(f"Notice: Movie '{movie_title}' already exists in catalog (ID: {existing_movie.movie_id}). Reusing entry.")
+            movie = existing_movie
+        else:
+            # Step 2: Create catalog movie entry
+            log("Step 2/5 — Creating catalog movie entry …")
+            placeholder_thumb = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80"
+            movie_in = MovieCreate(
+                title=movie_title,
+                description=movie_description,
+                release_year=release_year,
+                duration_minutes=duration_minutes,
+                thumbnail_url=placeholder_thumb,
+                video_url="pending",
+                genre_ids=[],
+            )
+
+            if genre_name:
+                genre_result = await db.execute(
+                    select(Genre).filter(Genre.name.ilike(genre_name.strip()))
+                )
+                genre = genre_result.scalars().first()
+                if genre:
+                    movie_in.genre_ids = [genre.genre_id]
+                    log(f"Linked genre: {genre.name}")
+                else:
+                    log(f"WARN  Genre '{genre_name}' not found — movie created without genre.")
+
+            movie = await movie_service.create_movie(db, movie_in)
+            log(f"Movie created → ID: {movie.movie_id}")
 
         # Step 3: Copy video to storage and create Video record
         log("Step 3/5 — Copying video to storage/videos …")

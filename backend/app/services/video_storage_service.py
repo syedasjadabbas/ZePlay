@@ -61,6 +61,31 @@ async def save_uploaded_video(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Movie with ID {movie_id} not found."
             )
+        existing_vid = await db.execute(
+            select(Video).filter(
+                Video.movie_id == movie_id,
+                Video.status.in_(["completed", "processing", "READY"])
+            )
+        )
+        if existing_vid.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Movie with ID {movie_id} already has an attached video asset."
+            )
+
+    # Prevent uploading duplicate video asset with exact original filename and size
+    if file.filename:
+        dup_check = await db.execute(
+            select(Video).filter(
+                Video.original_filename == file.filename,
+                Video.status.in_(["completed", "processing", "READY"])
+            )
+        )
+        if dup_check.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Video asset '{file.filename}' has already been uploaded."
+            )
 
     # Generate unique filename on disk
     unique_filename = f"{uuid.uuid4()}{ext}"
@@ -157,10 +182,24 @@ async def import_video_from_disk(
             f"Allowed formats: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
         )
 
+    file_size = os.path.getsize(source_path)
+    max_upload_size = 5 * 1024 * 1024 * 1024
+    if file_size > max_upload_size:
+        raise ValueError("Video file exceeds the maximum size limit of 5GB.")
+
     if movie_id:
         movie_result = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
         if not movie_result.scalars().first():
             raise ValueError(f"Movie with ID {movie_id} not found.")
+
+        existing_vid = await db.execute(
+            select(Video).filter(
+                Video.movie_id == movie_id,
+                Video.status.in_(["completed", "processing", "READY"])
+            )
+        )
+        if existing_vid.scalars().first():
+            raise ValueError(f"Movie with ID {movie_id} already has an attached video asset.")
 
     unique_filename = f"{uuid.uuid4()}{ext}"
     storage_dir = get_storage_path()
