@@ -122,6 +122,10 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Validate the streaming delivery loop, seeking timeline actions, and adaptive bitrate behavior under simulated network constraints.
 - **Features Built**: Added strict keyframe GOP constraints (`-g 6 -keyint_min 6 -sc_threshold 0`) to `720p` and `480p` transcoder settings to allow uniform 6-second segment sizes; refactored video transcoding execution to run resolutions concurrently using async subprocesses; built dynamic client simulator validating WiFi (1080p), 4G (720p), 3G (480p), and Slow network profiles without playback stalls.
 
+### Sprint 17: Real Local Streaming Validation
+- **Objective**: Establish fully functional local HLS video serving, bypassing all S3 and CloudFront dependencies to guarantee local network (LAN) supervisor demo readiness.
+- **Features Built**: Disabled mock S3 configuration (`MOCK_S3=false`), forcing local HLS folder persistence and relative endpoint pathing; built direct FastAPI endpoints serving variant playlists and segment chunks (.ts files) straight from host disk; validated local playback loop using `test_lan_streaming.py` verification runner.
+
 ---
 
 
