@@ -7,6 +7,8 @@ const ForgotPassword: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [emailConfigured, setEmailConfigured] = useState<boolean | null>(null);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [devNotice, setDevNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -20,6 +22,12 @@ const ForgotPassword: React.FC = () => {
       // The API always returns success (doesn't reveal user existence)
       const response = await api.post('/auth/forgot-password', { email });
       setEmailConfigured(response.data.email_configured ?? true);
+      if (response.data.reset_token) {
+        setResetToken(response.data.reset_token);
+      }
+      if (response.data.dev_notice) {
+        setDevNotice(response.data.dev_notice);
+      }
       setSubmitted(true);
     } catch (err: any) {
       setError(
@@ -201,29 +209,44 @@ const ForgotPassword: React.FC = () => {
                 </p>
               </div>
 
-              {/* Dev Notice — shown only when email service is not configured */}
-              {emailConfigured === false && (
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  background: 'rgba(234,179,8,0.06)',
-                  border: '1px solid rgba(234,179,8,0.2)',
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <svg className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              {resetToken && (
+                <button
+                  id="reset-password-now"
+                  onClick={() => navigate(`/reset-password?token=${resetToken}`)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
+                  style={{
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                    boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
-                  <div>
-                    <p className="text-[11px] font-bold text-yellow-300 mb-1">Email service not configured?</p>
-                    <p className="text-[11px] text-yellow-400/80 leading-relaxed">
-                      Check{' '}
-                      <code className="bg-yellow-400/10 px-1 rounded text-yellow-300">local_emails.log</code>{' '}
-                      on the server for the reset link.
-                    </p>
+                  Reset Password Now
+                </button>
+              )}
+
+              {/* Dev Notice — shown when email service is unconfigured or in dev mode */}
+              {devNotice && (
+                <div
+                  className="rounded-xl p-4 text-left"
+                  style={{
+                    background: 'rgba(234,179,8,0.06)',
+                    border: '1px solid rgba(234,179,8,0.2)',
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <svg className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                      <p className="text-[11px] font-bold text-yellow-300 mb-1">⚡ Password Reset Link Ready</p>
+                      <p className="text-[11px] text-yellow-400/80 leading-relaxed">
+                        {devNotice}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
               )}
 
               <button
