@@ -118,6 +118,10 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Identify, document, and remediate top architectural performance bottlenecks, security weaknesses, and reliability risks to ensure production readiness.
 - **Features Built**: Fixed critical health check coroutine bug; upgraded Bcrypt hashing cost factors; added verify_user_entitlement gating to HLS master playlists, segments, and MP4 stream routes; implemented strict video upload extension whitelisting and 5GB upload limits; optimized streaming ranged generator with non-blocking AnyIO async file reads; added database indexes to foreign keys (`plan_id` in `user_subscriptions` and `genre_id` in `movie_genres`); modernized unit tests to support background processing and CDN redirects context.
 
+### Sprint 16: Streaming Resilience & Network Validation
+- **Objective**: Validate the streaming delivery loop, seeking timeline actions, and adaptive bitrate behavior under simulated network constraints.
+- **Features Built**: Added strict keyframe GOP constraints (`-g 6 -keyint_min 6 -sc_threshold 0`) to `720p` and `480p` transcoder settings to allow uniform 6-second segment sizes; refactored video transcoding execution to run resolutions concurrently using async subprocesses; built dynamic client simulator validating WiFi (1080p), 4G (720p), 3G (480p), and Slow network profiles without playback stalls.
+
 ---
 
 
@@ -269,3 +273,5 @@ erDiagram
 5. **Entitlement Protection**: All media assets and streaming segments must be gated behind verified premium user/admin entitlements.
 6. **Payload Guardrails**: All user-uploaded media files must have their extensions whitelisted and file sizes strictly capped to prevent Denial-of-Service (DoS) attacks.
 7. **Database Indexing**: All foreign key columns and common query join/filter columns must be indexed to ensure sub-100ms API response rates.
+8. **Uniform Keyframe Spacing**: Any ABR/HLS transcoding pipeline must enforce explicit keyframe GOP boundaries (e.g., `-g 6 -keyint_min 6 -sc_threshold 0` for 6-second chunks) across all scaled variants to support uniform segment sizes and reliable timeline seeking.
+
