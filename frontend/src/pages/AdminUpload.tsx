@@ -97,7 +97,7 @@ interface AuditLog {
 }
 
 const AdminUpload: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'health' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('overview');
   
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
@@ -109,6 +109,18 @@ const AdminUpload: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activePreviewVideo, setActivePreviewVideo] = useState<VideoAsset | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // States for Catalog Movie Management
+  const [catalogMovies, setCatalogMovies] = useState<any[]>([]);
+  const [editingMovie, setEditingMovie] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editYear, setEditYear] = useState(2026);
+  const [editDuration, setEditDuration] = useState(120);
+  const [editPosterFile, setEditPosterFile] = useState<File | null>(null);
+  const [editPosterPreview, setEditPosterPreview] = useState('');
+  const [savingMovie, setSavingMovie] = useState(false);
+  const posterInputRef = useRef<HTMLInputElement>(null);
 
   // States for Analytics & Health
   const [analytics, setAnalytics] = useState<AnalyticsStats | null>(null);
@@ -145,6 +157,13 @@ const AdminUpload: React.FC = () => {
     fetchHealth();
     fetchUsersList();
     fetchAuditLogs();
+
+    const interval = setInterval(() => {
+      fetchVideos();
+      fetchHealth();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch functions
@@ -152,8 +171,65 @@ const AdminUpload: React.FC = () => {
     try {
       const response = await api.get('/catalog/movies');
       setMovies(response.data);
+      setCatalogMovies(response.data);
     } catch (err) {
       console.error('Failed to load movies catalog', err);
+    }
+  };
+
+  const handleStartEdit = (movie: any) => {
+    setEditingMovie(movie);
+    setEditTitle(movie.title);
+    setEditDesc(movie.description);
+    setEditYear(movie.release_year);
+    setEditDuration(movie.duration_minutes);
+    setEditPosterFile(null);
+    setEditPosterPreview(movie.thumbnail_url || '');
+  };
+
+  const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setEditPosterFile(file);
+      setEditPosterPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveMovie = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMovie) return;
+    try {
+      setSavingMovie(true);
+      setError(null);
+      setSuccessMsg(null);
+      
+      let currentThumbnail = editPosterPreview;
+      if (editPosterFile) {
+        const formData = new FormData();
+        formData.append('file', editPosterFile);
+        const posterRes = await api.post(`/admin/movies/${editingMovie.movie_id}/poster`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        currentThumbnail = posterRes.data.thumbnail_url;
+      }
+      
+      await api.put(`/admin/movies/${editingMovie.movie_id}`, {
+        title: editTitle,
+        description: editDesc,
+        release_year: editYear,
+        duration_minutes: editDuration,
+        thumbnail_url: currentThumbnail,
+        video_url: editingMovie.video_url || 'placeholder'
+      });
+      
+      setSuccessMsg('Movie catalog entry successfully updated!');
+      setEditingMovie(null);
+      fetchMovies();
+    } catch (err: any) {
+      console.error('Failed to save movie', err);
+      setError(err.response?.data?.detail || 'Failed to save movie metadata.');
+    } finally {
+      setSavingMovie(false);
     }
   };
 
@@ -483,6 +559,7 @@ const AdminUpload: React.FC = () => {
             { id: 'content', label: 'Content Analytics' },
             { id: 'users', label: 'User Management' },
             { id: 'ingestion', label: 'Catalog Ingestion' },
+            { id: 'movies_manage', label: 'Manage Catalog Movies' },
             { id: 'health', label: 'Infrastructure & Cache' },
             { id: 'audit', label: 'Audit Log Explorer' },
           ].map((t) => (
@@ -1060,6 +1137,163 @@ const AdminUpload: React.FC = () => {
                     <span>Mime-Type: {activePreviewVideo.mime_type}</span>
                     <span>UUID: {activePreviewVideo.video_id}</span>
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Manage Catalog Movies */}
+        {activeTab === 'movies_manage' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent">Catalog Movies Directory</h2>
+                <span className="text-[10px] font-bold text-brand-textMuted">Total Catalog Movies: {catalogMovies.length}</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {catalogMovies.map((m) => (
+                  <div key={m.movie_id} className="bg-brand-surface border border-white/5 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div className="flex gap-4">
+                      <div className="w-20 h-28 bg-black/40 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative group">
+                        {m.thumbnail_url ? (
+                          <img src={m.thumbnail_url} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-neutral-600">No Poster</div>
+                        )}
+                      </div>
+                      <div className="space-y-2 flex-grow min-w-0">
+                        <h4 className="text-xs font-black text-white uppercase truncate">{m.title}</h4>
+                        <p className="text-[10px] text-neutral-400 font-mono">{m.release_year} • {m.duration_minutes} mins</p>
+                        <p className="text-[10px] text-brand-textMuted line-clamp-3 leading-relaxed">{m.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleStartEdit(m)}
+                        className="flex-1 py-2 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/30 text-[10px] font-extrabold rounded-xl transition-all"
+                      >
+                        Edit Metadata & Poster
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Movie Edit Modal */}
+            {editingMovie && (
+              <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-8">
+                <div className="bg-[#0B1533] border border-white/10 max-w-lg w-full rounded-3xl overflow-hidden shadow-2xl relative">
+                  <button
+                    onClick={() => setEditingMovie(null)}
+                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all"
+                  >
+                    ×
+                  </button>
+                  
+                  <div className="p-6 border-b border-white/5">
+                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide">Edit Movie Metadata</h3>
+                    <p className="text-[10px] text-neutral-400 mt-1 font-mono">ID: {editingMovie.movie_id}</p>
+                  </div>
+                  
+                  <form onSubmit={handleSaveMovie} className="p-6 space-y-4">
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Movie Title / Rename</label>
+                      <input
+                        type="text"
+                        required
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Description</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={editDesc}
+                        onChange={(e) => setEditDesc(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent resize-none"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Release Year</label>
+                        <input
+                          type="number"
+                          required
+                          value={editYear}
+                          onChange={(e) => setEditYear(parseInt(e.target.value))}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Duration (mins)</label>
+                        <input
+                          type="number"
+                          required
+                          value={editDuration}
+                          onChange={(e) => setEditDuration(parseInt(e.target.value))}
+                          className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Upload / Replace Poster Image</label>
+                      <div className="flex gap-4 items-center">
+                        <div className="w-16 h-24 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex-shrink-0 relative group">
+                          {editPosterPreview ? (
+                            <img src={editPosterPreview} className="w-full h-full object-cover" alt="Poster Preview" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[9px] text-neutral-600">No Preview</div>
+                          )}
+                          {editPosterPreview && (
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
+                              <span className="text-[8px] font-black uppercase tracking-wider text-white">Preview</span>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => posterInputRef.current?.click()}
+                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-neutral-300 text-[10px] font-black uppercase rounded-xl border border-white/10 transition-all"
+                        >
+                          Choose Poster Image
+                        </button>
+                        <input
+                          type="file"
+                          ref={posterInputRef}
+                          accept="image/*"
+                          onChange={handlePosterChange}
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 flex gap-3">
+                      <button
+                        type="submit"
+                        disabled={savingMovie}
+                        className="flex-1 py-3 bg-brand-accent text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-brand-accent-hover transition-colors"
+                      >
+                        {savingMovie ? 'Saving Changes...' : 'Save Changes'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingMovie(null)}
+                        className="px-5 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-xl transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}

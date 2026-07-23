@@ -126,7 +126,9 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             # High efficiency transcode task running copy for 1080p and scaling down for others
             cmd_1080 = [
                 ffmpeg_bin, "-y", "-i", video.storage_path,
-                "-c:v", "copy", "-c:a", "copy",
+                "-vf", "scale=-2:1080", "-c:v", "libx264", "-preset", "ultrafast",
+                "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
+                "-b:v", "4500k", "-c:a", "aac", "-b:a", "128k",
                 "-hls_time", "6", "-hls_playlist_type", "vod",
                 "-hls_segment_filename", os.path.join(t1080_dir, "segment_%03d.ts"),
                 os.path.join(t1080_dir, "index.m3u8")
