@@ -43,6 +43,10 @@ const MovieDetails: React.FC = () => {
   const [isInWatchlist, setIsInWatchlist] = useState<boolean>(false);
   const [watchlistSubmitting, setWatchlistSubmitting] = useState<boolean>(false);
 
+  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
+  const [levels, setLevels] = useState<{ index: number; name: string }[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<number>(-1);
+
   const [ratingStats, setRatingStats] = useState<{ average_rating: number; total_ratings: number }>({ average_rating: 0, total_ratings: 0 });
   const [userScore, setUserScore] = useState<number | null>(null);
   const [ratingSubmitting, setRatingSubmitting] = useState<boolean>(false);
@@ -249,6 +253,20 @@ const MovieDetails: React.FC = () => {
           videoRef.current.currentTime = savedProgress.current_position;
         }
         videoRef.current?.play().catch((e) => console.log('Autoplay prevented:', e));
+
+        if (hls) {
+          const detectedLevels = hls.levels.map((level, index) => {
+            let name = `${level.height}p`;
+            if (level.height === 1080) name = '1080p';
+            else if (level.height === 720) name = '720p';
+            else if (level.height === 480) name = '480p';
+            return { index, name };
+          });
+          detectedLevels.sort((a, b) => b.index - a.index);
+          setLevels([{ index: -1, name: 'Auto' }, ...detectedLevels]);
+          setHlsInstance(hls);
+          setSelectedLevel(hls.currentLevel); // Default should map to whatever is configured
+        }
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
@@ -285,6 +303,9 @@ const MovieDetails: React.FC = () => {
       if (hls) {
         hls.destroy();
       }
+      setHlsInstance(null);
+      setLevels([]);
+      setSelectedLevel(-1);
     };
   }, [isPlaying, movie, shouldResume, savedProgress]);
 
@@ -428,6 +449,33 @@ const MovieDetails: React.FC = () => {
                           Close Player
                         </button>
                       </div>
+
+                      {streamType === 'HLS' && levels.length > 1 && (
+                        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                          <label htmlFor="quality-select" className="text-[10px] font-extrabold uppercase text-neutral-400 bg-black/40 px-2.5 py-1 rounded border border-white/5 backdrop-blur-sm">
+                            Quality:
+                          </label>
+                          <select
+                            id="quality-select"
+                            value={selectedLevel}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              setSelectedLevel(val);
+                              if (hlsInstance) {
+                                hlsInstance.currentLevel = val;
+                                console.log(`Switched quality to level: ${val}`);
+                              }
+                            }}
+                            className="text-xs bg-black/70 hover:bg-black/90 text-white font-bold px-2 py-1 rounded border border-white/15 backdrop-blur-md transition-colors cursor-pointer outline-none focus:border-brand-accent"
+                          >
+                            {levels.map((lvl) => (
+                              <option key={lvl.index} value={lvl.index} className="bg-[#0b1225] text-white">
+                                {lvl.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
