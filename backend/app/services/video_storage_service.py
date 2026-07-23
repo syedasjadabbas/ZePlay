@@ -1,6 +1,7 @@
 import os
 import uuid
 import re
+import shutil
 from typing import Optional, Tuple, AsyncGenerator
 from uuid import UUID
 from fastapi import UploadFile, HTTPException, status
@@ -121,6 +122,79 @@ async def save_uploaded_video(
         await s3_storage.upload_file(file_path, s3_key)
 
     # Also update movie video_url if movie_id attached
+    if movie_id:
+        movie_result = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
+        movie = movie_result.scalars().first()
+        if movie:
+            movie.video_url = f"/api/videos/{db_video.video_id}/stream"
+            await db.commit()
+
+    return db_video
+
+
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".mov", ".ts", ".m3u8"}
+
+
+async def import_video_from_disk(
+    db: AsyncSession,
+    source_path: str,
+    movie_id: Optional[UUID] = None,
+    original_filename: Optional[str] = None,
+) -> Video:
+    """
+    Import a video file from a local disk path into storage/videos and create a Video record.
+    Used by the development import_video.py CLI tool.
+    """
+    source_path = os.path.abspath(source_path)
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(f"Video file not found: {source_path}")
+
+    orig_name = original_filename or os.path.basename(source_path)
+    ext = os.path.splitext(orig_name)[1].lower()
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        raise ValueError(
+            f"Unsupported file extension '{ext}'. "
+            f"Allowed formats: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
+        )
+
+    if movie_id:
+        movie_result = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
+        if not movie_result.scalars().first():
+            raise ValueError(f"Movie with ID {movie_id} not found.")
+
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    storage_dir = get_storage_path()
+    dest_path = os.path.join(storage_dir, unique_filename)
+
+    file_size = os.path.getsize(source_path)
+    max_upload_size = 5 * 1024 * 1024 * 1024
+    if file_size > max_upload_size:
+        raise ValueError("Video file exceeds the maximum size limit of 5GB.")
+
+    shutil.copy2(source_path, dest_path)
+
+    mime_type = "video/mp4" if ext == ".mp4" else f"video/{ext.lstrip('.')}"
+    container_format = ext.lstrip(".") or "mp4"
+
+    db_video = Video(
+        movie_id=movie_id,
+        filename=unique_filename,
+        original_filename=orig_name,
+        storage_path=dest_path,
+        file_size_bytes=file_size,
+        mime_type=mime_type,
+        format=container_format,
+        status="uploaded",
+    )
+    db.add(db_video)
+    await db.commit()
+    await db.refresh(db_video)
+
+    from app.services.s3_storage_service import s3_storage
+    if s3_storage.s3_client and s3_storage.bucket_name:
+        s3_key = f"uploads/{unique_filename}"
+        await s3_storage.upload_file(dest_path, s3_key)
+
     if movie_id:
         movie_result = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
         movie = movie_result.scalars().first()

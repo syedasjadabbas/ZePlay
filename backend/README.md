@@ -70,7 +70,22 @@ uvicorn app.main:app --reload
 
 ---
 
-## 5. Directory Structure
+## 5. Development Video Import (CLI)
+
+Import local MP4 files directly from disk without using the Admin Dashboard:
+
+```bash
+cd backend
+python import_video.py "D:\Videos\movie.mp4"
+```
+
+See `import_video.py --help` for optional `--title`, `--year`, `--description`, and `--genre` flags.
+
+Requirements: FFmpeg on PATH, database configured in `.env`, Alembic migrations applied.
+
+---
+
+## 6. Directory Structure
 ```
 backend/
 ├── app/
