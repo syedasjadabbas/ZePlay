@@ -3,62 +3,41 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
 const VerifyEmail: React.FC = () => {
+  const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
+  const [message, setMessage] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
 
   const query = new URLSearchParams(location.search);
-  const initialToken = query.get('token') || '';
-
-  const [otp, setOtp] = useState(initialToken);
-  const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const performVerification = async (codeToVerify: string) => {
-    if (!codeToVerify || codeToVerify.trim().length === 0) {
-      setStatus('error');
-      setMessage('Please enter a 6-digit OTP verification code.');
-      return;
-    }
-
-    setLoading(true);
-    setStatus('verifying');
-    setMessage('');
-
-    try {
-      const response = await api.post('/auth/verify-email', { token: codeToVerify.trim() });
-      setStatus('success');
-      setMessage(response.data.message || 'Email verified successfully!');
-
-      setTimeout(() => {
-        navigate('/login', { state: { message: 'Email verified successfully! You can now sign in.' } });
-      }, 2500);
-    } catch (err: any) {
-      setStatus('error');
-      setMessage(
-        err.response?.data?.detail ||
-          'Invalid or expired 6-digit OTP code.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const token = query.get('token');
 
   useEffect(() => {
-    if (initialToken) {
-      performVerification(initialToken);
-    }
-  }, [initialToken]);
+    const performVerification = async () => {
+      if (!token) {
+        setStatus('error');
+        setMessage('Verification link is missing or invalid.');
+        return;
+      }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    performVerification(otp);
-  };
+      try {
+        const response = await api.post('/auth/verify-email', { token });
+        setStatus('success');
+        setMessage(response.data.message || 'Email verified successfully!');
 
-  const inputStyle = {
-    background: 'rgba(16,28,64,0.8)',
-    border: '1px solid rgba(255,255,255,0.09)',
-  };
+        setTimeout(() => {
+          navigate('/login', { state: { message: 'Email verified successfully! You can now sign in.' } });
+        }, 2500);
+      } catch (err: any) {
+        setStatus('error');
+        setMessage(
+          err.response?.data?.detail ||
+            'Invalid or expired verification token.'
+        );
+      }
+    };
+
+    performVerification();
+  }, [token, navigate]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-brand-background px-4 font-sans select-none overflow-hidden">
@@ -83,9 +62,9 @@ const VerifyEmail: React.FC = () => {
       >
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-        {/* Form State */}
-        {status !== 'success' && (
-          <div className="space-y-6">
+        {/* Verifying */}
+        {status === 'verifying' && (
+          <div className="space-y-5 py-6">
             <div className="flex justify-center">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center"
@@ -95,76 +74,14 @@ const VerifyEmail: React.FC = () => {
                   boxShadow: '0 0 20px rgba(59,130,246,0.1)',
                 }}
               >
-                <svg className="w-7 h-7 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                <svg className="w-6 h-6 text-brand-accent animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               </div>
             </div>
-
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white font-display mb-2">Verify Your Email</h2>
-              <p className="text-xs text-brand-textMuted font-medium px-4">
-                Enter the 6-digit OTP code sent to your email address to activate your account.
-              </p>
-            </div>
-
-            {status === 'error' && message && (
-              <div
-                className="text-xs text-red-200 rounded-xl p-3.5 font-semibold"
-                style={{ background: 'rgba(127,29,29,0.4)', border: '1px solid rgba(239,68,68,0.25)' }}
-              >
-                {message}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">
-                  6-Digit OTP Code
-                </label>
-                <input
-                  id="otp-input"
-                  type="text"
-                  maxLength={6}
-                  placeholder="123456"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  required
-                  className="w-full px-4 py-3.5 text-center text-2xl tracking-[8px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
-                  style={inputStyle}
-                />
-              </div>
-
-              <button
-                id="verify-submit"
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                }}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Verifying OTP...
-                  </span>
-                ) : (
-                  'Verify Account'
-                )}
-              </button>
-            </form>
-
-            <div className="pt-2 text-xs text-brand-textMuted">
-              Already verified?{' '}
-              <Link to="/login" className="text-brand-accent font-bold hover:text-blue-400">
-                Sign In
-              </Link>
-            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-white font-display">Verifying your email</h2>
+            <p className="text-xs text-brand-textMuted font-medium">Please wait while we activate your account...</p>
           </div>
         )}
 
@@ -202,6 +119,56 @@ const VerifyEmail: React.FC = () => {
                 You can now access all ZePlay features.{' '}
                 <span className="text-emerald-300 font-semibold">Redirecting to sign in...</span>
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {status === 'error' && (
+          <div className="space-y-5 py-4">
+            <div className="flex justify-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%)',
+                  border: '1px solid rgba(239,68,68,0.3)',
+                  boxShadow: '0 0 30px rgba(239,68,68,0.1)',
+                }}
+              >
+                <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white font-display mb-2">
+                Verification Failed
+              </h2>
+              <p className="text-xs text-red-300 font-medium px-4">{message}</p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Link
+                id="verify-go-login"
+                to="/login"
+                className="flex-1 py-3 rounded-xl font-bold text-xs text-brand-textMuted transition-all duration-200"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                Sign In
+              </Link>
+              <Link
+                id="verify-go-register"
+                to="/register"
+                className="flex-1 py-3 rounded-xl font-bold text-xs text-white transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                  boxShadow: '0 8px 24px rgba(59,130,246,0.3)',
+                }}
+              >
+                Register
+              </Link>
             </div>
           </div>
         )}
