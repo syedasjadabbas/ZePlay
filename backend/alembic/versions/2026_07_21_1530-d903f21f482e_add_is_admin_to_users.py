@@ -20,8 +20,9 @@ def upgrade() -> None:
     # Check/add is_admin column to users table with default False
     op.add_column(
         'users',
-        sa.Column('is_admin', sa.Boolean(), server_default=sa.text('0'), nullable=False)
+        sa.Column('is_admin', sa.Boolean(), server_default=sa.text('false'), nullable=False)
     )
+
 
 
 def downgrade() -> None:
