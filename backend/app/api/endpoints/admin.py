@@ -1,9 +1,10 @@
 import os
 import json
+import shutil
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete, or_
 from pydantic import BaseModel, Field
@@ -673,3 +674,64 @@ async def clear_cache(
     """Admin endpoint to clear all cached keys and reset hit/miss counters."""
     await cache.clear_all()
     return {"message": "Cache successfully cleared."}
+
+@router.post("/movies/{movie_id}/poster", response_model=MovieResponse)
+async def upload_movie_poster(
+    movie_id: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.get_current_admin_user)
+):
+    """
+    Upload or replace a movie poster/thumbnail image.
+    Stores the file locally in static directory (or S3 if enabled) and updates thumbnail_url.
+    """
+    movie_res = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
+    movie = movie_res.scalars().first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found.")
+
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are allowed for posters.")
+
+    ext = os.path.splitext(file.filename)[1] or ".jpg"
+    filename = f"poster_{movie_id}{ext}"
+    
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "static", "posters")
+    os.makedirs(static_dir, exist_ok=True)
+    
+    dest_path = os.path.join(static_dir, filename)
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    poster_url = f"/static/posters/{filename}"
+    
+    from app.services.s3_storage_service import s3_storage
+    from app.config import settings
+    
+    is_s3_enabled = (s3_storage.s3_client and s3_storage.bucket_name) or settings.MOCK_S3
+    if is_s3_enabled:
+        s3_key = f"posters/{filename}"
+        s3_uploaded = True
+        if not settings.MOCK_S3:
+            s3_uploaded = await s3_storage.upload_file(dest_path, s3_key)
+        if s3_uploaded:
+            cdn_url = getattr(settings, "CLOUDFRONT_URL", None)
+            if cdn_url:
+                poster_url = f"{cdn_url.rstrip('/')}/{s3_key}"
+            else:
+                poster_url = f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{s3_key}"
+                
+    movie.thumbnail_url = poster_url
+    await db.commit()
+    await db.refresh(movie)
+    
+    await log_event(
+        db,
+        action="movie_poster_upload",
+        details=f"Poster uploaded for movie '{movie.title}': {poster_url}",
+        performed_by=current_user.user_id,
+        metadata_dict={"movie_id": str(movie_id), "poster_url": poster_url}
+    )
+    
+    return await movie_service.get_movie_by_id(db, movie_id)

@@ -39,6 +39,12 @@ import logging
 # Mount Unified Router
 app.include_router(api_router, prefix="/api")
 
+import os
+from fastapi.staticfiles import StaticFiles
+static_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static")
+os.makedirs(static_path, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize cache service and validate database connection on application startup."""
