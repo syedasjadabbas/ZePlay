@@ -34,6 +34,7 @@ def build_video_response(video: Video) -> dict:
         "playback_url": f"/api/videos/{video.video_id}/stream",
         "hls_url": hls_url,
         "error_message": video.error_message,
+        "processing_progress": getattr(video, 'processing_progress', 0.0),
         "created_at": video.created_at,
         "updated_at": video.updated_at
     }

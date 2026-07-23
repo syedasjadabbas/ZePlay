@@ -21,6 +21,7 @@ interface VideoAsset {
   playback_url: string;
   hls_url?: string | null;
   error_message?: string | null;
+  processing_progress?: number;
   created_at: string;
 }
 
@@ -98,7 +99,7 @@ interface AuditLog {
 
 const AdminUpload: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('overview');
-  
+
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
@@ -202,7 +203,7 @@ const AdminUpload: React.FC = () => {
       setSavingMovie(true);
       setError(null);
       setSuccessMsg(null);
-      
+
       let currentThumbnail = editPosterPreview;
       if (editPosterFile) {
         const formData = new FormData();
@@ -212,7 +213,7 @@ const AdminUpload: React.FC = () => {
         });
         currentThumbnail = posterRes.data.thumbnail_url;
       }
-      
+
       await api.put(`/admin/movies/${editingMovie.movie_id}`, {
         title: editTitle,
         description: editDesc,
@@ -221,7 +222,7 @@ const AdminUpload: React.FC = () => {
         thumbnail_url: currentThumbnail,
         video_url: editingMovie.video_url || 'placeholder'
       });
-      
+
       setSuccessMsg('Movie catalog entry successfully updated!');
       setEditingMovie(null);
       fetchMovies();
@@ -276,7 +277,7 @@ const AdminUpload: React.FC = () => {
       if (userPlanFilter) params.plan = userPlanFilter;
       if (userStatusFilter) params.status = userStatusFilter;
       if (userVerifyFilter) params.is_verified = userVerifyFilter === 'verified';
-      
+
       const response = await api.get('/admin/users', { params });
       setUsers(response.data);
     } catch (err) {
@@ -506,7 +507,7 @@ const AdminUpload: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-brand-accent selection:text-white pb-20">
-      
+
       {/* Top Navbar */}
       <header className="border-b border-white/5 bg-[#070E26]/80 backdrop-blur-xl sticky top-0 z-40 px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
@@ -529,7 +530,7 @@ const AdminUpload: React.FC = () => {
 
       {/* Main Workspace Container */}
       <div className="max-w-7xl mx-auto px-8 pt-10">
-        
+
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight uppercase">Administrative Operations</h1>
@@ -570,11 +571,10 @@ const AdminUpload: React.FC = () => {
                 setError(null);
                 setSuccessMsg(null);
               }}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${
-                activeTab === t.id
+              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${activeTab === t.id
                   ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent'
                   : 'bg-brand-surface/40 border-white/5 text-neutral-400 hover:text-white'
-              }`}
+                }`}
             >
               {t.label}
             </button>
@@ -610,15 +610,15 @@ const AdminUpload: React.FC = () => {
               <div className="h-64 flex items-end gap-3 pt-6 border-b border-white/5 pb-2">
                 {[45, 60, 55, 80, 70, 95, 85, 110, 90, 120, 130, 150].map((val, idx) => (
                   <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
-                    <div 
-                      style={{ height: `${(val / 150) * 100}%` }} 
+                    <div
+                      style={{ height: `${(val / 150) * 100}%` }}
                       className="w-full bg-gradient-to-t from-brand-accent/40 to-brand-accent rounded-t-lg relative group cursor-pointer"
                     >
                       <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-accent text-white font-black text-[9px] px-2 py-0.5 rounded-md transition-opacity whitespace-nowrap shadow-lg">
                         {val} hrs
                       </div>
                     </div>
-                    <span className="text-[8px] font-bold text-neutral-500 uppercase">M{idx+1}</span>
+                    <span className="text-[8px] font-bold text-neutral-500 uppercase">M{idx + 1}</span>
                   </div>
                 ))}
               </div>
@@ -633,7 +633,7 @@ const AdminUpload: React.FC = () => {
         {/* Tab 2: Content Analytics */}
         {activeTab === 'content' && contentRankings && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
+
             {/* 1. Most Watched Movies */}
             <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
               <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Most Watched Movies</h2>
@@ -641,7 +641,7 @@ const AdminUpload: React.FC = () => {
                 {contentRankings.most_watched_movies.map((m, idx) => (
                   <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
                       <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
                       <span className="text-xs font-bold">{m.title}</span>
                     </div>
@@ -658,7 +658,7 @@ const AdminUpload: React.FC = () => {
                 {contentRankings.highest_rated_movies.map((m, idx) => (
                   <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
                       <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
                       <span className="text-xs font-bold">{m.title}</span>
                     </div>
@@ -675,7 +675,7 @@ const AdminUpload: React.FC = () => {
                 {contentRankings.most_added_watchlist.map((m, idx) => (
                   <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx+1}</span>
+                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
                       <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
                       <span className="text-xs font-bold">{m.title}</span>
                     </div>
@@ -715,7 +715,7 @@ const AdminUpload: React.FC = () => {
         {/* Tab 3: User Management */}
         {activeTab === 'users' && (
           <div className="space-y-6">
-            
+
             {/* Search and Filters */}
             <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
               <input
@@ -725,7 +725,7 @@ const AdminUpload: React.FC = () => {
                 onChange={(e) => setUserSearch(e.target.value)}
                 className="flex-1 min-w-[280px] px-4 py-2.5 bg-brand-surface border border-white/10 rounded-2xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-accent"
               />
-              
+
               <div className="flex flex-wrap gap-3">
                 <select
                   value={userPlanFilter}
@@ -761,7 +761,7 @@ const AdminUpload: React.FC = () => {
 
             {/* List and Details Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
+
               {/* Users table list */}
               <div className="lg:col-span-2 bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
                 <div className="overflow-x-auto">
@@ -809,22 +809,20 @@ const AdminUpload: React.FC = () => {
                               <button
                                 onClick={() => handleToggleUserActive(u)}
                                 disabled={updatingUserId === u.user_id}
-                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${
-                                  u.is_active
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${u.is_active
                                     ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/20'
                                     : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/20'
-                                }`}
+                                  }`}
                               >
                                 {u.is_active ? 'Disable' : 'Enable'}
                               </button>
                               <button
                                 onClick={() => handleToggleAdminRole(u)}
                                 disabled={updatingUserId === u.user_id}
-                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${
-                                  u.is_admin
+                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${u.is_admin
                                     ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-white/5'
                                     : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/30'
-                                }`}
+                                  }`}
                               >
                                 {u.is_admin ? 'Revoke Admin' : 'Make Admin'}
                               </button>
@@ -840,7 +838,7 @@ const AdminUpload: React.FC = () => {
               {/* User detail activity panels */}
               <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
                 <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Audit Details & Activity</h3>
-                
+
                 {!selectedUserDetail ? (
                   <div className="text-center py-20 text-xs text-neutral-500">
                     Select a user from the list to audit watch history, ratings, and profile statistics.
@@ -951,12 +949,12 @@ const AdminUpload: React.FC = () => {
         {/* Tab 4: Ingestion (Existing logic intact) */}
         {activeTab === 'ingestion' && (
           <div className="space-y-8 animate-fadeIn">
-            
+
             {/* Catalog Upload Form */}
             <div className="bg-[#0B1533]/80 border border-white/5 p-8 rounded-3xl backdrop-blur-md">
               <h2 className="text-lg font-black uppercase mb-6 tracking-wide text-brand-accent">Ingest Video Catalog</h2>
               <form onSubmit={handleUpload} className="space-y-6">
-                
+
                 {/* Select Movie Linkage */}
                 <div>
                   <label className="text-[10px] font-black uppercase text-brand-textMuted block mb-2 tracking-wider">
@@ -1071,7 +1069,7 @@ const AdminUpload: React.FC = () => {
                             {v.status === 'completed' ? (
                               <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">COMPLETED</span>
                             ) : v.status === 'processing' ? (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">PROCESSING</span>
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">PROCESSING {v.processing_progress ? `${v.processing_progress}%` : ''}</span>
                             ) : v.status === 'uploaded' ? (
                               <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">UPLOADED</span>
                             ) : (
@@ -1151,7 +1149,7 @@ const AdminUpload: React.FC = () => {
                 <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent">Catalog Movies Directory</h2>
                 <span className="text-[10px] font-bold text-brand-textMuted">Total Catalog Movies: {catalogMovies.length}</span>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {catalogMovies.map((m) => (
                   <div key={m.movie_id} className="bg-brand-surface border border-white/5 p-5 rounded-2xl flex flex-col justify-between space-y-4">
@@ -1169,7 +1167,7 @@ const AdminUpload: React.FC = () => {
                         <p className="text-[10px] text-brand-textMuted line-clamp-3 leading-relaxed">{m.description}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleStartEdit(m)}
@@ -1193,12 +1191,12 @@ const AdminUpload: React.FC = () => {
                   >
                     ×
                   </button>
-                  
+
                   <div className="p-6 border-b border-white/5">
                     <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide">Edit Movie Metadata</h3>
                     <p className="text-[10px] text-neutral-400 mt-1 font-mono">ID: {editingMovie.movie_id}</p>
                   </div>
-                  
+
                   <form onSubmit={handleSaveMovie} className="p-6 space-y-4">
                     <div>
                       <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Movie Title / Rename</label>
@@ -1210,7 +1208,7 @@ const AdminUpload: React.FC = () => {
                         className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Description</label>
                       <textarea
@@ -1221,7 +1219,7 @@ const AdminUpload: React.FC = () => {
                         className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent resize-none"
                       />
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Release Year</label>
@@ -1244,7 +1242,7 @@ const AdminUpload: React.FC = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Upload / Replace Poster Image</label>
                       <div className="flex gap-4 items-center">
@@ -1276,7 +1274,7 @@ const AdminUpload: React.FC = () => {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="pt-4 flex gap-3">
                       <button
                         type="submit"
@@ -1303,10 +1301,10 @@ const AdminUpload: React.FC = () => {
         {/* Tab 5: Infrastructure & Cache */}
         {activeTab === 'health' && health && (
           <div className="space-y-8 animate-fadeIn">
-            
+
             {/* Status indicators */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
+
               <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${health.database_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
                   {health.database_status === 'healthy' ? '✓' : '!'}
@@ -1343,7 +1341,7 @@ const AdminUpload: React.FC = () => {
 
             {/* Storage details & segment metrics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
+
               {/* Detailed Cache Statistics */}
               <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
                 <div className="flex items-center justify-between">
@@ -1356,7 +1354,7 @@ const AdminUpload: React.FC = () => {
                     {clearingCache ? 'Clearing Cache...' : 'Flush Cache'}
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-6 pt-4 text-xs">
                   <div>
                     <span className="text-neutral-500 block">Total Cache Hit Ratio</span>
@@ -1408,7 +1406,7 @@ const AdminUpload: React.FC = () => {
         {/* Tab 6: Audit Log Explorer */}
         {activeTab === 'audit' && (
           <div className="space-y-6 animate-fadeIn">
-            
+
             {/* Filter controls */}
             <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
               <div className="flex flex-wrap gap-3 items-center">

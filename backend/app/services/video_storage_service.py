@@ -70,8 +70,11 @@ async def save_uploaded_video(
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB
     max_upload_size = 5 * 1024 * 1024 * 1024  # 5GB
+    import time
+    start_time = time.time()
     try:
-        with open(file_path, "wb") as out_file:
+        import anyio
+        async with await anyio.open_file(file_path, "wb") as out_file:
             while chunk := await file.read(chunk_size):
                 file_size += len(chunk)
                 if file_size > max_upload_size:
@@ -79,7 +82,8 @@ async def save_uploaded_video(
                         status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                         detail="Uploaded file exceeds the maximum size limit of 5GB."
                     )
-                out_file.write(chunk)
+                await out_file.write(chunk)
+        print(f"[TIMING] Uploaded {file.filename} ({file_size} bytes) in {time.time() - start_time:.2f}s")
     except HTTPException:
         # Clean up partial files
         if os.path.exists(file_path):

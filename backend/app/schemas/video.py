@@ -15,6 +15,7 @@ class VideoBase(BaseModel):
     format: str = "mp4"
     master_playlist_url: Optional[str] = None
     error_message: Optional[str] = None
+    processing_progress: float = 0.0
 
 class VideoCreate(BaseModel):
     movie_id: Optional[UUID] = None

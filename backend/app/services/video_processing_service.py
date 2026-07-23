@@ -122,10 +122,32 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             os.makedirs(t720_dir, exist_ok=True)
             os.makedirs(t1080_dir, exist_ok=True)
 
+            import time
+            start_time = time.time()
+            
+            # Helper to get video duration
+            duration = video.duration_seconds
+            if not duration:
+                try:
+                    probe_cmd = [ffmpeg_bin, "-i", video.storage_path]
+                    proc = await asyncio.create_subprocess_exec(*probe_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                    _, stderr = await proc.communicate()
+                    import re
+                    match = re.search(r"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})", stderr.decode())
+                    if match:
+                        hours, mins, secs = match.groups()
+                        duration = float(hours) * 3600 + float(mins) * 60 + float(secs)
+                        video.duration_seconds = duration
+                        await db.commit()
+                except Exception:
+                    duration = 100.0 # fallback
+
             # Transcode target resolutions (FFmpeg subprocess execution in thread pool)
             # High efficiency transcode task running copy for 1080p and scaling down for others
+            # Limit threads to avoid starving the main Uvicorn event loop on the host machine
             cmd_1080 = [
                 ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-threads", "2",
                 "-vf", "scale=-2:1080", "-c:v", "libx264", "-preset", "ultrafast",
                 "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
                 "-b:v", "4500k", "-c:a", "aac", "-b:a", "128k",
@@ -136,6 +158,7 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             
             cmd_720 = [
                 ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-threads", "1",
                 "-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "ultrafast",
                 "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
                 "-b:v", "2200k", "-c:a", "aac", "-b:a", "96k",
@@ -146,6 +169,7 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
 
             cmd_480 = [
                 ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-threads", "1",
                 "-vf", "scale=-2:480", "-c:v", "libx264", "-preset", "ultrafast",
                 "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
                 "-b:v", "800k", "-c:a", "aac", "-b:a", "64k",
@@ -155,18 +179,45 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             ]
 
             # Run HLS encoding streams concurrently using non-blocking async subprocesses
-            async def run_transcode(cmd) -> bool:
+            async def run_transcode(cmd, is_primary=False) -> bool:
                 proc = await asyncio.create_subprocess_exec(
                     *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
-                await proc.communicate()
+                
+                import re
+                time_pattern = re.compile(r"time=(\d{2}):(\d{2}):(\d{2}\.\d{2})")
+                
+                while True:
+                    line = await proc.stderr.readline()
+                    if not line:
+                        break
+                    
+                    if is_primary and duration:
+                        line_str = line.decode(errors='replace')
+                        match = time_pattern.search(line_str)
+                        if match:
+                            h, m, s = match.groups()
+                            current_time = float(h) * 3600 + float(m) * 60 + float(s)
+                            progress = min(100.0, (current_time / duration) * 100.0)
+                            
+                            # Update progress roughly every 5% to avoid spamming DB
+                            if progress - getattr(video, 'processing_progress', 0.0) > 5.0 or progress >= 99.0:
+                                video.processing_progress = round(progress, 2)
+                                try:
+                                    await db.commit()
+                                except Exception:
+                                    pass
+
+                await proc.wait()
                 return proc.returncode == 0
 
+            print(f"[TIMING] Starting concurrent FFmpeg transcoding for {video_id}")
             results = await asyncio.gather(
-                run_transcode(cmd_1080),
+                run_transcode(cmd_1080, is_primary=True), # Track progress on 1080p
                 run_transcode(cmd_720),
                 run_transcode(cmd_480)
             )
+            print(f"[TIMING] Completed transcoding for {video_id} in {time.time() - start_time:.2f}s")
             
             if all(results):
                 # Write master playlist referencing active variants
