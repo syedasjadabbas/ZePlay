@@ -19,16 +19,8 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      // The API always returns success (doesn't reveal user existence)
-      const response = await api.post('/auth/forgot-password', { email });
-      setEmailConfigured(response.data.email_configured ?? true);
-      if (response.data.reset_token) {
-        setResetToken(response.data.reset_token);
-      }
-      if (response.data.dev_notice) {
-        setDevNotice(response.data.dev_notice);
-      }
-      setSubmitted(true);
+      await api.post('/auth/forgot-password', { email });
+      navigate('/reset-password', { state: { email } });
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||

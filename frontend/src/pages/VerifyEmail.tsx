@@ -6,18 +6,29 @@ const VerifyEmail: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const query = new URLSearchParams(location.search);
-  const initialToken = query.get('token') || '';
+  const passedEmail = location.state?.email || '';
 
-  const [otp, setOtp] = useState(initialToken);
+  const [email, setEmail] = useState(passedEmail);
+  const [otp, setOtp] = useState('');
   const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const performVerification = async (codeToVerify: string) => {
-    if (!codeToVerify || codeToVerify.trim().length === 0) {
+    const cleanCode = codeToVerify.trim();
+    if (cleanCode.length !== 6) {
       setStatus('error');
-      setMessage('Please enter your 6-digit OTP verification code.');
+      setMessage('Please enter a valid 6-digit OTP code.');
       return;
     }
 
@@ -26,33 +37,58 @@ const VerifyEmail: React.FC = () => {
     setMessage('');
 
     try {
-      const response = await api.post('/auth/verify-email', { token: codeToVerify.trim() });
+      const response = await api.post('/auth/verify-email', { token: cleanCode });
       setStatus('success');
       setMessage(response.data.message || 'Email verified successfully!');
 
       setTimeout(() => {
         navigate('/login', { state: { message: 'Email verified successfully! You can now sign in.' } });
-      }, 2500);
+      }, 2000);
     } catch (err: any) {
       setStatus('error');
       setMessage(
         err.response?.data?.detail ||
-          'Invalid or expired 6-digit OTP code.'
+          'Invalid or expired 6-digit OTP code. Please check your code or request a new one.'
       );
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (initialToken) {
-      performVerification(initialToken);
-    }
-  }, [initialToken]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     performVerification(otp);
+  };
+
+  const handleResendOtp = async () => {
+    if (!email || !email.includes('@')) {
+      setMessage('Please enter a valid email address to resend OTP.');
+      setStatus('error');
+      return;
+    }
+
+    setResendMessage(null);
+    setLoading(true);
+
+    try {
+      const res = await api.post('/auth/resend-verification', { email });
+      setResendMessage(res.data.message || 'A new 6-digit OTP code has been sent to your email.');
+      setResendCooldown(30);
+      setStatus('idle');
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err.response?.data?.detail || 'Failed to resend verification code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setOtp(val);
+    if (val.length === 6) {
+      performVerification(val);
+    }
   };
 
   const inputStyle = {
@@ -102,15 +138,25 @@ const VerifyEmail: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white font-display mb-2">Verify Your Email</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white font-display mb-2">Verify Your Account</h2>
               <p className="text-xs text-brand-textMuted font-medium px-4">
-                Enter the 6-digit OTP code sent to your email inbox to activate your account.
+                Enter the 6-digit OTP code sent to{' '}
+                <span className="text-brand-accent font-semibold">{email || 'your email'}</span>.
               </p>
             </div>
 
+            {resendMessage && (
+              <div
+                className="text-xs text-emerald-300 rounded-xl p-3 font-semibold text-center"
+                style={{ background: 'rgba(6,78,59,0.4)', border: '1px solid rgba(16,185,129,0.25)' }}
+              >
+                {resendMessage}
+              </div>
+            )}
+
             {status === 'error' && message && (
               <div
-                className="text-xs text-red-200 rounded-xl p-3.5 font-semibold"
+                className="text-xs text-red-200 rounded-xl p-3.5 font-semibold text-center"
                 style={{ background: 'rgba(127,29,29,0.4)', border: '1px solid rgba(239,68,68,0.25)' }}
               >
                 {message}
@@ -118,6 +164,23 @@ const VerifyEmail: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {!passedEmail && (
+                <div className="text-left">
+                  <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1 font-bold">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 text-sm text-white rounded-xl placeholder:text-white/20 outline-none"
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">
                   6-Digit OTP Code
@@ -128,9 +191,10 @@ const VerifyEmail: React.FC = () => {
                   maxLength={6}
                   placeholder="123456"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onChange={handleOtpChange}
                   required
-                  className="w-full px-4 py-3.5 text-center text-2xl tracking-[8px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
+                  autoFocus
+                  className="w-full px-4 py-4 text-center text-3xl tracking-[12px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
                   style={inputStyle}
                 />
               </div>
@@ -139,7 +203,7 @@ const VerifyEmail: React.FC = () => {
                 id="verify-submit"
                 type="submit"
                 disabled={loading || otp.length < 6}
-                className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
                   boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
@@ -154,14 +218,22 @@ const VerifyEmail: React.FC = () => {
                     Verifying OTP...
                   </span>
                 ) : (
-                  'Verify Account'
+                  'Verify & Activate'
                 )}
               </button>
             </form>
 
-            <div className="pt-2 text-xs text-brand-textMuted">
-              Already verified?{' '}
-              <Link to="/login" className="text-brand-accent font-bold hover:text-blue-400">
+            <div className="flex items-center justify-between text-xs pt-2 text-brand-textMuted">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || loading}
+                className="text-brand-accent font-bold hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend OTP Code'}
+              </button>
+
+              <Link to="/login" className="text-brand-textMuted hover:text-white font-semibold">
                 Sign In
               </Link>
             </div>
@@ -187,7 +259,7 @@ const VerifyEmail: React.FC = () => {
             </div>
             <div>
               <h2 className="text-3xl font-extrabold tracking-tight text-white font-display mb-2">
-                Email Verified!
+                Account Verified!
               </h2>
               <p className="text-xs text-emerald-300 font-medium px-4">{message}</p>
             </div>
@@ -199,7 +271,7 @@ const VerifyEmail: React.FC = () => {
               }}
             >
               <p className="text-[11px] text-brand-textMuted">
-                You can now access all ZePlay features.{' '}
+                Your account is active.{' '}
                 <span className="text-emerald-300 font-semibold">Redirecting to sign in...</span>
               </p>
             </div>
