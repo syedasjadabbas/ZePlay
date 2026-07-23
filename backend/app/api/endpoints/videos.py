@@ -1,8 +1,8 @@
 import os
 from typing import Optional, List
 from uuid import UUID
-from fastapi import APIRouter, Depends, File, UploadFile, Form, Header, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, UploadFile, Form, Header, HTTPException, status, BackgroundTasks
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -40,6 +40,7 @@ def build_video_response(video: Video) -> dict:
 
 @router.post("/admin/upload", response_model=VideoResponse, status_code=status.HTTP_201_CREATED)
 async def upload_video(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     movie_id: Optional[UUID] = Form(None),
     db: AsyncSession = Depends(get_db),
@@ -50,16 +51,26 @@ async def upload_video(
     Automatically triggers background HLS segmentation.
     """
     video = await video_storage_service.save_uploaded_video(db, file, movie_id)
-    # Process video into HLS VOD package
-    processed_video = await video_processing_service.process_video_to_hls(db, video.video_id)
+    
+    # Initialize background task for transcoding and S3 upload
+    background_tasks.add_task(
+        video_processing_service.process_video_in_background,
+        video.video_id
+    )
+    
+    # Update video state in DB immediately to processing
+    video.status = "processing"
+    await db.commit()
+    await db.refresh(video)
+    
     await log_event(
         db,
         action="video_upload",
-        details=f"Video asset '{processed_video.original_filename}' uploaded and HLS processing completed.",
+        details=f"Video asset '{video.original_filename}' uploaded and queued for background HLS transcoding.",
         performed_by=current_user.user_id,
-        metadata_dict={"video_id": str(processed_video.video_id), "filename": processed_video.filename}
+        metadata_dict={"video_id": str(video.video_id), "filename": video.filename}
     )
-    return build_video_response(processed_video)
+    return build_video_response(video)
 
 @router.post("/admin/{video_id}/process-hls", response_model=VideoResponse)
 async def trigger_hls_processing(
@@ -118,6 +129,11 @@ async def get_hls_master_playlist(
     Serves the HLS master/variant playlist file (.m3u8) for adaptive video playback.
     """
     video = await video_storage_service.get_video_by_id(db, video_id)
+    
+    # CDN / S3 Redirect integration
+    if video.master_playlist_url and video.master_playlist_url.startswith("http"):
+        return RedirectResponse(video.master_playlist_url)
+
     video_dir = os.path.dirname(video.storage_path)
     hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
     playlist_path = os.path.join(hls_dir, "master.m3u8")
@@ -149,6 +165,12 @@ async def get_hls_file(
     Serves HLS files (variant playlists, segment chunks) supporting multi-bitrate subdirectory layouts.
     """
     video = await video_storage_service.get_video_by_id(db, video_id)
+    
+    # CDN / S3 Redirect integration
+    if video.master_playlist_url and video.master_playlist_url.startswith("http"):
+        base_url = video.master_playlist_url.rsplit('/', 1)[0]
+        return RedirectResponse(f"{base_url}/{file_path}")
+
     video_dir = os.path.dirname(video.storage_path)
     hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
     target_path = os.path.join(hls_dir, file_path)

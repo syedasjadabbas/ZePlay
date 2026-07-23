@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "us-east-1"
     CLOUDFRONT_URL: str = ""
+    MOCK_S3: bool = False
 
     # Redis cache settings
     REDIS_URL: str = "redis://localhost:6379/0"
