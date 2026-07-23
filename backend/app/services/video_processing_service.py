@@ -173,7 +173,33 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
         video.status = "completed"
         video.format = "hls"
         video.hls_path = hls_dir
-        video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
+        
+        # Upload directory to S3 if configured
+        from app.services.s3_storage_service import s3_storage
+        from app.config import settings
+        if s3_storage.s3_client and s3_storage.bucket_name:
+            s3_prefix = f"hls/{video.video_id}_hls"
+            s3_uploaded = await s3_storage.upload_directory(hls_dir, s3_prefix)
+            if s3_uploaded:
+                cdn_url = getattr(settings, "CLOUDFRONT_URL", None)
+                if cdn_url:
+                    video.master_playlist_url = f"{cdn_url.rstrip('/')}/{s3_prefix}/master.m3u8"
+                else:
+                    video.master_playlist_url = f"https://{s3_storage.bucket_name}.s3.amazonaws.com/{s3_prefix}/master.m3u8"
+                
+                # Cleanup local files
+                try:
+                    if os.path.exists(video.storage_path):
+                        os.remove(video.storage_path)
+                    if os.path.exists(hls_dir):
+                        shutil.rmtree(hls_dir)
+                except Exception as cleanup_err:
+                    print(f"Failed to clean up local files after S3 upload: {cleanup_err}")
+            else:
+                video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
+        else:
+            video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
+            
         video.error_message = None
         
         if video.movie_id:
@@ -189,3 +215,4 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     await db.commit()
     await db.refresh(video)
     return video
+

@@ -24,10 +24,16 @@ class Settings(BaseSettings):
 
     # Storage settings
     STORAGE_DIR: str = "storage/videos"
+    S3_BUCKET_NAME: str = ""
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "us-east-1"
+    CLOUDFRONT_URL: str = ""
 
     # Redis cache settings
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_ENABLED: bool = True
+
 
     # Pydantic v2 configuration to find the .env file
     model_config = SettingsConfigDict(

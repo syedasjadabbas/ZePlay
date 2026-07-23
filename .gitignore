@@ -48,3 +48,7 @@ Thumbs.db
 # Alembic auto-generated (keep structure, not compiled cache)
 backend/alembic/__pycache__/
 backend/alembic/versions/__pycache__/
+
+# Large standalone local binaries
+local_services/
+

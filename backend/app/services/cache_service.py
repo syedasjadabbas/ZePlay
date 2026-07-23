@@ -25,8 +25,10 @@ class CacheService:
             self._redis_client = aioredis.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                socket_timeout=1.5
+                socket_timeout=1.5,
+                protocol=2
             )
+
             # Ping Redis to test connection
             await self._redis_client.ping()
             self._redis_available = True

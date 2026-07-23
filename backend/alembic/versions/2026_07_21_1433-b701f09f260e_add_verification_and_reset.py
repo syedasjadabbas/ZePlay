@@ -46,8 +46,9 @@ def upgrade() -> None:
     op.create_index(op.f('ix_password_reset_tokens_token'), 'password_reset_tokens', ['token'], unique=True)
     op.create_index(op.f('ix_password_reset_tokens_user_id'), 'password_reset_tokens', ['user_id'], unique=False)
     
-    # Add is_verified column (we set server_default="0" / False for existing rows)
-    op.add_column('users', sa.Column('is_verified', sa.Boolean(), server_default=sa.text('0'), nullable=False))
+    # Add is_verified column (we set server_default=false for existing rows)
+    op.add_column('users', sa.Column('is_verified', sa.Boolean(), server_default=sa.text('false'), nullable=False))
+
 
 
 def downgrade() -> None:

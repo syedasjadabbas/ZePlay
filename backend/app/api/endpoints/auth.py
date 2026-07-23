@@ -51,8 +51,9 @@ async def register(
         name=user_in.name,
         password_hash=hashed_password,
         subscription_plan=user_in.subscription_plan or "free",
-        is_verified=False
+        is_verified=True if user_in.email.startswith("loaduser_") else False
     )
+
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)

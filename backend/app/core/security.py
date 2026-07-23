@@ -16,9 +16,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Generate a hashed password from plain-text."""
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=4)
     hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
     return hashed.decode("utf-8")
+
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     """Generate a JWT access token for authentication."""

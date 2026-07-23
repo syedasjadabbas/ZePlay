@@ -7,12 +7,23 @@ from app.config import settings
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 _connect_args = {"check_same_thread": False} if _is_sqlite else {}
 
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=False,  # Set to True for query logs during development
-    future=True,
-    connect_args=_connect_args,
-)
+if not _is_sqlite:
+    # Production-grade PostgreSQL pooling configuration
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=False,
+        future=True,
+        pool_size=80,
+        max_overflow=15,
+    )
+
+else:
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=False,
+        future=True,
+        connect_args=_connect_args,
+    )
 
 # Async session maker
 SessionLocal = async_sessionmaker(

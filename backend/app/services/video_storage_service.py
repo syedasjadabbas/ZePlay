@@ -4,8 +4,9 @@ import re
 from typing import Optional, Tuple, AsyncGenerator
 from uuid import UUID
 from fastapi import UploadFile, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
 from app.models.video import Video
 from app.models.movie import Movie
@@ -90,6 +91,12 @@ async def save_uploaded_video(
     await db.commit()
     await db.refresh(db_video)
 
+    # Upload to S3 if configured
+    from app.services.s3_storage_service import s3_storage
+    if s3_storage.s3_client and s3_storage.bucket_name:
+        s3_key = f"uploads/{unique_filename}"
+        await s3_storage.upload_file(file_path, s3_key)
+
     # Also update movie video_url if movie_id attached
     if movie_id:
         movie_result = await db.execute(select(Movie).filter(Movie.movie_id == movie_id))
@@ -99,6 +106,7 @@ async def save_uploaded_video(
             await db.commit()
 
     return db_video
+
 
 def parse_range_header(range_header: str, file_size: int) -> Tuple[int, int]:
     """Parses standard HTTP Range header string (e.g. 'bytes=0-1024')."""
@@ -132,16 +140,27 @@ async def ranged_file_generator(file_path: str, start: int, end: int, chunk_size
             remaining -= len(data)
             yield data
 
-def stream_video(video: Video, range_header: Optional[str] = None) -> StreamingResponse:
+def stream_video(video: Video, range_header: Optional[str] = None):
     """
     Constructs a FastAPI StreamingResponse supporting HTTP 206 Partial Content range streaming
-    for HTML5 video player seeking and partial chunk loading.
+    for HTML5 video player seeking and partial chunk loading. Redirects to S3/CloudFront if local file is missing.
     """
     if not os.path.exists(video.storage_path):
+        from app.services.s3_storage_service import s3_storage
+        if s3_storage.s3_client and s3_storage.bucket_name:
+            s3_key = f"uploads/{video.filename}"
+            cdn_url = getattr(settings, "CLOUDFRONT_URL", None)
+            if cdn_url:
+                s3_url = f"{cdn_url.rstrip('/')}/{s3_key}"
+            else:
+                s3_url = f"https://{s3_storage.bucket_name}.s3.amazonaws.com/{s3_key}"
+            return RedirectResponse(url=s3_url)
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Video asset file not found on disk."
         )
+
 
     file_size = os.path.getsize(video.storage_path)
 

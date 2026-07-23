@@ -36,7 +36,8 @@ def upgrade() -> None:
     op.create_index(op.f('ix_audit_logs_performed_by'), 'audit_logs', ['performed_by'], unique=False)
 
     # Add is_active column to users table
-    op.add_column('users', sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('1')))
+    op.add_column('users', sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')))
+
 
 
 def downgrade() -> None:
