@@ -82,8 +82,8 @@ async def register(
         db.add(db_subscription)
         await db.commit()
     
-    # Generate 6-digit OTP code for Email Verification
-    token = f"{secrets.randbelow(900000) + 100000}"
+    # Generate Secure Verification Token
+    token = secrets.token_urlsafe(32)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     db_token = EmailVerificationToken(
         user_id=db_user.user_id,
@@ -97,10 +97,6 @@ async def register(
     background_tasks.add_task(send_verification_email, db_user.email, db_user.name, token)
     email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or (settings.RESEND_API_KEY and not settings.RESEND_API_KEY.startswith("re_gzP")))
 
-    dev_notice = None
-    if not email_configured:
-        dev_notice = f"Use 6-digit OTP code '{token}' to complete account activation."
-
     return {
         "user_id": str(db_user.user_id),
         "email": db_user.email,
@@ -111,8 +107,6 @@ async def register(
         "updated_at": db_user.updated_at,
         "email_configured": email_configured,
         "email_delivered": True,
-        "dev_notice": dev_notice,
-        "verification_token": token,
     }
 
 
@@ -222,21 +216,12 @@ async def forgot_password(
     db.add(db_token)
     await db.commit()
     
-    # Send password reset email and capture actual delivery result
+    # Send password reset email
     background_tasks.add_task(send_password_reset_email, user.email, user.name, token)
-    email_configured = bool((settings.SMTP_USERNAME and settings.SMTP_PASSWORD) or settings.RESEND_API_KEY)
-
-    dev_notice = None
-    if not email_configured or not settings.RESEND_API_KEY:
-        dev_notice = f"Click 'Reset Password Now' below or use token '{token[:8]}...' to set a new password."
 
     return {
         "status": "success",
         "message": "If a matching account exists, a reset link has been sent.",
-        "email_configured": email_configured,
-        "email_delivered": True,
-        "dev_notice": dev_notice,
-        "reset_token": token,
     }
 
 @router.post("/reset-password")

@@ -131,58 +131,17 @@ const Register: React.FC = () => {
               </div>
             </div>
 
-            {/* Dev / Sandbox Notice — shown whenever devNotice is provided by backend */}
-            {registrationData.devNotice && (
-              <div
-                className="rounded-xl p-4 mb-5"
+            <div className="space-y-3 mt-4">
+              <a
+                id="open-email-app"
+                href="mailto:"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
                 style={{
-                  background: 'rgba(234,179,8,0.06)',
-                  border: '1px solid rgba(234,179,8,0.25)',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
                 }}
               >
-                <div className="flex items-start gap-3">
-                  <svg className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <p className="text-[11px] font-bold text-yellow-300 mb-1">⚡ Email Delivery Notice</p>
-                    <p className="text-[11px] text-yellow-400/80 leading-relaxed">
-                      {registrationData.devNotice}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3 mt-2">
-              {registrationData.verificationToken && (
-                <button
-                  id="verify-email-now"
-                  onClick={() => navigate(`/verify-email?token=${registrationData.verificationToken}`)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    boxShadow: '0 8px 24px rgba(16,185,129,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                  }}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Verify Email Now
-                </button>
-              )}
-
-              {registrationData.emailConfigured && (
-                <a
-                  id="open-email-app"
-                  href="mailto:"
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                    boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                  }}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   Open Email App
