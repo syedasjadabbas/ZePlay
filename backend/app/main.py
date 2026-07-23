@@ -59,7 +59,7 @@ async def startup_event():
 @app.get("/health", tags=["System Health"])
 async def health_check():
     """Simple service checking endpoint including cache status."""
-    cache_stats = cache.get_stats()
+    cache_stats = await cache.get_stats()
     return {
         "status": "online",
         "service": settings.PROJECT_NAME,

@@ -40,7 +40,7 @@ async def test_cache_service_operations():
     assert val_miss is None
 
     # Test stats
-    stats = cache.get_stats()
+    stats = await cache.get_stats()
     assert stats["hits"] >= 1
     assert stats["misses"] >= 1
     assert stats["hit_rate_pct"] > 0.0
@@ -84,7 +84,7 @@ async def test_cache_disabled_fallback():
         await cache.initialize()
         await cache.set("fallback:key", "fallback_value", ttl=60)
         assert await cache.get("fallback:key") == "fallback_value"
-        stats = cache.get_stats()
+        stats = await cache.get_stats()
         assert stats["redis_connected"] is False
         assert "In-Memory" in stats["cache_engine"]
     finally:

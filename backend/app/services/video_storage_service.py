@@ -34,6 +34,15 @@ async def save_uploaded_video(
             detail="Uploaded file must have a valid filename."
         )
 
+    # Validate file extension against whitelist
+    ext = os.path.splitext(file.filename)[1].lower()
+    allowed_extensions = {".mp4", ".mkv", ".avi", ".mov", ".ts", ".m3u8"}
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file extension '{ext}'. Allowed formats: {', '.join(sorted(allowed_extensions))}"
+        )
+
     # Validate mime type
     mime_type = file.content_type or "video/mp4"
     if not (mime_type.startswith("video/") or mime_type in ["application/x-mpegURL", "application/octet-stream"]):
@@ -53,19 +62,29 @@ async def save_uploaded_video(
             )
 
     # Generate unique filename on disk
-    ext = os.path.splitext(file.filename)[1].lower() or ".mp4"
     unique_filename = f"{uuid.uuid4()}{ext}"
     storage_dir = get_storage_path()
     file_path = os.path.join(storage_dir, unique_filename)
 
-    # Save to disk in 1MB chunks
+    # Save to disk in 1MB chunks (enforcing max 5GB size ceiling to prevent Denial of Service)
     file_size = 0
     chunk_size = 1024 * 1024  # 1MB
+    max_upload_size = 5 * 1024 * 1024 * 1024  # 5GB
     try:
         with open(file_path, "wb") as out_file:
             while chunk := await file.read(chunk_size):
-                out_file.write(chunk)
                 file_size += len(chunk)
+                if file_size > max_upload_size:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Uploaded file exceeds the maximum size limit of 5GB."
+                    )
+                out_file.write(chunk)
+    except HTTPException:
+        # Clean up partial files
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise
     except Exception as e:
         if os.path.exists(file_path):
             os.remove(file_path)
@@ -128,13 +147,14 @@ def parse_range_header(range_header: str, file_size: int) -> Tuple[int, int]:
     return start, end
 
 async def ranged_file_generator(file_path: str, start: int, end: int, chunk_size: int = 1024 * 512) -> AsyncGenerator[bytes, None]:
-    """Asynchronous generator that yields byte chunks for range requests."""
-    with open(file_path, "rb") as file:
-        file.seek(start)
+    """Asynchronous generator that yields byte chunks for range requests without blocking the event loop."""
+    import anyio
+    async with await anyio.open_file(file_path, "rb") as file:
+        await file.seek(start)
         remaining = end - start + 1
         while remaining > 0:
             bytes_to_read = min(remaining, chunk_size)
-            data = file.read(bytes_to_read)
+            data = await file.read(bytes_to_read)
             if not data:
                 break
             remaining -= len(data)

@@ -114,6 +114,10 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Resolve remaining scalability bottlenecks, decouple local storage, and configure CloudFront redirects.
 - **Features Built**: Asynchronous background transcoding, S3 directory upload with local storage cleanup, HTTP 307 CDN redirect serving, and Redis-based global cache counters (resolving multi-worker metrics isolation).
 
+### Sprint 15: Performance, Security & Reliability Audit
+- **Objective**: Identify, document, and remediate top architectural performance bottlenecks, security weaknesses, and reliability risks to ensure production readiness.
+- **Features Built**: Fixed critical health check coroutine bug; upgraded Bcrypt hashing cost factors; added verify_user_entitlement gating to HLS master playlists, segments, and MP4 stream routes; implemented strict video upload extension whitelisting and 5GB upload limits; optimized streaming ranged generator with non-blocking AnyIO async file reads; added database indexes to foreign keys (`plan_id` in `user_subscriptions` and `genre_id` in `movie_genres`); modernized unit tests to support background processing and CDN redirects context.
+
 ---
 
 
@@ -261,3 +265,7 @@ erDiagram
 1. **Stateless Operations**: Server instances must never save local application states. All state coordinates must reside in PostgreSQL or Redis.
 2. **Type Enforcement**: All database primary and foreign keys must use `UUID(as_uuid=True)` instead of incremental integers or raw strings.
 3. **Non-Blocking API Calls**: Any external integration (email delivery, transcoding, heavy file reads) must occur in background jobs.
+4. **Secure Hashing**: Password hashing must enforce a production-grade cost factor (Bcrypt rounds >= 12).
+5. **Entitlement Protection**: All media assets and streaming segments must be gated behind verified premium user/admin entitlements.
+6. **Payload Guardrails**: All user-uploaded media files must have their extensions whitelisted and file sizes strictly capped to prevent Denial-of-Service (DoS) attacks.
+7. **Database Indexing**: All foreign key columns and common query join/filter columns must be indexed to ensure sub-100ms API response rates.

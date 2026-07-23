@@ -112,7 +112,8 @@ async def get_video(
 async def stream_video(
     video_id: UUID,
     range: Optional[str] = Header(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.verify_user_entitlement)
 ):
     """
     Stream raw video asset using HTTP 206 Partial Content range requests (MP4 Fallback).
@@ -123,7 +124,8 @@ async def stream_video(
 @router.get("/{video_id}/hls/master.m3u8")
 async def get_hls_master_playlist(
     video_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.verify_user_entitlement)
 ):
     """
     Serves the HLS master/variant playlist file (.m3u8) for adaptive video playback.
@@ -159,7 +161,8 @@ async def get_hls_master_playlist(
 async def get_hls_file(
     video_id: UUID,
     file_path: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(deps.verify_user_entitlement)
 ):
     """
     Serves HLS files (variant playlists, segment chunks) supporting multi-bitrate subdirectory layouts.

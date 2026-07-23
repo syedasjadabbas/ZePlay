@@ -25,6 +25,18 @@ async def db_engine():
         poolclass=StaticPool,
     )
 
+    # Patch app.database.SessionLocal and app.database.engine to use the test database
+    import app.database
+    old_engine = app.database.engine
+    old_session_local = app.database.SessionLocal
+    
+    app.database.engine = engine
+    app.database.SessionLocal = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -55,6 +67,10 @@ async def db_engine():
             ))
 
     yield engine
+
+    # Restore originals
+    app.database.engine = old_engine
+    app.database.SessionLocal = old_session_local
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
