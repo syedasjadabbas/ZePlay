@@ -3,7 +3,7 @@
 # Usage: .\push.ps1 "your commit message"
 
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$Message
 )
 
