@@ -135,23 +135,44 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             cmd_720 = [
                 ffmpeg_bin, "-y", "-i", video.storage_path,
                 "-vf", "scale=-2:720", "-c:v", "libx264", "-preset", "ultrafast",
+                "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
                 "-b:v", "2200k", "-c:a", "aac", "-b:a", "96k",
                 "-hls_time", "6", "-hls_playlist_type", "vod",
                 "-hls_segment_filename", os.path.join(t720_dir, "segment_%03d.ts"),
                 os.path.join(t720_dir, "index.m3u8")
             ]
 
-            # Run HLS encoding streams
-            proc_1080 = await asyncio.to_thread(lambda: subprocess.run(cmd_1080, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
+            cmd_480 = [
+                ffmpeg_bin, "-y", "-i", video.storage_path,
+                "-vf", "scale=-2:480", "-c:v", "libx264", "-preset", "ultrafast",
+                "-g", "6", "-keyint_min", "6", "-sc_threshold", "0",
+                "-b:v", "800k", "-c:a", "aac", "-b:a", "64k",
+                "-hls_time", "6", "-hls_playlist_type", "vod",
+                "-hls_segment_filename", os.path.join(t480_dir, "segment_%03d.ts"),
+                os.path.join(t480_dir, "index.m3u8")
+            ]
+
+            # Run HLS encoding streams concurrently using non-blocking async subprocesses
+            async def run_transcode(cmd) -> bool:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                await proc.communicate()
+                return proc.returncode == 0
+
+            results = await asyncio.gather(
+                run_transcode(cmd_1080),
+                run_transcode(cmd_720),
+                run_transcode(cmd_480)
+            )
             
-            if proc_1080.returncode == 0:
-                # Run 720p transcode in background or proceed
-                await asyncio.to_thread(lambda: subprocess.run(cmd_720, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
-                
+            if all(results):
                 # Write master playlist referencing active variants
                 master_content = (
                     "#EXTM3U\n"
                     "#EXT-X-VERSION:3\n"
+                    "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=854x480\n"
+                    "480p/index.m3u8\n"
                     "#EXT-X-STREAM-INF:BANDWIDTH=2200000,RESOLUTION=1280x720\n"
                     "720p/index.m3u8\n"
                     "#EXT-X-STREAM-INF:BANDWIDTH=4500000,RESOLUTION=1920x1080\n"
