@@ -130,6 +130,16 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
             return True
         except Exception as e:
             logger.error(f"Exception during Resend email delivery to {to_email}: {e}")
+            if settings.SMTP_USERNAME and settings.SMTP_PASSWORD:
+                logger.info(f"[Resend Fallback] Attempting Gmail SMTP delivery to {to_email}...")
+                try:
+                    await asyncio.to_thread(_send_smtp_sync, to_email, subject, html_content)
+                    logger.info(f"Email sent successfully to {to_email} via Gmail SMTP fallback.")
+                    print(f"\n[OK EMAIL SENT] Email delivered to {to_email} via Gmail SMTP fallback.\n")
+                    return True
+                except Exception as smtp_e:
+                    logger.error(f"Gmail SMTP fallback also failed: {smtp_e}")
+
             banner = (
                 f"\n{'='*60}\n"
                 f"  [!] RESEND EMAIL DELIVERY FAILED\n"
@@ -140,7 +150,6 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
             )
             print(banner)
 
-            # Append the email content and error to the local log so it's traceable offline
             try:
                 with open(log_file_path, "a", encoding="utf-8") as f:
                     f.write(log_entry)
