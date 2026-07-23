@@ -126,6 +126,10 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Establish fully functional local HLS video serving, bypassing all S3 and CloudFront dependencies to guarantee local network (LAN) supervisor demo readiness.
 - **Features Built**: Disabled mock S3 configuration (`MOCK_S3=false`), forcing local HLS folder persistence and relative endpoint pathing; built direct FastAPI endpoints serving variant playlists and segment chunks (.ts files) straight from host disk; validated local playback loop using `test_lan_streaming.py` verification runner.
 
+### Real Long Video Validation
+- **Objective**: Validate ZePlay's playback stability, chunk delivery, seeking timeline latency, and watch progress updates using real-world long-form video durations (30 min, 60 min, and 90 min).
+- **Features Built**: Built `validate_long_videos.py` validation runner; generated and transcoded 30-min, 60-min, and 90-min long-form videos with GOP constraints; successfully verified startup manifest latency (~30ms) and seek chunk download latency (~30ms) across 0%, 25%, 50%, 75%, and 95% jumps; validated watch progress database writes and Continue Watching profile integrations.
+
 ---
 
 
