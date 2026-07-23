@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UUID
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.database import Base, GUID
 
 
 class UserSubscription(Base):
@@ -10,19 +10,19 @@ class UserSubscription(Base):
     __tablename__ = "user_subscriptions"
 
     id = Column(
-        UUID(as_uuid=True),
+        GUID,
         primary_key=True,
         default=uuid.uuid4,
         index=True
     )
     user_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
     plan_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
         nullable=False,
         index=True

@@ -1,14 +1,14 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, UUID, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.database import Base, GUID
 
 class User(Base):
     __tablename__ = "users"
 
     user_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         primary_key=True,
         default=uuid.uuid4,
         index=True
