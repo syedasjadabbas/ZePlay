@@ -1,20 +1,20 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UUID
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.database import Base, GUID
 
 class Profile(Base):
     __tablename__ = "profiles"
 
     profile_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         primary_key=True,
         default=uuid.uuid4,
         index=True
     )
     user_id = Column(
-        UUID(as_uuid=True),
+        GUID,
         ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
         index=True

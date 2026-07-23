@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, UUID
-from app.database import Base
+from sqlalchemy import Column, String, Boolean, Integer, DateTime
+from app.database import Base, GUID
 
 
 class SubscriptionPlan(Base):
@@ -9,7 +9,7 @@ class SubscriptionPlan(Base):
     __tablename__ = "subscription_plans"
 
     id = Column(
-        UUID(as_uuid=True),
+        GUID,
         primary_key=True,
         default=uuid.uuid4,
         index=True
