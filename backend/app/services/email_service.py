@@ -186,16 +186,14 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         return False
 
 
-async def send_verification_email(to_email: str, name: str, token: str):
-    """Sends a verification email with link."""
-    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
-    
+async def send_verification_email(to_email: str, name: str, otp: str):
+    """Sends a verification email containing a 6-digit OTP code."""
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Verify your Email - ZePlay</title>
+        <title>Your Verification Code - ZePlay</title>
         <style>
             body {{
                 background-color: #060B18;
@@ -230,19 +228,19 @@ async def send_verification_email(to_email: str, name: str, token: str):
                 font-size: 14px;
                 color: #A8B3CF;
                 line-height: 1.6;
-                margin-bottom: 24px;
+                margin-bottom: 20px;
             }}
-            .btn {{
+            .otp-box {{
+                background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(37,99,235,0.08) 100%);
+                border: 2px dashed rgba(59,130,246,0.5);
+                border-radius: 12px;
+                padding: 20px 24px;
+                font-size: 38px;
+                font-weight: 800;
+                letter-spacing: 12px;
+                color: #60A5FA;
+                margin: 24px 0;
                 display: inline-block;
-                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                color: #FFFFFF !important;
-                text-decoration: none;
-                font-weight: bold;
-                font-size: 14px;
-                padding: 14px 32px;
-                border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
-                margin-bottom: 24px;
             }}
             .footer {{
                 font-size: 11px;
@@ -254,30 +252,27 @@ async def send_verification_email(to_email: str, name: str, token: str):
     <body>
         <div class="container">
             <div class="logo">ZePlay</div>
-            <h1>Verify Your Email Address</h1>
+            <h1>Email Verification Code</h1>
             <p>Hi {name},</p>
-            <p>Welcome to ZePlay! Click the button below to verify your email address and activate your account.</p>
-            <a href="{verify_url}" class="btn">Verify Email Address</a>
-            <p style="font-size: 12px; color: #64748B;">If the button doesn't work, copy and paste this link in your browser:</p>
-            <p style="word-break: break-all; font-size: 12px; color: #3B82F6;">{verify_url}</p>
+            <p>Use the following 6-digit OTP code to verify your ZePlay account:</p>
+            <div class="otp-box">{otp}</div>
+            <p style="font-size: 12px; color: #64748B;">This OTP code is valid for 24 hours. Enter it on the verification page to activate your account.</p>
             <div class="footer">&copy; {datetime_now_year()} ZePlay. All rights reserved.</div>
         </div>
     </body>
     </html>
     """
-    return await send_email(to_email, "Verify your email - ZePlay", html_content)
+    return await send_email(to_email, f"{otp} is your ZePlay verification code", html_content)
 
 
-async def send_password_reset_email(to_email: str, name: str, token: str):
-    """Sends a password reset email with link."""
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    
+async def send_password_reset_email(to_email: str, name: str, otp: str):
+    """Sends a password reset email containing a 6-digit OTP code."""
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Reset your Password - ZePlay</title>
+        <title>Password Reset Code - ZePlay</title>
         <style>
             body {{
                 background-color: #060B18;
@@ -312,19 +307,19 @@ async def send_password_reset_email(to_email: str, name: str, token: str):
                 font-size: 14px;
                 color: #A8B3CF;
                 line-height: 1.6;
-                margin-bottom: 24px;
+                margin-bottom: 20px;
             }}
-            .btn {{
+            .otp-box {{
+                background: linear-gradient(135deg, rgba(59,130,246,0.18) 0%, rgba(37,99,235,0.08) 100%);
+                border: 2px dashed rgba(59,130,246,0.5);
+                border-radius: 12px;
+                padding: 20px 24px;
+                font-size: 38px;
+                font-weight: 800;
+                letter-spacing: 12px;
+                color: #60A5FA;
+                margin: 24px 0;
                 display: inline-block;
-                background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                color: #FFFFFF !important;
-                text-decoration: none;
-                font-weight: bold;
-                font-size: 14px;
-                padding: 14px 32px;
-                border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
-                margin-bottom: 24px;
             }}
             .footer {{
                 font-size: 11px;
@@ -336,18 +331,17 @@ async def send_password_reset_email(to_email: str, name: str, token: str):
     <body>
         <div class="container">
             <div class="logo">ZePlay</div>
-            <h1>Reset Your Password</h1>
+            <h1>Password Reset Code</h1>
             <p>Hi {name},</p>
-            <p>We received a request to reset your password. Click the button below to choose a new password.</p>
-            <a href="{reset_url}" class="btn">Reset Password</a>
-            <p style="font-size: 12px; color: #64748B;">If you did not request this, you can ignore this email. The link will expire in 2 hours.</p>
-            <p style="word-break: break-all; font-size: 12px; color: #3B82F6;">{reset_url}</p>
+            <p>We received a request to reset your password. Use the following 6-digit OTP code to set a new password:</p>
+            <div class="otp-box">{otp}</div>
+            <p style="font-size: 12px; color: #64748B;">This OTP code is valid for 2 hours. Enter it on the password reset page.</p>
             <div class="footer">&copy; {datetime_now_year()} ZePlay. All rights reserved.</div>
         </div>
     </body>
     </html>
     """
-    return await send_email(to_email, "Reset your password - ZePlay", html_content)
+    return await send_email(to_email, f"{otp} is your ZePlay password reset code", html_content)
 
 
 def datetime_now_year() -> int:

@@ -82,8 +82,8 @@ async def register(
         db.add(db_subscription)
         await db.commit()
     
-    # Generate Secure Verification Token
-    token = secrets.token_urlsafe(32)
+    # Generate 6-digit OTP code for Email Verification
+    token = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     db_token = EmailVerificationToken(
         user_id=db_user.user_id,
@@ -151,16 +151,17 @@ async def get_me(current_user: User = Depends(deps.get_current_user)):
 
 @router.post("/verify-email")
 async def verify_email(payload: EmailVerifyRequest, db: AsyncSession = Depends(get_db)):
-    """Verifies a user email using verification token."""
+    """Verifies a user email using 6-digit OTP code."""
+    raw_token = payload.token.strip()
     result = await db.execute(
-        select(EmailVerificationToken).filter(EmailVerificationToken.token == payload.token)
+        select(EmailVerificationToken).filter(EmailVerificationToken.token == raw_token)
     )
     token_record = result.scalars().first()
     
     if not token_record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid or expired verification token."
+            detail="Invalid or expired 6-digit OTP verification code."
         )
         
     if token_record.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
@@ -169,7 +170,7 @@ async def verify_email(payload: EmailVerifyRequest, db: AsyncSession = Depends(g
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification token has expired."
+            detail="Verification code has expired. Please request a new code."
         )
         
     # Get associated user
@@ -194,19 +195,19 @@ async def forgot_password(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
-    """Initiates password reset process."""
+    """Initiates password reset process using 6-digit OTP code."""
     result = await db.execute(select(User).filter(User.email == payload.email))
     user = result.scalars().first()
     
     if not user:
         # Standard safety: do not reveal user presence
-        return {"status": "success", "message": "If a matching account exists, a reset link has been sent."}
+        return {"status": "success", "message": "If a matching account exists, a reset code has been sent."}
         
     # Clean up any existing tokens
     await db.execute(delete(PasswordResetToken).filter(PasswordResetToken.user_id == user.user_id))
     
-    # Generate new token
-    token = secrets.token_urlsafe(32)
+    # Generate 6-digit OTP for Password Reset
+    token = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
     db_token = PasswordResetToken(
         user_id=user.user_id,
@@ -216,12 +217,12 @@ async def forgot_password(
     db.add(db_token)
     await db.commit()
     
-    # Send password reset email
+    # Send password reset email with OTP
     background_tasks.add_task(send_password_reset_email, user.email, user.name, token)
 
     return {
         "status": "success",
-        "message": "If a matching account exists, a reset link has been sent.",
+        "message": "If a matching account exists, a reset code has been sent.",
     }
 
 @router.post("/reset-password")

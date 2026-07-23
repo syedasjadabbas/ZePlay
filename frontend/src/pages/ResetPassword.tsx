@@ -4,25 +4,26 @@ import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
 
 const ResetPassword: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const query = new URLSearchParams(location.search);
+  const initialToken = query.get('token') || '';
+
+  const [otp, setOtp] = useState(initialToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const query = new URLSearchParams(location.search);
-  const token = query.get('token');
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
 
-    if (!token) {
-      setError('Reset token is missing from URL.');
+    if (!otp || otp.trim().length === 0) {
+      setError('Please enter the 6-digit OTP reset code.');
       return;
     }
 
@@ -40,17 +41,17 @@ const ResetPassword: React.FC = () => {
 
     try {
       await api.post('/auth/reset-password', {
-        token,
+        token: otp.trim(),
         new_password: newPassword,
       });
-      setSuccessMessage('Password successfully reset. Redirecting to sign in...');
+      setSuccessMessage('Password successfully reset! Redirecting to sign in...');
       setTimeout(() => {
         navigate('/login', { state: { message: 'Password reset successful. Please sign in with your new password.' } });
       }, 2500);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          'Failed to reset password. The link may have expired or is invalid.'
+          'Failed to reset password. The 6-digit OTP code may be invalid or expired.'
       );
     } finally {
       setLoading(false);
@@ -127,9 +128,9 @@ const ResetPassword: React.FC = () => {
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-500/8 rounded-full blur-[40px] pointer-events-none" />
 
-          <div className="space-y-2 mb-8 relative z-10">
-            <h2 className="text-3xl font-extrabold tracking-tight text-white font-display">New Password</h2>
-            <p className="text-xs text-brand-textMuted font-medium">Create a new password for your account.</p>
+          <div className="space-y-2 mb-6 relative z-10">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white font-display">Reset Password</h2>
+            <p className="text-xs text-brand-textMuted font-medium">Enter your 6-digit OTP reset code and choose a new password.</p>
           </div>
 
           {successMessage && (
@@ -153,91 +154,81 @@ const ResetPassword: React.FC = () => {
             </div>
           )}
 
-          {!token ? (
-            <div className="text-center py-6 relative z-10">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                }}
-              >
-                <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <p className="text-xs text-brand-textMuted mb-6">
-                Reset token is missing. Please request a new password reset link.
-              </p>
-              <Link
-                to="/forgot-password"
-                className="inline-block px-6 py-2.5 font-bold rounded-xl text-xs text-white transition-all duration-200"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3)',
-                }}
-              >
-                Request Reset Link
-              </Link>
+          <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
+            <div>
+              <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
+                6-Digit OTP Reset Code
+              </label>
+              <input
+                id="reset-otp-input"
+                type="text"
+                maxLength={6}
+                placeholder="123456"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                required
+                className="w-full px-4 py-3 text-center text-xl tracking-[6px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
             </div>
-          ) : (
-            <form onSubmit={handleResetPassword} className="space-y-5 relative z-10">
-              <div>
-                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
-                  New Password
-                </label>
-                <PasswordInput
-                  id="reset-new-password"
-                  placeholder="Enter your password"
-                  value={newPassword}
-                  onChange={setNewPassword}
-                  required
-                  style={inputStyle}
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
 
-              <div>
-                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
-                  Confirm Password
-                </label>
-                <PasswordInput
-                  id="reset-confirm-password"
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={setConfirmPassword}
-                  required
-                  style={inputStyle}
-                  onFocus={handleFocus}
-                  onBlur={handleBlur}
-                />
-              </div>
+            <div>
+              <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
+                New Password
+              </label>
+              <PasswordInput
+                id="reset-new-password"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={setNewPassword}
+                required
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
 
-              <button
-                id="reset-submit"
-                type="submit"
-                disabled={loading || !!successMessage}
-                className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                }}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Updating password...
-                  </span>
-                ) : (
-                  'Reset Password'
-                )}
-              </button>
-            </form>
-          )}
+            <div>
+              <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
+                Confirm New Password
+              </label>
+              <PasswordInput
+                id="reset-confirm-password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                required
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+
+            <button
+              id="reset-submit"
+              type="submit"
+              disabled={loading || !!successMessage}
+              className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
+              }}
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Updating password...
+                </span>
+              ) : (
+                'Reset Password'
+              )}
+            </button>
+          </form>
 
           <div className="mt-8 text-brand-textMuted text-xs text-center font-medium relative z-10">
             Remember your password?{' '}
