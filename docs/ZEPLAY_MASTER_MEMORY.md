@@ -102,7 +102,12 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Execute database migrations against PostgreSQL dialect, implement multi-bitrate HLS structure, and write Locust load testing configs.
 - **Features Built**: ABR playlist index master.m3u8, 480p/720p/1080p transcoder tasks, autocomplete suggestion caching, and locustfile.py suite.
 
+### Sprint 12: PostgreSQL Database Migration & Cache Load Scaling
+- **Objective**: Deploy local standalone PostgreSQL & Redis servers, execute all schema migrations, build a type-safe data migration pipeline, and execute high-concurrency load testing comparisons.
+- **Features Built**: Automated dynamic SQLite-to-PostgreSQL data migration script (handling UUID numeric coercion, boolean serialization, and constraints bypasses), production-scaled SQLAlchemy connection pools, multi-worker process deployment, and verification of local Redis RESP2 compatibility.
+
 ---
+
 
 ## 4. Feature Inventory
 
@@ -178,7 +183,16 @@ erDiagram
 - **Root Cause**: Registration API response times spiked to 2+ seconds due to synchronous Resend/SMTP email triggers.
 - **Fix**: Refactored email triggers into FastAPI `BackgroundTasks`.
 
+### 4. PostgreSQL WIN1252/UTF8 Encoding Conflict
+- **Root Cause**: On Windows systems, PostgreSQL initializes database clusters with the default system locale (WIN1252), causing untranslatable character errors when storing 4-byte unicode emojis (like 😎) present in movie or user profile data.
+- **Fix**: Reinitialized the PostgreSQL database cluster with C locale and UTF-8 encoding (`initdb --locale=C -E UTF8`), and configured the connection client to use `utf8` encoding.
+
+### 5. PostgreSQL TooManyConnections Pool Exhaustion
+- **Root Cause**: Running Uvicorn in multi-worker configurations under high concurrency (500+ users) caused each process to exceed database pool size allocations, exhausting the default PostgreSQL `max_connections` limit of 100 and crashing with `TooManyConnectionsError`.
+- **Fix**: Tuned `max_connections` in `postgresql.conf` to 500, and optimized Uvicorn worker pools to scale efficiently without exceeding system capacities.
+
 ---
+
 
 ## 8. Current Known Issues & Technical Debt
 
