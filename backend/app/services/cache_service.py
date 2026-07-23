@@ -46,9 +46,17 @@ class CacheService:
             try:
                 data = await self._redis_client.get(key)
                 if data is not None:
+                    try:
+                        await self._redis_client.incr("cache_stats:hits")
+                    except Exception:
+                        pass
                     self._hits += 1
                     return json.loads(data)
                 else:
+                    try:
+                        await self._redis_client.incr("cache_stats:misses")
+                    except Exception:
+                        pass
                     self._misses += 1
                     return None
             except Exception as e:
@@ -113,6 +121,10 @@ class CacheService:
         if self._redis_available and self._redis_client:
             try:
                 await self._redis_client.flushdb()
+                try:
+                    await self._redis_client.delete("cache_stats:hits", "cache_stats:misses")
+                except Exception:
+                    pass
             except Exception as e:
                 logger.warning(f"Redis flush error: {e}")
 
@@ -120,15 +132,29 @@ class CacheService:
         self._hits = 0
         self._misses = 0
 
-    def get_stats(self) -> dict:
+    async def get_stats(self) -> dict:
         """Return cache performance statistics (hits, misses, hit_rate_pct)."""
-        total = self._hits + self._misses
-        hit_rate = round((self._hits / total) * 100, 2) if total > 0 else 0.0
+        hits = self._hits
+        misses = self._misses
+        
+        if self._redis_available and self._redis_client:
+            try:
+                r_hits = await self._redis_client.get("cache_stats:hits")
+                r_misses = await self._redis_client.get("cache_stats:misses")
+                if r_hits is not None:
+                    hits = int(r_hits)
+                if r_misses is not None:
+                    misses = int(r_misses)
+            except Exception as e:
+                logger.warning(f"Failed to fetch Redis cache stats: {e}")
+                
+        total = hits + misses
+        hit_rate = round((hits / total) * 100, 2) if total > 0 else 0.0
         
         total_keys = len(self._memory_cache)
         return {
-            "hits": self._hits,
-            "misses": self._misses,
+            "hits": hits,
+            "misses": misses,
             "hit_rate_pct": hit_rate,
             "total_keys": total_keys,
             "redis_connected": self._redis_available,

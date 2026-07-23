@@ -177,17 +177,23 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
         # Upload directory to S3 if configured
         from app.services.s3_storage_service import s3_storage
         from app.config import settings
-        if s3_storage.s3_client and s3_storage.bucket_name:
+        
+        is_s3_enabled = (s3_storage.s3_client and s3_storage.bucket_name) or settings.MOCK_S3
+        
+        if is_s3_enabled:
             s3_prefix = f"hls/{video.video_id}_hls"
-            s3_uploaded = await s3_storage.upload_directory(hls_dir, s3_prefix)
+            s3_uploaded = True
+            if not settings.MOCK_S3:
+                s3_uploaded = await s3_storage.upload_directory(hls_dir, s3_prefix)
+                
             if s3_uploaded:
                 cdn_url = getattr(settings, "CLOUDFRONT_URL", None)
                 if cdn_url:
                     video.master_playlist_url = f"{cdn_url.rstrip('/')}/{s3_prefix}/master.m3u8"
                 else:
-                    video.master_playlist_url = f"https://{s3_storage.bucket_name}.s3.amazonaws.com/{s3_prefix}/master.m3u8"
+                    video.master_playlist_url = f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{s3_prefix}/master.m3u8"
                 
-                # Cleanup local files
+                # Cleanup local files - REPLACING LOCAL STORAGE DEPENDENCY
                 try:
                     if os.path.exists(video.storage_path):
                         os.remove(video.storage_path)
@@ -215,4 +221,23 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     await db.commit()
     await db.refresh(video)
     return video
+
+async def process_video_in_background(video_id: UUID) -> None:
+    """
+    Entrypoint for FastAPI BackgroundTasks.
+    Creates a fresh database session context and executes HLS transcoding.
+    """
+    from app.database import SessionLocal
+    async with SessionLocal() as db:
+        try:
+            await process_video_to_hls(db, video_id)
+        except Exception as e:
+            from app.models.video import Video
+            result = await db.execute(select(Video).filter(Video.video_id == video_id))
+            video = result.scalars().first()
+            if video:
+                video.status = "failed"
+                video.error_message = str(e)
+                await db.commit()
+
 

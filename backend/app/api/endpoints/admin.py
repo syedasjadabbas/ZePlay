@@ -223,7 +223,7 @@ async def get_health_monitoring(
         db_status = "error"
 
     # Cache status
-    cache_stats = cache.get_stats()
+    cache_stats = await cache.get_stats()
     cache_status = "healthy"
     if cache_stats.get("hit_rate_pct", 0) < 0.0 and cache_stats.get("keys_count", 0) == 0:
         cache_status = "warning"
@@ -664,7 +664,7 @@ async def get_cache_stats(
     current_user = Depends(deps.get_current_admin_user)
 ):
     """Admin endpoint to retrieve cache performance statistics (hits, misses, hit rate)."""
-    return cache.get_stats()
+    return await cache.get_stats()
 
 @router.post("/cache/clear")
 async def clear_cache(

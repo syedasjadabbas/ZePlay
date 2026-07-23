@@ -106,6 +106,14 @@ ZePlay is designed around a modern client-server model, separating client presen
 - **Objective**: Deploy local standalone PostgreSQL & Redis servers, execute all schema migrations, build a type-safe data migration pipeline, and execute high-concurrency load testing comparisons.
 - **Features Built**: Automated dynamic SQLite-to-PostgreSQL data migration script (handling UUID numeric coercion, boolean serialization, and constraints bypasses), production-scaled SQLAlchemy connection pools, multi-worker process deployment, and verification of local Redis RESP2 compatibility.
 
+### Sprint 13: Production Validation & Streaming Verification
+- **Objective**: Complete a comprehensive production readiness audit.
+- **Features Built**: Developed automated integration testing harness checking user activation, profile/PIN gates, sub entitlements, Continue Watching, HLS binary segment structure, and Redis keyspace integrity.
+
+### Sprint 14: Production Architecture Completion
+- **Objective**: Resolve remaining scalability bottlenecks, decouple local storage, and configure CloudFront redirects.
+- **Features Built**: Asynchronous background transcoding, S3 directory upload with local storage cleanup, HTTP 307 CDN redirect serving, and Redis-based global cache counters (resolving multi-worker metrics isolation).
+
 ---
 
 
@@ -121,8 +129,8 @@ ZePlay is designed around a modern client-server model, separating client presen
 | **Recommendations** | Surfaces popular/trending content. | Caching Optimised | Redis, Database |
 | **Search** | Finds movies. | Autocomplete Active | Catalog Service |
 | **Watch History** | Tracks user viewing history. | Production Ready | Movie, Profile |
-| **Movie Uploads** | Admins ingest new media. | Active | FFmpeg, Async Session |
-| **Video Processing** | Translates MP4 to HLS. | HLS Master Linked | FFmpeg, BackgroundTasks |
+| **Movie Uploads** | Admins ingest new media. | Production Ready | BackgroundTasks, S3/CDN |
+| **Video Processing** | Translates MP4 to HLS. | Production Ready | FFmpeg, BackgroundTasks, S3 |
 
 ---
 
@@ -196,9 +204,8 @@ erDiagram
 
 ## 8. Current Known Issues & Technical Debt
 
-1. **Local Media File Serving (Current Debt)**: Adaptive HLS segments are saved directly to host VPS disk folders. They should be offloaded to cloud object storage.
-2. **Synchronous Transcoding Block**: Processing high-resolution movies using local FFmpeg inside the app container can max out host CPU. Long-term solution requires delegating processing to AWS Elastic Transcoder or AWS Elemental MediaConvert.
-3. **Caching Granularity**: Cache invalidation for recommendations does not listen to catalog updates immediately.
+1. **Caching Granularity**: Cache invalidation for recommendations does not listen to catalog updates immediately.
+2. **Third-Party Email Delivery**: Email dispatch (Resend/SMTP) is handled via background tasks but still runs within the FastAPI event loop pool. Highly scaled loads should offload these calls to a dedicated worker queue (e.g. Celery).
 
 ---
 
