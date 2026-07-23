@@ -24,7 +24,8 @@ class UserSubscription(Base):
     plan_id = Column(
         UUID(as_uuid=True),
         ForeignKey("subscription_plans.id", ondelete="RESTRICT"),
-        nullable=False
+        nullable=False,
+        index=True
     )
     # Status: active | cancelled | expired
     status = Column(String, nullable=False, default="active")

@@ -16,7 +16,8 @@ movie_genres = Table(
         "genre_id", 
         UUID(as_uuid=True), 
         ForeignKey("genres.genre_id", ondelete="CASCADE"), 
-        primary_key=True
+        primary_key=True,
+        index=True
     )
 )
 

@@ -262,9 +262,20 @@ async def main():
         print("PHASE 4: HLS Streaming End-to-End Playlist & Segments Verification")
         print("----------------------------------------------------------------------")
         
-        # Verify master.m3u8 Redirect to CDN
+        # Verify HLS Paywall Gating
         local_hls_url = f"/api/videos/{video_id}/hls/master.m3u8"
-        print(f"Retrieving HLS master playlist from local endpoint (asserting 307 Redirect)...")
+        print("Retrieving HLS master playlist as Free user (asserting HTTP 403)...")
+        free_master_res = await client.get(local_hls_url, follow_redirects=False)
+        assert free_master_res.status_code == 403, f"Free user bypassed HLS paywall: {free_master_res.status_code}"
+        print("PASS: Free user successfully blocked with HTTP 403 on HLS playlist.")
+        
+        # Upgrade user to Premium to allow HLS access
+        print("Upgrading user to Premium subscription for HLS validation...")
+        sub_upgrade_res = await client.post("/api/subscription/upgrade")
+        assert sub_upgrade_res.status_code == 200, f"Upgrade failed: {sub_upgrade_res.text}"
+        
+        # Verify master.m3u8 Redirect to CDN for Premium user
+        print("Retrieving HLS master playlist from local endpoint as Premium user (asserting 307 Redirect)...")
         master_res = await client.get(local_hls_url, follow_redirects=False)
         assert master_res.status_code in (302, 307), f"HLS endpoint did not return redirect: {master_res.status_code}"
         location = master_res.headers.get("location")
