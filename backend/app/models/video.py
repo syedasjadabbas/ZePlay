@@ -36,7 +36,8 @@ class Video(Base):
     master_playlist_url = Column(String, nullable=True)         # HLS manifest URL
     hls_path = Column(String, nullable=True)                    # Directory path containing HLS playlist & segments
     error_message = Column(String, nullable=True)                # Failure reason if processing fails
-    
+    processing_progress = Column(Float, default=0.0, nullable=False) # 0.0 to 100.0
+
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
