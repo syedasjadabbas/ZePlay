@@ -150,7 +150,7 @@ const AdminUsers: React.FC = () => {
                      {filteredUsers.map((u) => (
                        <tr key={u.user_id} className="hover:bg-white/[0.02] transition-colors">
                          <td className="p-4 pl-6 font-bold text-white flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
+                           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
                              {u.name.charAt(0).toUpperCase()}
                            </div>
                            <span>{u.name}</span>

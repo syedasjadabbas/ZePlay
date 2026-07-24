@@ -800,7 +800,7 @@ const AdminUpload: React.FC = () => {
                         <tr key={u.user_id} className={`hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedUserDetail?.user_id === u.user_id ? 'bg-white/[0.03]' : ''}`} onClick={() => handleViewUserDetail(u)}>
                           <td className="p-4 pl-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
+                              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
                                 {u.name.charAt(0).toUpperCase()}
                               </div>
                               <div>

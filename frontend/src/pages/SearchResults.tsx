@@ -137,7 +137,7 @@ const SearchResults: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="bg-[#101C40] text-white border border-white/10 text-xs rounded-xl px-3 py-2 font-medium focus:outline-none cursor-pointer"
+                className="bg-black/40 text-white border border-white/10 text-xs rounded-xl px-3 py-2.5 font-medium focus:outline-none cursor-pointer input-premium"
               >
                 <option value="relevance">Relevance</option>
                 <option value="year_desc">Newest Release</option>
@@ -148,16 +148,16 @@ const SearchResults: React.FC = () => {
 
           {/* Genre Filter Pills */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <h3 className="text-xs font-black text-neutral-450 uppercase tracking-widest">
               Filter by Category / Genre
             </h3>
             <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
               <button
                 onClick={() => handleGenreSelect(null)}
-                className={`px-5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                   !selectedGenre 
                     ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                    : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
+                    : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
                 }`}
               >
                 All Genres
@@ -166,10 +166,10 @@ const SearchResults: React.FC = () => {
                 <button
                   key={g.genre_id}
                   onClick={() => handleGenreSelect(g.name)}
-                  className={`px-5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                     selectedGenre.toLowerCase() === g.name.toLowerCase()
                       ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                      : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
+                      : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
                   {g.name}

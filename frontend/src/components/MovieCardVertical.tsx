@@ -26,7 +26,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   return (
     <div 
       onClick={() => navigate(`/movies/${movie_id}`)}
-      className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/25 border border-white/5 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:border-brand-accent/30 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15),_0_0_15px_rgba(59,130,246,0.08)] transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.98] group flex flex-col justify-between"
+      className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/25 border border-white/5 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:scale-[1.03] hover:border-brand-accent/30 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15),_0_0_15px_rgba(59,130,246,0.08)] transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.98] group flex flex-col justify-between"
     >
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-900">

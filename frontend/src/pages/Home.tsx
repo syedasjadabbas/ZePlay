@@ -148,13 +148,13 @@ const Home: React.FC = () => {
               {/* Featured Hero Banner */}
               {heroMovie && (
                 <div 
-                  className="relative w-full h-[450px] rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(6,11,24,0.9)] flex items-end p-8 md:p-16 bg-cover bg-center"
+                  className="relative w-full h-[65vh] min-h-[480px] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] flex items-end p-8 md:p-16 bg-cover bg-center group"
                   style={{
-                    backgroundImage: `linear-gradient(to right, rgba(6, 11, 24, 0.95) 25%, rgba(6, 11, 24, 0.5) 60%, rgba(6, 11, 24, 0.2) 100%), url(${heroMovie.thumbnail_url})`
+                    backgroundImage: `linear-gradient(to top, rgba(6, 11, 24, 1) 0%, rgba(6, 11, 24, 0.75) 30%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, rgba(6, 11, 24, 0.95) 20%, rgba(6, 11, 24, 0.45) 65%, rgba(0, 0, 0, 0) 100%), url(${heroMovie.thumbnail_url})`
                   }}
                 >
                   <div className="max-w-2xl z-10 space-y-5">
-                    <span className="inline-flex items-center gap-1.5 text-[9px] font-extrabold text-brand-accent tracking-widest uppercase bg-brand-accent/15 px-2.5 py-1 rounded-md border border-brand-accent/25">
+                    <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-brand-accent tracking-widest uppercase bg-brand-accent/15 px-3 py-1 rounded-full border border-brand-accent/25">
                       • Featured
                     </span>
                     <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display leading-none uppercase drop-shadow-2xl text-white">
@@ -164,7 +164,7 @@ const Home: React.FC = () => {
                       {heroMovie.description}
                     </p>
                     
-                    <div className="flex items-center gap-4 text-xs text-brand-textMuted font-semibold pt-1">
+                    <div className="flex items-center gap-4 text-xs text-brand-textMuted font-bold pt-1">
                       <span className="flex items-center gap-1.5 text-brand-accent">
                         <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -178,26 +178,26 @@ const Home: React.FC = () => {
                       {heroMovie.genres && heroMovie.genres.length > 0 && (
                         <>
                           <span>•</span>
-                          <span className="uppercase text-[9px] tracking-widest font-extrabold bg-brand-cards border border-white/5 px-2 py-0.5 rounded">
+                          <span className="uppercase text-[9px] tracking-widest font-black bg-brand-cards border border-white/5 px-2.5 py-0.5 rounded-full">
                             {heroMovie.genres.map(g => g.name).join(', ')}
                           </span>
                         </>
                       )}
                     </div>
-
+ 
                     <div className="flex items-center gap-4 pt-2">
                       <button 
                         onClick={() => navigate(`/movies/${heroMovie.movie_id}`)}
-                        className="px-8 py-3 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_30px_rgba(59,130,246,0.35)] text-sm hover:-translate-y-0.5"
+                        className="px-8 py-3.5 bg-white hover:bg-neutral-200 text-black font-extrabold rounded-2xl transition-all flex items-center gap-2 shadow-lg text-sm active:scale-95 btn-premium cursor-pointer"
                       >
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 fill-current text-black" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
-                        Watch Now
+                        Play
                       </button>
                       <button 
                         onClick={() => navigate(`/movies/${heroMovie.movie_id}`)}
-                        className="px-8 py-3 bg-white/5 border border-white/10 hover:bg-white/10 backdrop-blur-md text-white font-bold rounded-xl transition-all text-sm hover:-translate-y-0.5"
+                        className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-extrabold rounded-2xl transition-all text-sm active:scale-95 backdrop-blur-md btn-premium cursor-pointer"
                       >
                         More Info
                       </button>
