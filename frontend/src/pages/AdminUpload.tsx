@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import PremiumPoster from '../components/PremiumPoster';
+import Logo from '../components/Logo';
 
 interface MovieOption {
   movie_id: string;
@@ -531,8 +532,8 @@ const AdminUpload: React.FC = () => {
       {/* Top Navbar */}
       <header className="border-b border-white/5 bg-black sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-xl font-black text-[#3B82F6] tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
-            ZEPLAY STUDIO
+          <Link to="/" className="hover:scale-[1.01] transition-transform select-none">
+            <Logo height={36} className="w-auto" />
           </Link>
           <span className="text-[9px] font-bold tracking-widest uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-full text-neutral-300">
             Studio Ingestion Console
