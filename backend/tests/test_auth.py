@@ -232,3 +232,54 @@ async def test_change_password_failures(client: AsyncClient, db_session: AsyncSe
     )
     assert response3.status_code == 422
 
+
+from app.models.password_reset_token import PasswordResetToken
+
+async def test_forgot_password_and_reset_via_otp(client: AsyncClient, db_session: AsyncSession):
+    # 1. Register a user
+    await client.post(
+        "/api/auth/register",
+        json={"email": "forgot@example.com", "name": "Forgot User", "password": "Password123!"}
+    )
+    
+    # Verify email first
+    res_verify = await db_session.execute(select(EmailVerificationToken))
+    verify_token_rec = res_verify.scalars().first()
+    await client.post(
+        "/api/auth/verify-email",
+        json={"token": verify_token_rec.token}
+    )
+    
+    # 2. Trigger forgot password
+    forgot_response = await client.post(
+        "/api/auth/forgot-password",
+        json={"email": "forgot@example.com"}
+    )
+    assert forgot_response.status_code == 200
+    assert "reset code has been sent" in forgot_response.json()["message"]
+    
+    # 3. Query the password reset token from DB
+    res_reset = await db_session.execute(select(PasswordResetToken))
+    reset_token_rec = res_reset.scalars().first()
+    assert reset_token_rec is not None
+    assert len(reset_token_rec.token) == 6  # 6-digit OTP
+    
+    # 4. Reset password using the 6-digit OTP token
+    reset_response = await client.post(
+        "/api/auth/reset-password",
+        json={
+            "token": reset_token_rec.token,
+            "new_password": "NewPassword123!"
+        }
+    )
+    assert reset_response.status_code == 200
+    assert "Password successfully reset" in reset_response.json()["message"]
+    
+    # 5. Attempt login with new password (should succeed)
+    login_res = await client.post(
+        "/api/auth/login",
+        data={"username": "forgot@example.com", "password": "NewPassword123!"}
+    )
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.json()
+
