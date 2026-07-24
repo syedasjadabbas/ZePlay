@@ -28,7 +28,7 @@ interface WatchHistoryItem {
 const WatchHistoryPage: React.FC = () => {
   const { showAlert } = useModal();
   const [history, setHistory] = useState<WatchHistoryItem[]>([]);
-  const [profileName, setProfileName] = useState('User');
+  const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,20 +40,6 @@ const WatchHistoryPage: React.FC = () => {
       navigate('/profiles');
       return;
     }
-
-    const fetchProfileDetails = async () => {
-      try {
-        const response = await api.get('/profiles/');
-        const activeProfile = response.data.find((p: any) => p.profile_id === activeProfileId);
-        if (activeProfile) {
-          setProfileName(activeProfile.display_name);
-        }
-      } catch (err) {
-        console.error("Failed to load profile details.", err);
-      }
-    };
-
-    fetchProfileDetails();
   }, [activeProfileId, navigate]);
 
   const fetchHistory = async () => {

@@ -130,10 +130,19 @@ const Login: React.FC = () => {
 
           {error && (
             <div
-              className="text-xs text-red-200 rounded-xl p-3.5 mb-5 font-semibold"
+              className="text-xs text-red-200 rounded-xl p-3.5 mb-5 font-semibold space-y-2"
               style={{ background: 'rgba(127,29,29,0.4)', border: '1px solid rgba(239,68,68,0.25)' }}
             >
-              {error}
+              <div>{error}</div>
+              {error.toLowerCase().includes('verify') && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/verify-email', { state: { email } })}
+                  className="text-brand-accent hover:underline font-bold text-[11px] block text-left cursor-pointer"
+                >
+                  Verify your email now &rarr;
+                </button>
+              )}
             </div>
           )}
 

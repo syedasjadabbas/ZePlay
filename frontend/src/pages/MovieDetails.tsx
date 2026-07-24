@@ -36,7 +36,7 @@ const MovieDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
-  const [profileName, setProfileName] = useState('User');
+  const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,22 +117,6 @@ const MovieDetails: React.FC = () => {
       navigate('/profiles');
       return;
     }
-
-    const fetchProfileDetails = async () => {
-      try {
-        const response = await api.get('/profiles/');
-        const activeProfile = response.data.find(
-          (p: any) => p.profile_id === activeProfileId
-        );
-        if (activeProfile) {
-          setProfileName(activeProfile.display_name);
-        }
-      } catch (err) {
-        console.error("Failed to load profile details.", err);
-      }
-    };
-
-    fetchProfileDetails();
   }, [activeProfileId, navigate]);
 
   useEffect(() => {
@@ -536,11 +520,8 @@ const MovieDetails: React.FC = () => {
                             Watch {movie.title}
                           </h4>
                           <div className="flex items-center justify-center gap-2 mt-1">
-                            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                              HLS Streaming Enabled
-                            </span>
-                            <span className="text-[10px] font-mono text-neutral-400">
-                              .m3u8 / .ts
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/5 text-neutral-300 border border-white/10">
+                              4K HDR ULTRA HD
                             </span>
                           </div>
                         </div>
@@ -750,12 +731,6 @@ const MovieDetails: React.FC = () => {
                           </span>
                         ))}
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-xs text-neutral-500 uppercase tracking-wider block mb-2 font-medium">HLS Transcode Stream Pointer</span>
-                      <span className="text-xs text-neutral-400 font-mono break-all bg-brand-cards/20 border border-white/5 p-3 rounded-xl block select-text">
-                        {movie.video_url}
-                      </span>
                     </div>
                   </div>
                 </div>

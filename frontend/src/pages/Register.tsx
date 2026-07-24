@@ -163,7 +163,7 @@ const Register: React.FC = () => {
             <div className="space-y-3 mt-4">
               <button
                 id="enter-otp-button"
-                onClick={() => navigate('/verify-email')}
+                onClick={() => navigate('/verify-email', { state: { email: registrationData.userEmail } })}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm text-white transition-all duration-300 btn-premium cursor-pointer"
                 style={{
                   background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',

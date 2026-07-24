@@ -6,8 +6,8 @@ import TopBar from '../components/TopBar';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
-  const [profileName, setProfileName] = useState('User');
-  const [profileAvatar, setProfileAvatar] = useState('🍿');
+  const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
+  const [profileAvatar] = useState(() => localStorage.getItem('selectedProfileAvatar') || 'grad-nebula');
   const [planName, setPlanName] = useState<string>('free');
   const [planMaxProfiles, setPlanMaxProfiles] = useState<number>(1);
   
@@ -28,23 +28,6 @@ const Settings: React.FC = () => {
       navigate('/profiles');
       return;
     }
-
-    const fetchProfileDetails = async () => {
-      try {
-        const response = await api.get('/profiles/');
-        const activeProfile = response.data.find(
-          (p: any) => p.profile_id === activeProfileId
-        );
-        if (activeProfile) {
-          setProfileName(activeProfile.display_name);
-          setProfileAvatar(activeProfile.avatar_url || '🍿');
-        }
-      } catch (err) {
-        console.error("Failed to load profile details in Settings page.", err);
-      }
-    };
-
-    fetchProfileDetails();
 
     const cachedUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isAdmin = cachedUser.is_admin === true;
