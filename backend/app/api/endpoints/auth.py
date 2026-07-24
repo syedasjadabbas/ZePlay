@@ -140,9 +140,9 @@ async def login(
             detail="Please verify your email address before logging in."
         )
     
-    # Create and return JWT access token
+    # Create JWT access token and return user data in one response (saves /me round-trip)
     access_token = security.create_access_token(subject=user.user_id)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(deps.get_current_user)):

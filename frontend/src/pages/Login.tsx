@@ -38,18 +38,12 @@ const Login: React.FC = () => {
         },
       });
 
-      const { access_token } = response.data;
+      const { access_token, user } = response.data;
       setAuthSession(access_token, rememberMe);
 
-      // Immediately fetch and cache user profile (including is_admin) so Sidebar
-      // and AdminRoute can read it without a second network round-trip.
-      try {
-        const meRes = await api.get('/auth/me');
-        if (meRes.data) {
-          localStorage.setItem('user', JSON.stringify(meRes.data));
-        }
-      } catch {
-        // Non-fatal: Sidebar will retry on mount
+      // Immediately cache user profile (including is_admin) returned directly in login response
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
       }
 
       navigate('/profiles');

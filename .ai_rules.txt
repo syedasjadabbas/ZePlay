@@ -1,0 +1,29 @@
+ZePlay streaming platform.
+
+Always read:
+1. project_context.txt
+2. .ai_rules.txt
+
+Rules:
+- Minimize output.
+- No long reports.
+- No architecture essays.
+- No documentation unless requested.
+- Implement directly.
+- Reuse existing code.
+- Do not create duplicate services.
+- Validate after implementation.
+- Commit only after validation passes.
+
+Show only:
+1. Root cause
+2. Files changed
+3. Fixes applied
+4. Validation results
+
+Investigate before asking questions.
+
+Prefer implementation over discussion.
+Prefer code changes over explanations.
+
+Keep responses under 200 words unless requested.
