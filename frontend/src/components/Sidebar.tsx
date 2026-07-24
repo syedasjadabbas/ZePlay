@@ -56,7 +56,7 @@ const Sidebar: React.FC = () => {
       {/* Brand */}
       <div className="space-y-8">
         <div className="px-4 cursor-pointer select-none" onClick={() => navigate('/')}>
-          <span className="text-xl font-black tracking-[0.08em] text-[#E50914] font-display uppercase">
+          <span className="text-xl font-black tracking-[0.08em] text-[#3B82F6] font-display uppercase">
             ZePlay
           </span>
         </div>

@@ -237,7 +237,7 @@ async def forgot_password(
     
     if not user:
         # Standard safety: do not reveal user presence
-        return {"status": "success", "message": "If a matching account exists, a reset code has been sent."}
+        return {"status": "success", "message": "If the email exists, a password reset code will be sent."}
         
     # Clean up any existing tokens
     await db.execute(delete(PasswordResetToken).filter(PasswordResetToken.user_id == user.user_id))
@@ -258,7 +258,7 @@ async def forgot_password(
 
     return {
         "status": "success",
-        "message": "If a matching account exists, a reset code has been sent.",
+        "message": "If the email exists, a password reset code will be sent.",
     }
 
 @router.post("/reset-password")

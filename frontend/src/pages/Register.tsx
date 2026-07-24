@@ -193,17 +193,8 @@ const Register: React.FC = () => {
 
         {/* Footer bar */}
         <footer className="px-8 py-6 text-center text-xs text-neutral-600 relative z-10 space-y-1">
-          <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-          <div>
-            <a
-              href="https://zeploy.tech"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
-            >
-              POWERED BY ZEPLOY TECH
-            </a>
-          </div>
+          <div>&copy; 2026 ZePlay. All Rights Reserved.</div>
+          <div className="text-[10px]">Powered by Zeploy Tech</div>
         </footer>
       </div>
     );
@@ -323,17 +314,8 @@ const Register: React.FC = () => {
 
       {/* Footer bar */}
       <footer className="px-8 py-6 text-center text-xs text-neutral-600 relative z-10 space-y-1">
-        <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-        <div>
-          <a
-            href="https://zeploy.tech"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
-          >
-            POWERED BY ZEPLOY TECH
-          </a>
-        </div>
+        <div>&copy; 2026 ZePlay. All Rights Reserved.</div>
+        <div className="text-[10px]">Powered by Zeploy Tech</div>
       </footer>
     </div>
   );

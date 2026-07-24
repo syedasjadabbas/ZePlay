@@ -256,7 +256,7 @@ async def test_forgot_password_and_reset_via_otp(client: AsyncClient, db_session
         json={"email": "forgot@example.com"}
     )
     assert forgot_response.status_code == 200
-    assert "reset code has been sent" in forgot_response.json()["message"]
+    assert "password reset code will be sent" in forgot_response.json()["message"]
     
     # 3. Query the password reset token from DB
     res_reset = await db_session.execute(select(PasswordResetToken))
