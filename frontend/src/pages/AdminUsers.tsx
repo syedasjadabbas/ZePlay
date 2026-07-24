@@ -86,10 +86,10 @@ const AdminUsers: React.FC = () => {
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
+              <span className="text-[9px] font-black tracking-widest uppercase text-brand-accent bg-brand-accent/15 border border-brand-accent/30 px-3 py-1 rounded-full">
                 System Administration
               </span>
-              <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
+              <h1 className="text-3xl md:text-4xl font-black font-display tracking-tighter text-white uppercase mt-2">
                 User Management
               </h1>
               <p className="text-xs text-brand-textMuted font-medium mt-1">
@@ -103,13 +103,16 @@ const AdminUsers: React.FC = () => {
                  placeholder="Search users by name or email..."
                  value={search}
                  onChange={(e) => setSearch(e.target.value)}
-                 className="px-4 py-2.5 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all w-64 input-premium"
+                 className="px-4 py-2.5 bg-black/40 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-2xl text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all w-64 input-premium"
                />
                <button
                  onClick={() => navigate('/admin/upload')}
-                 className="px-4 py-2.5 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border border-brand-accent/30 rounded-xl text-xs font-bold transition-all btn-premium select-none cursor-pointer"
+                 className="px-4 py-2.5 bg-brand-accent hover:bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all btn-premium select-none cursor-pointer flex items-center gap-1 shadow-md shadow-blue-500/20 active:scale-95"
                >
-                 Catalog Ingestion
+                 <span>Catalog Ingestion</span>
+                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                 </svg>
                </button>
              </div>
            </div>
@@ -124,83 +127,92 @@ const AdminUsers: React.FC = () => {
              </div>
            )}
  
-           <div className="bg-brand-surface/40 border border-white/5 backdrop-blur-xl rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn">
-             {loading ? (
-               <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse">
-                 Loading platform users...
-               </div>
-             ) : filteredUsers.length === 0 ? (
-               <div className="p-12 text-center text-brand-textMuted text-sm">
-                 No matching users found.
-               </div>
-             ) : (
-               <div className="overflow-x-auto">
-                 <table className="w-full text-left border-collapse">
-                   <thead>
-                     <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
-                       <th className="p-4 pl-6">User</th>
-                       <th className="p-4">Email</th>
-                       <th className="p-4">Verification</th>
-                       <th className="p-4">Role</th>
-                       <th className="p-4">Joined</th>
-                       <th className="p-4 pr-6 text-right">Actions</th>
-                     </tr>
-                   </thead>
-                   <tbody className="divide-y divide-white/5 text-xs">
-                     {filteredUsers.map((u) => (
-                       <tr key={u.user_id} className="hover:bg-white/[0.02] transition-colors">
-                         <td className="p-4 pl-6 font-bold text-white flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
-                             {u.name.charAt(0).toUpperCase()}
-                           </div>
-                           <span>{u.name}</span>
-                         </td>
-                         <td className="p-4 text-neutral-300 font-mono text-[11px]">{u.email}</td>
-                         <td className="p-4">
-                           {u.is_verified ? (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.06)]">
-                               Verified
-                             </span>
-                           ) : (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.06)]">
-                               Pending
-                             </span>
-                           )}
-                         </td>
-                         <td className="p-4">
-                           {u.is_admin ? (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-brand-accent bg-brand-accent/15 px-2.5 py-0.5 rounded-full border border-brand-accent/30 shadow-[0_0_10px_rgba(59,130,246,0.08)]">
-                               Admin
-                             </span>
-                           ) : (
-                             <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-800/40 px-2.5 py-0.5 rounded-full border border-white/5">
-                               Member
-                             </span>
-                           )}
-                         </td>
-                         <td className="p-4 text-neutral-400 text-[11px]">
-                           {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                         </td>
-                         <td className="p-4 pr-6 text-right">
-                           <button
-                             onClick={() => handleToggleAdmin(u)}
-                             disabled={updatingUserId === u.user_id}
-                             className={`px-4 py-2 rounded-2xl text-[10px] font-extrabold transition-all border btn-premium select-none cursor-pointer ${
-                               u.is_admin
-                                 ? 'bg-red-500/10 hover:bg-red-500/25 text-rose-300 border-red-500/20'
-                                 : 'bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border-brand-accent/30'
-                             }`}
-                           >
-                             {updatingUserId === u.user_id ? 'Updating...' : u.is_admin ? 'Revoke Admin' : 'Promote to Admin'}
-                           </button>
-                         </td>
-                       </tr>
-                     ))}
-                   </tbody>
-                 </table>
-              </div>
-            )}
-          </div>
+            <div className="animate-scaleIn">
+              {loading ? (
+                <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse bg-neutral-900/40 border border-white/8 rounded-3xl backdrop-blur-xl shadow-2xl">
+                  Loading platform users...
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="p-12 text-center text-brand-textMuted text-sm bg-neutral-900/40 border border-white/8 rounded-3xl backdrop-blur-xl shadow-2xl">
+                  No matching users found.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredUsers.map((u) => (
+                    <div 
+                      key={u.user_id} 
+                      className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 hover:border-brand-accent/30 p-5 rounded-[24px] flex flex-col justify-between space-y-4 shadow-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_15px_30px_rgba(0,0,0,0.5)] group"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-lg text-white shadow-md shadow-blue-500/10 group-hover:scale-105 transition-transform duration-250 shrink-0 animate-[scaleIn_0.3s]">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 space-y-0.5">
+                            <span className="font-extrabold text-sm text-white truncate block">{u.name}</span>
+                            <span className="text-[10px] text-neutral-455 font-mono block truncate" title={u.email}>{u.email}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-[10px] pt-1">
+                          <div className="space-y-1">
+                            <span className="text-neutral-500 block uppercase font-bold tracking-wider">Verification</span>
+                            {u.is_verified ? (
+                              <span className="inline-flex items-center gap-1 font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                Verified
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <span className="text-neutral-500 block uppercase font-bold tracking-wider">Plan & Role</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`font-black uppercase tracking-wider px-2 py-0.5 rounded-md border text-[9px] ${
+                                u.subscription_plan === 'premium'
+                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                  : 'bg-neutral-800 border-neutral-750 text-neutral-450'
+                              }`}>
+                                {u.subscription_plan || 'free'}
+                              </span>
+                              {u.is_admin && (
+                                <span className="font-black uppercase tracking-wider px-2 py-0.5 rounded-md border border-brand-accent/30 text-brand-accent bg-brand-accent/15 text-[8px]">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-neutral-450 flex justify-between items-center pt-2 border-t border-white/5">
+                          <span className="font-semibold uppercase tracking-wider text-[8px] text-neutral-500">Joined Platform</span>
+                          <span className="font-mono text-neutral-350 font-bold">
+                            {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          onClick={() => handleToggleAdmin(u)}
+                          disabled={updatingUserId === u.user_id}
+                          className={`w-full py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all border btn-premium select-none cursor-pointer ${
+                            u.is_admin
+                              ? 'bg-red-500/10 hover:bg-red-500/25 text-rose-300 border-red-500/20'
+                              : 'bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border-brand-accent/30 shadow-md shadow-brand-accent/5'
+                          }`}
+                        >
+                          {updatingUserId === u.user_id ? 'Updating...' : u.is_admin ? 'Revoke Access' : 'Promote to Admin'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
         </main>
       </div>
     </div>

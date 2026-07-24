@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useModal } from '../components/ModalProvider';
+import PremiumPoster from '../components/PremiumPoster';
 
 interface MovieOption {
   movie_id: string;
@@ -526,63 +527,74 @@ const AdminUpload: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-brand-accent selection:text-white pb-20">
+    <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-brand-accent selection:text-white pb-20 relative overflow-hidden">
+      {/* Cinematic ambient background glow circles */}
+      <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[20%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-500/5 blur-[100px] pointer-events-none" />
 
       {/* Top Navbar */}
-      <header className="border-b border-white/5 bg-[#070E26]/80 backdrop-blur-xl sticky top-0 z-40 px-8 py-4 flex items-center justify-between">
+      <header className="border-b border-white/5 bg-[#060b18]/65 backdrop-blur-xl sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-2xl font-black text-brand-accent tracking-wider font-display">
-            ZEPLAY
+          <Link to="/" className="text-xl font-black text-brand-accent tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
+            ZEPLAY STUDIO
           </Link>
-          <span className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/10 border border-brand-accent/20 px-3 py-1 rounded-full text-brand-accent">
-            Control Center
+          <span className="text-[9px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/35 px-3 py-1 rounded-full text-brand-accent shadow-inner">
+            Media Hub Console
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/" className="text-xs font-bold text-neutral-400 hover:text-white transition-colors">
-            Exit Panel
+          <Link 
+            to="/" 
+            className="px-4 py-2.5 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-md"
+          >
+            <span>Exit Studio</span>
+            <svg className="w-3.5 h-3.5 text-neutral-450" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
           </Link>
-          <div className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center font-bold text-xs">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-accent to-blue-750 flex items-center justify-center font-black text-xs text-white shadow-md shadow-blue-500/20 select-none">
             A
           </div>
         </div>
       </header>
 
       {/* Main Workspace Container */}
-      <div className="max-w-7xl mx-auto px-8 pt-10">
+      <div className="max-w-7xl mx-auto px-8 pt-10 relative z-10 space-y-8">
 
         {/* Page Title */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-black tracking-tight uppercase">Administrative Operations</h1>
-          <p className="text-xs text-brand-textMuted mt-1">
-            Monitor infrastructure services, manage user access states, audit system event streams, and ingest content catalogs.
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase font-display leading-none text-white">Studio Workspace</h1>
+            <p className="text-xs text-brand-textMuted mt-2 font-medium max-w-xl">
+              Publish and edit media catalog titles, ingest raw video streams, observe database engine cache states, and manage member user credentials.
+            </p>
+          </div>
         </div>
 
         {/* Dynamic Notification Badges */}
         {error && (
-          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-2xl flex items-center gap-3">
-            <span className="font-extrabold uppercase bg-rose-500 text-white px-2 py-0.5 rounded-lg text-[9px]">ERROR</span>
-            <span>{error}</span>
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-2xl flex items-center gap-3 animate-scaleIn shadow-lg">
+            <span className="font-extrabold uppercase bg-rose-500 text-white px-2.5 py-0.5 rounded-lg text-[9px] tracking-wider">ERROR</span>
+            <span className="font-semibold">{error}</span>
           </div>
         )}
         {successMsg && (
-          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-2xl flex items-center gap-3">
-            <span className="font-extrabold uppercase bg-emerald-500 text-white px-2 py-0.5 rounded-lg text-[9px]">SUCCESS</span>
-            <span>{successMsg}</span>
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs rounded-2xl flex items-center gap-3 animate-scaleIn shadow-lg">
+            <span className="font-extrabold uppercase bg-emerald-500 text-white px-2.5 py-0.5 rounded-lg text-[9px] tracking-wider">SUCCESS</span>
+            <span className="font-semibold">{successMsg}</span>
           </div>
         )}
 
         {/* Dashboard Tabs bar */}
-        <div className="flex flex-wrap gap-2 border-b border-white/5 pb-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 select-none">
           {[
-            { id: 'overview', label: 'System Overview' },
-            { id: 'content', label: 'Content Analytics' },
-            { id: 'users', label: 'User Management' },
-            { id: 'ingestion', label: 'Catalog Ingestion' },
-            { id: 'movies_manage', label: 'Manage Catalog Movies' },
-            { id: 'health', label: 'Infrastructure & Cache' },
-            { id: 'audit', label: 'Audit Log Explorer' },
+            { id: 'overview', label: 'Overview', icon: '📊', desc: 'System metrics' },
+            { id: 'content', label: 'Analytics', icon: '📈', desc: 'Ratings & Views' },
+            { id: 'users', label: 'Users', icon: '👥', desc: 'Access Control' },
+            { id: 'ingestion', label: 'Ingestion', icon: '📤', desc: 'Video assets' },
+            { id: 'movies_manage', label: 'Catalog', icon: '🎬', desc: 'Movies directory' },
+            { id: 'health', label: 'Services', icon: '⚡', desc: 'DB & Redis health' },
+            { id: 'audit', label: 'Security', icon: '🛡️', desc: 'Audit trails' },
           ].map((t) => (
             <button
               key={t.id}
@@ -591,60 +603,71 @@ const AdminUpload: React.FC = () => {
                 setError(null);
                 setSuccessMsg(null);
               }}
-              className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${activeTab === t.id
-                  ? 'bg-brand-accent/20 border-brand-accent/40 text-brand-accent'
-                  : 'bg-brand-surface/40 border-white/5 text-neutral-400 hover:text-white'
+              className={`flex flex-col items-start p-4 rounded-2xl border transition-all duration-300 text-left group cursor-pointer hover:-translate-y-0.5 active:scale-98 ${activeTab === t.id
+                  ? 'bg-brand-accent/15 border-brand-accent/50 text-white shadow-[0_10px_25px_rgba(59,130,246,0.12)] font-black'
+                  : 'bg-[#0b1225]/40 border-white/5 text-neutral-400 hover:border-white/12 hover:text-white'
                 }`}
             >
-              {t.label}
+              <span className="text-xl mb-2 group-hover:scale-110 transition-transform duration-250">{t.icon}</span>
+              <span className="text-xs font-extrabold uppercase tracking-wider block leading-none">{t.label}</span>
+              <span className="text-[9px] text-neutral-500 font-bold block mt-1.5 uppercase tracking-tight">{t.desc}</span>
             </button>
           ))}
         </div>
 
         {/* Tab 1: System Overview */}
         {activeTab === 'overview' && analytics && (
-          <div className="space-y-8">
+          <div className="space-y-8 animate-fadeIn">
             {/* Grid of Key Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { label: 'Total Users', value: analytics.total_users, desc: `${analytics.free_users} Free / ${analytics.premium_users} Premium` },
-                { label: 'Total Profiles', value: analytics.total_profiles, desc: 'Across all active accounts' },
-                { label: 'Catalog Movies', value: analytics.total_movies, desc: `Ingested HLS Video assets: ${analytics.total_videos}` },
-                { label: 'Total Ratings', value: analytics.total_ratings, desc: `Average Rating: ${analytics.average_rating} ★` },
-                { label: 'Total Views', value: analytics.total_views, desc: 'Aggregated video playback sessions' },
-                { label: 'Total Watch Time', value: `${Math.round(analytics.total_watch_time / 60)} hrs`, desc: 'Accumulated streaming duration' },
-                { label: 'Active Viewers', value: analytics.active_users, desc: 'Unique playback users tracked' },
-                { label: 'Premium Conversion', value: `${analytics.conversion_rate}%`, desc: 'Ratio of paying subscriber accounts' },
+                { label: 'Total Users', value: analytics.total_users, desc: `${analytics.free_users} Free / ${analytics.premium_users} Premium`, icon: '👥', color: 'from-blue-500/20 to-indigo-500/5' },
+                { label: 'Total Profiles', value: analytics.total_profiles, desc: 'Across all active accounts', icon: '👤', color: 'from-purple-500/20 to-pink-500/5' },
+                { label: 'Catalog Movies', value: analytics.total_movies, desc: `Ingested HLS Assets: ${analytics.total_videos}`, icon: '🎬', color: 'from-amber-500/20 to-orange-500/5' },
+                { label: 'Total Ratings', value: analytics.total_ratings, desc: `Average Rating: ${analytics.average_rating} ★`, icon: '★', color: 'from-yellow-500/20 to-amber-500/5' },
+                { label: 'Total Views', value: analytics.total_views, desc: 'Aggregated video playback sessions', icon: '👁', color: 'from-emerald-500/20 to-teal-500/5' },
+                { label: 'Total Watch Time', value: `${Math.round(analytics.total_watch_time / 60)} hrs`, desc: 'Accumulated streaming duration', icon: '⏱', color: 'from-cyan-500/20 to-blue-500/5' },
+                { label: 'Active Viewers', value: analytics.active_users, desc: 'Unique playback users tracked', icon: '🔥', color: 'from-rose-500/20 to-red-500/5' },
+                { label: 'Premium Conversion', value: `${analytics.conversion_rate}%`, desc: 'Ratio of paying subscriber accounts', icon: '💎', color: 'from-violet-500/20 to-fuchsia-500/5' },
               ].map((m, idx) => (
-                <div key={idx} className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-brand-textMuted">{m.label}</span>
-                  <div className="text-3xl font-black mt-2 text-white">{m.value}</div>
-                  <div className="text-[10px] text-neutral-400 mt-1 font-medium">{m.desc}</div>
+                <div key={idx} className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl flex items-center justify-between group hover:border-brand-accent/40 hover:shadow-[0_10px_30px_rgba(59,130,246,0.1)] transition-all duration-300">
+                  <div className="space-y-2">
+                    <span className="text-[9px] uppercase font-black tracking-[0.2em] text-neutral-450">{m.label}</span>
+                    <div className="text-3xl font-black text-white font-display tracking-tight group-hover:text-brand-accent transition-colors">{m.value}</div>
+                    <div className="text-[10px] text-neutral-500 font-semibold">{m.desc}</div>
+                  </div>
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${m.color} border border-white/5 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300`}>
+                    {m.icon}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Performance charts mockup */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Retention & Watch Time Performance</h2>
+            {/* Retention & Watch Time Performance */}
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent font-display">Retention & Watch Time Performance</h2>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold">Analytical distribution represents hourly Watch Time trend over the past 12 months</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-xs font-bold text-amber-400">
+                  Average User Watch Time: {analytics.average_watch_time} mins
+                </div>
+              </div>
               <div className="h-64 flex items-end gap-3 pt-6 border-b border-white/5 pb-2">
                 {[45, 60, 55, 80, 70, 95, 85, 110, 90, 120, 130, 150].map((val, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                     <div
                       style={{ height: `${(val / 150) * 100}%` }}
-                      className="w-full bg-gradient-to-t from-brand-accent/40 to-brand-accent rounded-t-lg relative group cursor-pointer"
+                      className="w-full bg-gradient-to-t from-brand-accent/20 via-brand-accent/50 to-brand-accent rounded-t-lg relative cursor-pointer hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all duration-300"
                     >
-                      <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-brand-accent text-white font-black text-[9px] px-2 py-0.5 rounded-md transition-opacity whitespace-nowrap shadow-lg">
+                      <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-[#0c142c] border border-brand-accent/30 text-white font-black text-[10px] px-2.5 py-1 rounded-xl transition-all whitespace-nowrap shadow-2xl z-10">
                         {val} hrs
                       </div>
                     </div>
-                    <span className="text-[8px] font-bold text-neutral-500 uppercase">M{idx + 1}</span>
+                    <span className="text-[9px] font-black text-neutral-500 uppercase tracking-wider mt-1">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][idx]}</span>
                   </div>
                 ))}
-              </div>
-              <div className="flex justify-between items-center mt-3 text-[10px] text-brand-textMuted">
-                <span>Visual distribution represents hourly Watch Time trend over the past 12 months.</span>
-                <span className="font-bold text-white">Average User Watch Time: {analytics.average_watch_time} mins</span>
               </div>
             </div>
           </div>
@@ -652,78 +675,102 @@ const AdminUpload: React.FC = () => {
 
         {/* Tab 2: Content Analytics */}
         {activeTab === 'content' && contentRankings && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
             {/* 1. Most Watched Movies */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Most Watched Movies</h2>
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
+              <h2 className="text-sm font-black uppercase mb-5 tracking-wider text-brand-accent font-display">Most Watched Movies</h2>
               <div className="space-y-4">
                 {contentRankings.most_watched_movies.map((m, idx) => (
-                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
-                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
-                      <span className="text-xs font-bold">{m.title}</span>
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3.5 last:border-b-0 last:pb-0 group">
+                    <div className="flex items-center gap-4">
+                      <span className={`text-xs font-black w-5 text-center ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-neutral-400' : idx === 2 ? 'text-amber-600' : 'text-neutral-500'}`}>
+                        #{idx + 1}
+                      </span>
+                      <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
+                        {m.thumbnail_url ? (
+                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-white group-hover:text-brand-accent transition-colors">{m.title}</span>
                     </div>
-                    <span className="text-[10px] font-bold bg-white/5 border border-white/5 px-2.5 py-1 rounded-lg">{m.views} views</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-white/5 border border-white/10 px-3 py-1 rounded-xl text-neutral-350">{m.views} views</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* 2. Highest Rated Movies */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Highest Rated Movies</h2>
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
+              <h2 className="text-sm font-black uppercase mb-5 tracking-wider text-brand-accent font-display">Highest Rated Movies</h2>
               <div className="space-y-4">
                 {contentRankings.highest_rated_movies.map((m, idx) => (
-                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
-                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
-                      <span className="text-xs font-bold">{m.title}</span>
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3.5 last:border-b-0 last:pb-0 group">
+                    <div className="flex items-center gap-4">
+                      <span className={`text-xs font-black w-5 text-center ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-neutral-400' : idx === 2 ? 'text-amber-600' : 'text-neutral-500'}`}>
+                        #{idx + 1}
+                      </span>
+                      <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
+                        {m.thumbnail_url ? (
+                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-white group-hover:text-brand-accent transition-colors">{m.title}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">{m.rating} ★</span>
+                    <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">★ {m.rating.toFixed(1)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* 3. Most Added to Watchlist */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
-              <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent">Most Added to Watchlist</h2>
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
+              <h2 className="text-sm font-black uppercase mb-5 tracking-wider text-brand-accent font-display">Most Added to Watchlist</h2>
               <div className="space-y-4">
                 {contentRankings.most_added_watchlist.map((m, idx) => (
-                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-b-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-neutral-500 w-4">#{idx + 1}</span>
-                      <img src={m.thumbnail_url || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=100&q=80'} className="w-12 h-8 object-cover rounded-md border border-white/10" alt="" />
-                      <span className="text-xs font-bold">{m.title}</span>
+                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3.5 last:border-b-0 last:pb-0 group">
+                    <div className="flex items-center gap-4">
+                      <span className={`text-xs font-black w-5 text-center ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-neutral-400' : idx === 2 ? 'text-amber-600' : 'text-neutral-500'}`}>
+                        #{idx + 1}
+                      </span>
+                      <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
+                        {m.thumbnail_url ? (
+                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-white group-hover:text-brand-accent transition-colors">{m.title}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-brand-accent bg-brand-accent/10 border border-brand-accent/20 px-2.5 py-1 rounded-lg">+{m.saves} saves</span>
+                    <span className="text-[10px] font-black text-brand-accent bg-brand-accent/10 border border-brand-accent/20 px-3 py-1 rounded-xl">+{m.saves} saves</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* 4. Category & Genre Popularity */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-6">
               <div>
-                <h2 className="text-sm font-black uppercase mb-3 tracking-wider text-brand-accent">Most Popular Genres</h2>
-                <div className="flex flex-wrap gap-2">
+                <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent font-display">Genre Popularity</h2>
+                <div className="flex flex-wrap gap-2.5">
                   {contentRankings.most_popular_genres.map((g) => (
-                    <span key={g.genre_id} className="text-xs bg-white/5 border border-white/5 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2">
-                      {g.name} <span className="text-[10px] text-neutral-400 bg-black/30 px-2 py-0.5 rounded-md font-mono">{g.count}</span>
+                    <span key={g.genre_id} className="text-xs bg-white/[0.03] border border-white/10 px-3.5 py-2 rounded-xl font-extrabold flex items-center gap-2.5 hover:bg-white/[0.08] transition-colors">
+                      <span>{g.name}</span> 
+                      <span className="text-[9px] text-neutral-450 bg-black/45 px-2 py-0.5 rounded-md font-mono">{g.count} titles</span>
                     </span>
                   ))}
                 </div>
               </div>
               <div>
-                <h2 className="text-sm font-black uppercase mb-3 tracking-wider text-brand-accent">Most Watched Categories</h2>
-                <div className="space-y-2.5">
+                <h2 className="text-sm font-black uppercase mb-4 tracking-wider text-brand-accent font-display">Most Watched Categories</h2>
+                <div className="space-y-3">
                   {contentRankings.most_watched_categories.map((c) => (
-                    <div key={c.genre_id} className="flex items-center justify-between text-xs">
+                    <div key={c.genre_id} className="flex items-center justify-between text-xs border-b border-white/5 pb-2.5 last:border-none last:pb-0">
                       <span className="font-bold text-neutral-300">{c.name}</span>
-                      <span className="font-mono text-neutral-400">{c.views} views</span>
+                      <span className="font-mono font-black text-neutral-450 bg-white/5 px-2 py-0.5 rounded">{c.views} views</span>
                     </div>
                   ))}
                 </div>
@@ -734,23 +781,22 @@ const AdminUpload: React.FC = () => {
 
         {/* Tab 3: User Management */}
         {activeTab === 'users' && (
-          <div className="space-y-6">
-
+          <div className="space-y-6 animate-fadeIn">
             {/* Search and Filters */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl flex flex-wrap gap-4 items-center justify-between shadow-lg">
               <input
                 type="text"
                 placeholder="Search registered users by name or email..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                className="flex-1 min-w-[280px] px-4 py-2.5 bg-brand-surface border border-white/10 rounded-2xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-accent"
+                className="flex-1 min-w-[280px] px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-accent transition-all input-premium"
               />
 
               <div className="flex flex-wrap gap-3">
                 <select
                   value={userPlanFilter}
                   onChange={(e) => setUserPlanFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                  className="px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-neutral-400 focus:outline-none focus:text-white cursor-pointer"
                 >
                   <option value="">All Subscription Plans</option>
                   <option value="free">Free Tier</option>
@@ -760,7 +806,7 @@ const AdminUpload: React.FC = () => {
                 <select
                   value={userStatusFilter}
                   onChange={(e) => setUserStatusFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                  className="px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-neutral-400 focus:outline-none focus:text-white cursor-pointer"
                 >
                   <option value="">All Statuses</option>
                   <option value="active">Active Only</option>
@@ -770,7 +816,7 @@ const AdminUpload: React.FC = () => {
                 <select
                   value={userVerifyFilter}
                   onChange={(e) => setUserVerifyFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                  className="px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-neutral-400 focus:outline-none focus:text-white cursor-pointer"
                 >
                   <option value="">All Verification States</option>
                   <option value="verified">Verified Only</option>
@@ -781,109 +827,125 @@ const AdminUpload: React.FC = () => {
 
             {/* List and Details Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Users list rendered as a stack of gorgeous user cards */}
+              <div className="lg:col-span-2 space-y-4 pr-1 overflow-y-auto max-h-[650px] scrollbar-hide">
+                {users.length === 0 ? (
+                  <div className="p-12 text-center text-brand-textMuted bg-[#0c142c]/60 border border-white/5 rounded-3xl text-sm font-semibold">
+                    No matching users found in directory.
+                  </div>
+                ) : (
+                  users.map((u) => (
+                    <div
+                      key={u.user_id}
+                      onClick={() => handleViewUserDetail(u)}
+                      className={`p-5 rounded-[24px] border transition-all duration-300 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                        selectedUserDetail?.user_id === u.user_id
+                          ? 'bg-brand-accent/10 border-brand-accent/40 shadow-lg shadow-brand-accent/5'
+                          : 'bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border-white/5 hover:border-white/15'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-lg text-white shadow-md shadow-blue-500/10 shrink-0">
+                          {u.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-extrabold text-sm text-white truncate">{u.name}</span>
+                            {u.is_admin && (
+                              <span className="text-[8px] bg-brand-accent/15 border border-brand-accent/30 text-brand-accent px-2 py-0.5 rounded-full uppercase font-black tracking-widest shrink-0">Admin</span>
+                            )}
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${
+                              u.subscription_plan === 'premium'
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                : 'bg-neutral-800 border-neutral-750 text-neutral-450'
+                            }`}>
+                              {u.subscription_plan}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-neutral-450 font-mono block select-text truncate">{u.email}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 sm:self-center self-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-end gap-1.5 mr-1 shrink-0">
+                          <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">Verification</span>
+                          {u.is_verified ? (
+                            <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 rounded-md border border-emerald-500/20">Verified</span>
+                          ) : (
+                            <span className="text-[9px] font-black text-amber-400 bg-amber-500/10 px-2 rounded-md border border-amber-500/20">Pending</span>
+                          )}
+                        </div>
 
-              {/* Users table list */}
-              <div className="lg:col-span-2 bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
-                        <th className="p-4 pl-6">User / Account</th>
-                        <th className="p-4">Verification</th>
-                        <th className="p-4">Subscription</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4 pr-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5 text-xs">
-                      {users.map((u) => (
-                        <tr key={u.user_id} className={`hover:bg-white/[0.02] transition-colors cursor-pointer ${selectedUserDetail?.user_id === u.user_id ? 'bg-white/[0.03]' : ''}`} onClick={() => handleViewUserDetail(u)}>
-                          <td className="p-4 pl-6">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
-                                {u.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span className="font-bold block">{u.name} {u.is_admin && <span className="text-[9px] bg-brand-accent/20 border border-brand-accent/30 text-brand-accent px-1.5 py-0.2 rounded-md ml-1.5 uppercase font-black">Admin</span>}</span>
-                                <span className="text-[10px] text-neutral-400 block font-mono">{u.email}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            {u.is_verified ? (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Verified</span>
-                            ) : (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Pending</span>
-                            )}
-                          </td>
-                          <td className="p-4 font-bold text-neutral-300 uppercase text-[10px]">{u.subscription_plan}</td>
-                          <td className="p-4">
-                            {u.is_active ? (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Active</span>
-                            ) : (
-                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">Disabled</span>
-                            )}
-                          </td>
-                          <td className="p-4 pr-6 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleToggleUserActive(u)}
-                                disabled={updatingUserId === u.user_id}
-                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${u.is_active
-                                    ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border-rose-500/20'
-                                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/20'
-                                  }`}
-                              >
-                                {u.is_active ? 'Disable' : 'Enable'}
-                              </button>
-                              <button
-                                onClick={() => handleToggleAdminRole(u)}
-                                disabled={updatingUserId === u.user_id}
-                                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border transition-all ${u.is_admin
-                                    ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-white/5'
-                                    : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/30'
-                                  }`}
-                              >
-                                {u.is_admin ? 'Revoke Admin' : 'Make Admin'}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                        <div className="flex flex-col items-end gap-1.5 mr-3 shrink-0">
+                          <span className="text-[8px] text-neutral-500 font-bold uppercase tracking-wider">Status</span>
+                          {u.is_active ? (
+                            <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 rounded-md border border-emerald-500/20">Active</span>
+                          ) : (
+                            <span className="text-[9px] font-black text-rose-400 bg-rose-500/10 px-2 rounded-md border border-rose-500/20">Disabled</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleToggleUserActive(u)}
+                            disabled={updatingUserId === u.user_id}
+                            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-all active:scale-95 cursor-pointer ${
+                              u.is_active
+                                ? 'bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 border-rose-500/20'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/20'
+                            }`}
+                          >
+                            {u.is_active ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            onClick={() => handleToggleAdminRole(u)}
+                            disabled={updatingUserId === u.user_id}
+                            className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider border transition-all active:scale-95 cursor-pointer ${
+                              u.is_admin
+                                ? 'bg-neutral-800 hover:bg-neutral-750 text-neutral-350 border-white/5'
+                                : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/30'
+                            }`}
+                          >
+                            {u.is_admin ? 'Revoke' : 'Promote'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* User detail activity panels */}
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
-                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Audit Details & Activity</h3>
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-6">
+                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider font-display">User Audit Details & Activity</h3>
 
                 {!selectedUserDetail ? (
-                  <div className="text-center py-20 text-xs text-neutral-500">
-                    Select a user from the list to audit watch history, ratings, and profile statistics.
+                  <div className="text-center py-24 text-xs text-neutral-500">
+                    Select a user from the directory deck to audit watch history, ratings, and profile logs.
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 animate-fadeIn">
                     {/* Core details */}
-                    <div className="border-b border-white/5 pb-4">
-                      <h4 className="text-sm font-black text-white">{selectedUserDetail.name}</h4>
-                      <p className="text-[10px] text-neutral-400 font-mono mt-0.5">{selectedUserDetail.email}</p>
-                      <div className="grid grid-cols-2 gap-4 mt-4 text-[10px]">
+                    <div className="border-b border-white/5 pb-4 space-y-3">
+                      <div>
+                        <h4 className="text-sm font-black text-white">{selectedUserDetail.name}</h4>
+                        <p className="text-[10px] text-neutral-450 font-mono mt-0.5">{selectedUserDetail.email}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-1 text-[10px]">
                         <div>
-                          <span className="text-neutral-500 block">Subscription Tier</span>
-                          <span className="font-bold text-white uppercase mt-0.5 block">{selectedUserDetail.subscription_plan}</span>
+                          <span className="text-neutral-500 block uppercase font-bold tracking-wider">Subscription Plan</span>
+                          <span className="font-extrabold text-white uppercase mt-1 block">{selectedUserDetail.subscription_plan}</span>
                         </div>
                         <div>
-                          <span className="text-neutral-500 block">Profiles Registered</span>
-                          <span className="font-bold text-white mt-0.5 block">{selectedUserDetail.profile_count} / {selectedUserDetail.subscription_plan === 'premium' ? 4 : 1}</span>
+                          <span className="text-neutral-500 block uppercase font-bold tracking-wider">Profiles</span>
+                          <span className="font-extrabold text-white mt-1 block">{selectedUserDetail.profile_count} / {selectedUserDetail.subscription_plan === 'premium' ? 4 : 1}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Activity log loading */}
                     {loadingActivity && (
-                      <div className="text-center py-10 text-xs text-neutral-500 animate-pulse">
+                      <div className="text-center py-12 text-xs text-neutral-500 animate-pulse">
                         Loading activity logs...
                       </div>
                     )}
@@ -893,10 +955,10 @@ const AdminUpload: React.FC = () => {
                       <div className="space-y-6">
                         {/* Profiles list */}
                         <div>
-                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Registered Profile Personas</span>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2 tracking-wider">Registered Profile Personas</span>
                           <div className="flex flex-wrap gap-2">
                             {userActivity.profiles.map((p) => (
-                              <span key={p.profile_id} className="text-[10px] bg-white/5 border border-white/5 px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5">
+                              <span key={p.profile_id} className="text-[10px] bg-white/[0.03] border border-white/5 px-2.5 py-1 rounded-xl font-bold flex items-center gap-1.5">
                                 <span>{p.is_kids_profile ? '🧒' : '🍿'}</span>
                                 <span>{p.display_name}</span>
                               </span>
@@ -906,7 +968,7 @@ const AdminUpload: React.FC = () => {
 
                         {/* Recent Watch history */}
                         <div>
-                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Recent Playback Sessions</span>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2 tracking-wider">Recent Playback Sessions</span>
                           {userActivity.watch_history.length === 0 ? (
                             <span className="text-[10px] text-neutral-500 block italic">No history records found.</span>
                           ) : (
@@ -914,7 +976,7 @@ const AdminUpload: React.FC = () => {
                               {userActivity.watch_history.map((h) => (
                                 <div key={h.history_id} className="flex justify-between items-center text-[10px] border-b border-white/5 pb-2">
                                   <span className="font-bold text-neutral-300 truncate max-w-[150px]">{h.movie_title}</span>
-                                  <span className="text-neutral-400 font-mono">{h.percentage_watched}% watched</span>
+                                  <span className="text-neutral-450 font-mono">{h.percentage_watched}% watched</span>
                                 </div>
                               ))}
                             </div>
@@ -923,7 +985,7 @@ const AdminUpload: React.FC = () => {
 
                         {/* User Ratings */}
                         <div>
-                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Content Ratings Submitted</span>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2 tracking-wider">Content Ratings Submitted</span>
                           {userActivity.ratings.length === 0 ? (
                             <span className="text-[10px] text-neutral-500 block italic">No reviews submitted yet.</span>
                           ) : (
@@ -931,7 +993,7 @@ const AdminUpload: React.FC = () => {
                               {userActivity.ratings.map((r) => (
                                 <div key={r.rating_id} className="flex justify-between items-center text-[10px]">
                                   <span className="font-bold text-neutral-300">{r.movie_title}</span>
-                                  <span className="text-amber-400 font-bold">{r.score} ★</span>
+                                  <span className="text-amber-400 font-bold">★ {r.score}</span>
                                 </div>
                               ))}
                             </div>
@@ -940,7 +1002,7 @@ const AdminUpload: React.FC = () => {
 
                         {/* Performed Audit logs */}
                         <div>
-                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2">Security/Operation Events</span>
+                          <span className="text-[9px] uppercase font-bold text-neutral-500 block mb-2 tracking-wider">Security Events Feed</span>
                           {userActivity.audit_logs.length === 0 ? (
                             <span className="text-[10px] text-neutral-500 block italic">No security events triggered.</span>
                           ) : (
@@ -951,7 +1013,7 @@ const AdminUpload: React.FC = () => {
                                     <span>{l.action}</span>
                                     <span className="text-neutral-500 font-mono text-[8px]">{new Date(l.created_at).toLocaleDateString()}</span>
                                   </div>
-                                  <p className="text-neutral-400 text-[9px] mt-0.5 leading-snug">{l.details}</p>
+                                  <p className="text-neutral-450 text-[9px] mt-0.5 leading-snug">{l.details}</p>
                                 </div>
                               ))}
                             </div>
@@ -966,15 +1028,13 @@ const AdminUpload: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 4: Ingestion (Existing logic intact) */}
+        {/* Tab 4: Ingestion */}
         {activeTab === 'ingestion' && (
           <div className="space-y-8 animate-fadeIn">
-
             {/* Catalog Upload Form */}
-            <div className="bg-brand-surface/40 border border-white/5 p-8 rounded-3xl backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-              <h2 className="text-lg font-extrabold uppercase mb-6 tracking-wide text-brand-accent font-display">Ingest Video Catalog</h2>
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-8 rounded-[32px] backdrop-blur-xl shadow-2xl space-y-6">
+              <h2 className="text-lg font-extrabold uppercase tracking-wide text-brand-accent font-display">Ingest Video Catalog</h2>
               <form onSubmit={handleUpload} className="space-y-6">
-
                 {/* Select Movie Linkage */}
                 <div>
                   <label className="text-[10px] font-black uppercase text-brand-textMuted block mb-2 tracking-wider">
@@ -983,11 +1043,11 @@ const AdminUpload: React.FC = () => {
                   <select
                     value={selectedMovieId}
                     onChange={(e) => setSelectedMovieId(e.target.value)}
-                    className="w-full px-4 py-3 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-2xl text-xs text-white focus:outline-none transition-all cursor-pointer select-none input-premium"
+                    className="w-full px-4 py-3 bg-[#050913]/60 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-2xl text-xs text-white focus:outline-none transition-all cursor-pointer select-none input-premium font-semibold"
                   >
-                    <option value="" className="bg-[#0B1535]">Unlinked (Orphan Video Asset)</option>
+                    <option value="" className="bg-[#0b1225] text-white">Unlinked (Orphan Video Asset)</option>
                     {movies.map((m) => (
-                      <option key={m.movie_id} value={m.movie_id} className="bg-[#0B1535]">
+                      <option key={m.movie_id} value={m.movie_id} className="bg-[#0b1225] text-white font-sans font-semibold">
                         {m.title} ({m.release_year})
                       </option>
                     ))}
@@ -1003,7 +1063,7 @@ const AdminUpload: React.FC = () => {
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/40 bg-brand-cards/5 hover:bg-brand-cards/15 rounded-2xl p-10 text-center cursor-pointer transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.99] select-none"
+                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/30 bg-black/15 hover:bg-brand-accent/5 rounded-2xl p-10 text-center cursor-pointer transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.99] select-none"
                   >
                     <input
                       type="file"
@@ -1012,16 +1072,16 @@ const AdminUpload: React.FC = () => {
                       accept="video/*"
                       className="hidden"
                     />
-                    <div className="text-3xl mb-3">🎬</div>
+                    <div className="text-4xl mb-3">📤</div>
                     {file ? (
-                      <div>
+                      <div className="space-y-1">
                         <span className="text-xs font-bold text-white block truncate max-w-md mx-auto">{file.name}</span>
-                        <span className="text-[10px] text-brand-textMuted block mt-1 font-mono">{formatFileSize(file.size)}</span>
+                        <span className="text-[10px] text-neutral-450 block font-mono font-bold">{formatFileSize(file.size)}</span>
                       </div>
                     ) : (
-                      <div>
-                        <span className="text-xs font-bold text-neutral-300 block">Drag & drop your movie file here, or click to browse</span>
-                        <span className="text-[10px] text-brand-textMuted block mt-1">Supports MP4, MKV, AVI, MOV formats</span>
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-neutral-350 block">Drag & drop your movie file here, or click to browse</span>
+                        <span className="text-[10px] text-neutral-500 block font-semibold">Supports MP4, MKV, AVI, MOV formats</span>
                       </div>
                     )}
                   </div>
@@ -1030,7 +1090,7 @@ const AdminUpload: React.FC = () => {
                 {/* Upload Status */}
                 {uploading && (
                   <div className="space-y-2 animate-pulse">
-                    <div className="flex justify-between text-[10px] font-bold text-brand-accent">
+                    <div className="flex justify-between text-[10px] font-extrabold uppercase text-brand-accent tracking-wider">
                       <span>Ingesting catalog video file...</span>
                       <span>{uploadProgress}%</span>
                     </div>
@@ -1046,84 +1106,115 @@ const AdminUpload: React.FC = () => {
                 <button
                   type="submit"
                   disabled={uploading || !file}
-                  className="w-full py-4 bg-brand-accent text-white hover:bg-blue-600 disabled:bg-neutral-800/40 disabled:text-neutral-600 disabled:cursor-not-allowed rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-xl btn-premium select-none cursor-pointer active:scale-[0.98]"
+                  className="w-full py-4 bg-brand-accent text-white hover:bg-blue-600 disabled:bg-neutral-800/40 disabled:text-neutral-600 disabled:border-transparent disabled:cursor-not-allowed rounded-2xl text-xs font-extrabold uppercase tracking-widest transition-all shadow-xl btn-premium select-none cursor-pointer active:scale-[0.98]"
                 >
                   {uploading ? 'Processing Video...' : 'Ingest and Process Asset'}
                 </button>
               </form>
             </div>
-                   {/* List of Ingested Videos */}
-            <div className="bg-brand-surface/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/10">
-                <h3 className="text-sm font-black uppercase tracking-wider text-brand-accent">Ingested Video Assets</h3>
-                <span className="text-[10px] font-bold text-brand-textMuted">Total Ingested Assets: {videos.length}</span>
+
+            {/* List of Ingested Videos (Redesigned as Grid of Assets) */}
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 rounded-[32px] overflow-hidden backdrop-blur-xl shadow-2xl">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/15">
+                <h3 className="text-xs font-black uppercase tracking-wider text-brand-accent font-display">Ingested Video Assets</h3>
+                <span className="text-[9px] font-black uppercase tracking-widest bg-white/5 border border-white/10 px-3 py-1 rounded-full text-brand-textMuted">Total Assets: {videos.length}</span>
               </div>
 
               {videos.length === 0 ? (
-                <div className="p-12 text-center text-brand-textMuted text-xs font-semibold">
+                <div className="p-16 text-center text-brand-textMuted text-xs font-semibold">
                   No ingested video assets found in storage.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
-                        <th className="p-4 pl-6">Original Filename</th>
-                        <th className="p-4">Linked Catalog Item</th>
-                        <th className="p-4">Size</th>
-                        <th className="p-4">Status</th>
-                        <th className="p-4 pr-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5 text-xs">
-                      {videos.map((v) => (
-                        <tr key={v.video_id} className="hover:bg-white/[0.01] transition-colors">
-                          <td className="p-4 pl-6">
-                            <span className="font-bold text-white block truncate max-w-xs">{v.original_filename}</span>
-                            <span className="text-[9px] text-neutral-400 font-mono block mt-0.5 truncate max-w-xs">{v.filename}</span>
-                          </td>
-                          <td className="p-4 font-bold text-neutral-300">{getMovieTitle(v.movie_id)}</td>
-                          <td className="p-4 font-mono text-[10px] text-neutral-400">{formatFileSize(v.file_size_bytes)}</td>
-                          <td className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                  {videos.map((v) => (
+                    <div key={v.video_id} className="bg-black/30 border border-white/5 hover:border-white/15 p-5 rounded-2xl flex flex-col justify-between space-y-4 transition-all duration-300">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="min-w-0">
+                            <span className="font-extrabold text-sm text-white block truncate" title={v.original_filename}>
+                              {v.original_filename}
+                            </span>
+                            <span className="text-[9px] text-neutral-500 font-mono block truncate mt-0.5" title={v.filename}>
+                              {v.filename}
+                            </span>
+                          </div>
+                          
+                          {/* Ingestion Status Badges */}
+                          <div>
                             {v.status === 'completed' ? (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.06)]">COMPLETED</span>
+                              <span className="text-[8px] font-black tracking-widest text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 block text-center">COMPLETED</span>
                             ) : v.status === 'processing' ? (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.06)] animate-pulse">PROCESSING {v.processing_progress ? `${v.processing_progress}%` : ''}</span>
+                              <span className="text-[8px] font-black tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 block text-center animate-pulse">PROCESSING</span>
                             ) : v.status === 'uploaded' ? (
-                              <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.06)]">UPLOADED</span>
+                              <span className="text-[8px] font-black tracking-widest text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20 block text-center">UPLOADED</span>
                             ) : (
-                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20 shadow-[0_0_10px_rgba(239,68,68,0.06)]">FAILED</span>
+                              <span className="text-[8px] font-black tracking-widest text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20 block text-center">FAILED</span>
                             )}
-                          </td>
-                          <td className="p-4 pr-6 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {v.status === 'completed' && (
-                                <button
-                                  onClick={() => setActivePreviewVideo(v)}
-                                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
-                                >
-                                  Preview
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleProcessHLS(v.video_id)}
-                                disabled={processingId === v.video_id || v.status === 'processing'}
-                                className="px-3 py-1.5 bg-brand-accent/12 hover:bg-brand-accent/20 text-brand-accent border border-brand-accent/25 disabled:opacity-50 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
-                              >
-                                {processingId === v.video_id ? 'Processing...' : 'Reprocess HLS'}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteVideo(v.video_id)}
-                                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
-                              >
-                                Delete
-                              </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-[10px]">
+                          <div>
+                            <span className="text-neutral-500 block uppercase font-bold tracking-wider">Linked Catalog Item</span>
+                            <span className="font-extrabold text-neutral-250 mt-1 block truncate">{getMovieTitle(v.movie_id)}</span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-500 block uppercase font-bold tracking-wider">File Size</span>
+                            <span className="font-mono text-neutral-300 mt-1 block">{formatFileSize(v.file_size_bytes)}</span>
+                          </div>
+                        </div>
+
+                        {/* Processing progress bar */}
+                        {v.status === 'processing' && (
+                          <div className="space-y-1.5 pt-1">
+                            <div className="flex justify-between text-[8px] font-extrabold uppercase text-amber-400 tracking-wider">
+                              <span>Transcoding HLS ABR Segments...</span>
+                              <span>{v.processing_progress ? `${v.processing_progress}%` : '0%'}</span>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden border border-white/5">
+                              <div
+                                style={{ width: `${v.processing_progress || 0}%` }}
+                                className="bg-amber-400 h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {v.error_message && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[10px] p-2.5 rounded-xl block leading-normal mt-2">
+                            <span className="font-bold">Error:</span> {v.error_message}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+                        {v.status === 'completed' && (
+                          <button
+                            type="button"
+                            onClick={() => setActivePreviewVideo(v)}
+                            className="px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95 btn-premium"
+                          >
+                            Preview
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleProcessHLS(v.video_id)}
+                          disabled={processingId === v.video_id || v.status === 'processing'}
+                          className="px-3.5 py-2 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border border-brand-accent/30 disabled:opacity-50 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
+                        >
+                          {processingId === v.video_id ? 'Processing...' : 'Reprocess HLS'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVideo(v.video_id)}
+                          className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1131,16 +1222,16 @@ const AdminUpload: React.FC = () => {
             {/* Video Playback Preview Modal */}
             {activePreviewVideo && (
               <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-8">
-                <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl max-w-3xl w-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] relative transform animate-scaleIn">
+                <div className="bg-[#080d19]/95 border border-white/10 max-w-3xl w-full rounded-3xl overflow-hidden shadow-2xl relative transform animate-scaleIn">
                   <button
                     onClick={() => setActivePreviewVideo(null)}
                     className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all active:scale-90 cursor-pointer"
                   >
                     ×
                   </button>
-                  <div className="p-6 border-b border-white/5">
-                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide">{activePreviewVideo.original_filename}</h3>
-                    <p className="text-[10px] text-neutral-400 mt-1 font-mono">Status: HLS Adaptive Streaming Ready</p>
+                  <div className="p-6 border-b border-white/5 bg-black/10">
+                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wider font-display">{activePreviewVideo.original_filename}</h3>
+                    <p className="text-[10px] text-neutral-450 mt-1 font-mono font-bold">Status: HLS Adaptive Streaming Ready</p>
                   </div>
                   <div className="aspect-video bg-black flex items-center justify-center">
                     <video
@@ -1152,7 +1243,7 @@ const AdminUpload: React.FC = () => {
                   </div>
                   <div className="p-6 border-t border-white/5 bg-black/25 flex items-center justify-between text-[10px] text-brand-textMuted">
                     <span>Mime-Type: {activePreviewVideo.mime_type}</span>
-                    <span>UUID: {activePreviewVideo.video_id}</span>
+                    <span className="font-mono">UUID: {activePreviewVideo.video_id}</span>
                   </div>
                 </div>
               </div>
@@ -1163,34 +1254,49 @@ const AdminUpload: React.FC = () => {
         {/* Tab: Manage Catalog Movies */}
         {activeTab === 'movies_manage' && (
           <div className="space-y-8 animate-fadeIn">
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md">
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent">Catalog Movies Directory</h2>
-                <span className="text-[10px] font-bold text-brand-textMuted">Total Catalog Movies: {catalogMovies.length}</span>
+                <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent font-display">Catalog Movies Directory</h2>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-textMuted bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">Total: {catalogMovies.length}</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {catalogMovies.map((m) => (
-                  <div key={m.movie_id} className="bg-brand-surface border border-white/5 p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                  <div key={m.movie_id} className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 hover:border-brand-accent/30 p-5 rounded-[24px] flex flex-col justify-between space-y-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.5)] group relative">
                     <div className="flex gap-4">
-                      <div className="w-20 h-28 bg-black/40 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative group">
-                        {m.thumbnail_url ? (
-                          <img src={m.thumbnail_url} className="w-full h-full object-cover" alt="" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs text-neutral-600">No Poster</div>
-                        )}
+                      {/* Movie poster preview using PremiumPoster fallback if needed */}
+                      <div className="w-20 h-28 bg-[#040811] rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative flex items-center justify-center">
+                        <img 
+                          src={m.thumbnail_url} 
+                          className="absolute inset-0 w-full h-full object-cover z-10" 
+                          alt="" 
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center p-2">
+                          <PremiumPoster title={m.title} aspectRatio="portrait" />
+                        </div>
                       </div>
-                      <div className="space-y-2 flex-grow min-w-0">
-                        <h4 className="text-xs font-black text-white uppercase truncate">{m.title}</h4>
-                        <p className="text-[10px] text-neutral-400 font-mono">{m.release_year} • {m.duration_minutes} mins</p>
-                        <p className="text-[10px] text-brand-textMuted line-clamp-3 leading-relaxed">{m.description}</p>
+                      
+                      <div className="space-y-1.5 flex-grow min-w-0">
+                        <h4 className="text-sm font-black text-white uppercase truncate font-display group-hover:text-brand-accent transition-colors">{m.title}</h4>
+                        <div className="flex items-center gap-1.5 text-[9px] text-neutral-450 font-bold uppercase font-sans">
+                          <span className="text-brand-accent">{m.release_year}</span>
+                          <span>•</span>
+                          <span>{m.duration_minutes}m</span>
+                          <span>•</span>
+                          <span className="bg-white/5 border border-white/10 px-1 rounded text-[7px] text-white">4K</span>
+                        </div>
+                        <p className="text-[10px] text-neutral-450 line-clamp-3 leading-relaxed mt-1">{m.description}</p>
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="pt-2 border-t border-white/5">
                       <button
+                        type="button"
                         onClick={() => handleStartEdit(m)}
-                        className="flex-1 py-2 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/30 text-[10px] font-extrabold rounded-xl transition-all"
+                        className="w-full py-2.5 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent hover:text-white border border-brand-accent/25 hover:border-brand-accent/50 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer select-none active:scale-[0.98] btn-premium"
                       >
                         Edit Metadata & Poster
                       </button>
@@ -1203,84 +1309,82 @@ const AdminUpload: React.FC = () => {
             {/* Movie Edit Modal */}
             {editingMovie && (
               <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-8">
-                <div className="bg-[#0B1533] border border-white/10 max-w-lg w-full rounded-3xl overflow-hidden shadow-2xl relative">
+                <div className="bg-[#0b1225] border border-white/10 max-w-lg w-full rounded-[32px] overflow-hidden shadow-2xl relative transform animate-scaleIn">
                   <button
                     onClick={() => setEditingMovie(null)}
-                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all"
+                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all active:scale-90"
                   >
                     ×
                   </button>
 
-                  <div className="p-6 border-b border-white/5">
-                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide">Edit Movie Metadata</h3>
-                    <p className="text-[10px] text-neutral-400 mt-1 font-mono">ID: {editingMovie.movie_id}</p>
+                  <div className="p-6 border-b border-white/5 bg-black/10">
+                    <h3 className="text-sm font-black uppercase text-brand-accent tracking-wide font-display">Edit Movie Metadata</h3>
+                    <p className="text-[9px] text-neutral-450 mt-1 font-mono">ID: {editingMovie.movie_id}</p>
                   </div>
 
-                  <form onSubmit={handleSaveMovie} className="p-6 space-y-4">
+                  <form onSubmit={handleSaveMovie} className="p-6 space-y-5">
                     <div>
-                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Movie Title / Rename</label>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5 tracking-wider">Movie Title</label>
                       <input
                         type="text"
                         required
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                        className="w-full px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent transition-all input-premium"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Description</label>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5 tracking-wider">Description</label>
                       <textarea
                         required
                         rows={3}
                         value={editDesc}
                         onChange={(e) => setEditDesc(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent resize-none"
+                        className="w-full px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent transition-all resize-none input-premium"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Release Year</label>
+                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5 tracking-wider">Release Year</label>
                         <input
                           type="number"
                           required
                           value={editYear}
                           onChange={(e) => setEditYear(parseInt(e.target.value))}
-                          className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                          className="w-full px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent transition-all input-premium"
                         />
                       </div>
                       <div>
-                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Duration (mins)</label>
+                        <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5 tracking-wider">Duration (mins)</label>
                         <input
                           type="number"
                           required
                           value={editDuration}
                           onChange={(e) => setEditDuration(parseInt(e.target.value))}
-                          className="w-full px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-brand-accent"
+                          className="w-full px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent transition-all input-premium"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-1.5">Upload / Replace Poster Image</label>
+                      <label className="text-[9px] font-black uppercase text-brand-textMuted block mb-2 tracking-wider">Upload / Replace Poster Image</label>
                       <div className="flex gap-4 items-center">
-                        <div className="w-16 h-24 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex-shrink-0 relative group">
+                        <div className="w-16 h-24 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex-shrink-0 relative group flex items-center justify-center">
                           {editPosterPreview ? (
-                            <img src={editPosterPreview} className="w-full h-full object-cover" alt="Poster Preview" />
+                            <img src={editPosterPreview} className="w-full h-full object-cover" alt="" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px] text-neutral-600">No Preview</div>
+                            <div className="text-[8px] text-neutral-600 font-bold">No Image</div>
                           )}
-                          {editPosterPreview && (
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
-                              <span className="text-[8px] font-black uppercase tracking-wider text-white">Preview</span>
-                            </div>
-                          )}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span className="text-[8px] font-black uppercase tracking-wider text-white">Preview</span>
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => posterInputRef.current?.click()}
-                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-neutral-300 text-[10px] font-black uppercase rounded-xl border border-white/10 transition-all"
+                          className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-neutral-300 text-[9px] font-black uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer select-none active:scale-95"
                         >
                           Choose Poster Image
                         </button>
@@ -1294,18 +1398,18 @@ const AdminUpload: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-4 flex gap-3">
+                    <div className="pt-4 flex gap-4">
                       <button
                         type="submit"
                         disabled={savingMovie}
-                        className="flex-1 py-3 bg-brand-accent text-white font-black uppercase text-xs rounded-xl shadow-lg hover:bg-brand-accent-hover transition-colors"
+                        className="flex-1 py-3.5 bg-brand-accent text-white font-extrabold uppercase text-xs tracking-wider rounded-2xl shadow-xl hover:bg-blue-650 transition-colors active:scale-98 cursor-pointer select-none btn-premium"
                       >
                         {savingMovie ? 'Saving Changes...' : 'Save Changes'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingMovie(null)}
-                        className="px-5 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-xl transition-all"
+                        className="px-6 py-3.5 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-extrabold rounded-2xl border border-white/10 transition-all cursor-pointer select-none active:scale-98"
                       >
                         Cancel
                       </button>
@@ -1320,38 +1424,36 @@ const AdminUpload: React.FC = () => {
         {/* Tab 5: Infrastructure & Cache */}
         {activeTab === 'health' && health && (
           <div className="space-y-8 animate-fadeIn">
-
             {/* Status indicators */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${health.database_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl flex items-center gap-4 shadow-xl">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${health.database_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
                   {health.database_status === 'healthy' ? '✓' : '!'}
                 </div>
                 <div>
-                  <span className="text-[9px] uppercase font-bold text-neutral-400">Database Engine</span>
+                  <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">Database Engine</span>
                   <div className="text-sm font-black text-white uppercase mt-0.5">{health.database_status}</div>
                   <span className="text-[8px] text-neutral-500 block">SQLite production-ready replication</span>
                 </div>
               </div>
 
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${health.cache_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl flex items-center gap-4 shadow-xl">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${health.cache_status === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
                   ⚡
                 </div>
                 <div>
-                  <span className="text-[9px] uppercase font-bold text-neutral-400">Memory Cache Layer</span>
+                  <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">Memory Cache Layer</span>
                   <div className="text-sm font-black text-white uppercase mt-0.5">{health.cache_status}</div>
                   <span className="text-[8px] text-neutral-500 block">FastAPI database result cache</span>
                 </div>
               </div>
 
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-brand-accent/15 text-brand-accent border border-brand-accent/20 flex items-center justify-center font-bold text-sm">
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl flex items-center gap-4 shadow-xl">
+                <div className="w-12 h-12 rounded-2xl bg-brand-accent/15 text-brand-accent border border-brand-accent/20 flex items-center justify-center font-bold text-lg shadow-inner">
                   🗄
                 </div>
                 <div>
-                  <span className="text-[9px] uppercase font-bold text-neutral-400">Physical storage usage</span>
+                  <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">Physical Storage Usage</span>
                   <div className="text-sm font-black text-white mt-0.5">{formatFileSize(health.storage_usage_bytes)}</div>
                   <span className="text-[8px] text-neutral-500 block">Across {health.total_files} catalog files</span>
                 </div>
@@ -1360,59 +1462,58 @@ const AdminUpload: React.FC = () => {
 
             {/* Storage details & segment metrics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
               {/* Detailed Cache Statistics */}
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Cache Layer Statistics</h3>
+                  <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider font-display">Cache Layer Statistics</h3>
                   <button
                     onClick={handleClearCache}
                     disabled={clearingCache}
-                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 hover:border-rose-500/40 text-rose-300 text-[10px] font-black rounded-xl transition-all"
+                    className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-350 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
                   >
                     {clearingCache ? 'Clearing Cache...' : 'Flush Cache'}
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-4 text-xs">
+                <div className="grid grid-cols-2 gap-6 pt-2 text-xs">
                   <div>
-                    <span className="text-neutral-500 block">Total Cache Hit Ratio</span>
+                    <span className="text-neutral-500 block uppercase font-bold tracking-wider">Cache Hit Ratio</span>
                     <span className="text-2xl font-black text-white block mt-1">{health.cache_stats.hit_rate_pct}%</span>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block">Cached Keys In Memory</span>
+                    <span className="text-neutral-500 block uppercase font-bold tracking-wider">Keys In Memory</span>
                     <span className="text-2xl font-black text-white block mt-1">{health.cache_stats.keys_count}</span>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block">Hits Count</span>
-                    <span className="text-base font-bold text-emerald-400 block mt-1">{health.cache_stats.hits} hits</span>
+                    <span className="text-neutral-500 block uppercase font-bold tracking-wider">Hits Count</span>
+                    <span className="text-base font-bold text-emerald-450 block mt-1">{health.cache_stats.hits} hits</span>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block">Misses Count</span>
+                    <span className="text-neutral-500 block uppercase font-bold tracking-wider">Misses Count</span>
                     <span className="text-base font-bold text-rose-400 block mt-1">{health.cache_stats.misses} misses</span>
                   </div>
                 </div>
               </div>
 
               {/* Segment & Ingestion assets */}
-              <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md space-y-6">
-                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider">Asset segmentation metrics</h3>
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-6">
+                <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider font-display">Asset Segmentation Metrics</h3>
                 <div className="space-y-4 pt-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-neutral-400 font-medium">HLS segmented files (.ts)</span>
-                    <span className="font-mono text-white font-bold">{health.total_video_segments} files</span>
+                  <div className="flex justify-between items-center text-xs border-b border-white/5 pb-2">
+                    <span className="text-neutral-450 font-semibold">HLS segmented files (.ts)</span>
+                    <span className="font-mono text-white font-black">{health.total_video_segments} files</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs border-b border-white/5 pb-2">
+                    <span className="text-neutral-450 font-semibold">Ingested raw videos (MP4)</span>
+                    <span className="font-mono text-white font-black">{health.total_uploaded_files} files</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs border-b border-white/5 pb-2">
+                    <span className="text-neutral-450 font-semibold">Active HLS Master playlists</span>
+                    <span className="font-mono text-white font-black">{health.total_hls_assets} playlists</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-neutral-400 font-medium">Ingested raw videos (MP4)</span>
-                    <span className="font-mono text-white font-bold">{health.total_uploaded_files} files</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-neutral-400 font-medium">Active HLS Master playlists</span>
-                    <span className="font-mono text-white font-bold">{health.total_hls_assets} playlists</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-neutral-400 font-medium">Transcoding worker queue status</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${health.processing_queue_status > 0 ? 'bg-amber-500/10 text-amber-400 animate-pulse' : 'bg-white/5 text-neutral-400'}`}>
+                    <span className="text-neutral-450 font-semibold">Transcoding worker queue status</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${health.processing_queue_status > 0 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25 animate-pulse' : 'bg-white/5 text-neutral-550 border border-white/5'}`}>
                       {health.processing_queue_status > 0 ? `${health.processing_queue_status} processing` : 'idle'}
                     </span>
                   </div>
@@ -1425,9 +1526,8 @@ const AdminUpload: React.FC = () => {
         {/* Tab 6: Audit Log Explorer */}
         {activeTab === 'audit' && (
           <div className="space-y-6 animate-fadeIn">
-
             {/* Filter controls */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-6 rounded-3xl backdrop-blur-md flex flex-wrap gap-4 items-center justify-between">
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl flex flex-wrap gap-4 items-center justify-between shadow-lg">
               <div className="flex flex-wrap gap-3 items-center">
                 <label className="text-[10px] font-black uppercase text-brand-textMuted tracking-wider">Filter Action</label>
                 <select
@@ -1436,7 +1536,7 @@ const AdminUpload: React.FC = () => {
                     setAuditActionFilter(e.target.value);
                     setAuditOffset(0);
                   }}
-                  className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-neutral-400 focus:outline-none focus:text-white"
+                  className="px-4 py-3 bg-[#050913]/60 border border-white/10 rounded-2xl text-xs text-neutral-400 focus:outline-none focus:text-white cursor-pointer"
                 >
                   <option value="">All Platform Actions</option>
                   <option value="user_creation">User Creation</option>
@@ -1458,63 +1558,76 @@ const AdminUpload: React.FC = () => {
                 <button
                   disabled={auditOffset === 0}
                   onClick={() => setAuditOffset((prev) => Math.max(0, prev - auditLimit))}
-                  className="px-3 py-2 bg-brand-surface border border-white/5 hover:bg-brand-surface/80 rounded-xl text-xs disabled:opacity-50"
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white font-extrabold uppercase rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   ◄ Previous Page
                 </button>
                 <button
                   disabled={auditLogs.length < auditLimit}
                   onClick={() => setAuditOffset((prev) => prev + auditLimit)}
-                  className="px-3 py-2 bg-brand-surface border border-white/5 hover:bg-brand-surface/80 rounded-xl text-xs disabled:opacity-50"
+                  className="px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white font-extrabold uppercase rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   Next Page ►
                 </button>
               </div>
             </div>
 
-            {/* Logs Table */}
-            <div className="bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[9px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
-                      <th className="p-4 pl-6">Timestamp</th>
-                      <th className="p-4">Action</th>
-                      <th className="p-4">Operation Details</th>
-                      <th className="p-4">Actor Email</th>
-                      <th className="p-4 pr-6">Metadata Payload</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5 text-xs font-medium">
-                    {auditLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-12 text-center text-brand-textMuted italic">
-                          No audit event logs found matching the filter criteria.
-                        </td>
-                      </tr>
-                    ) : (
-                      auditLogs.map((l) => (
-                        <tr key={l.log_id} className="hover:bg-white/[0.01] transition-colors">
-                          <td className="p-4 pl-6 font-mono text-[10px] text-neutral-400">
-                            {new Date(l.created_at).toLocaleString()}
-                          </td>
-                          <td className="p-4">
-                            <span className="text-[9px] font-black uppercase text-brand-accent bg-brand-accent/15 px-2 py-0.5 rounded-md border border-brand-accent/20">
-                              {l.action}
+            {/* Timeline Feed of Logs */}
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 rounded-3xl p-6 backdrop-blur-xl shadow-xl space-y-6">
+              <h3 className="text-xs font-black uppercase text-brand-accent tracking-wider font-display">Live Audit Log Feed</h3>
+              
+              <div className="space-y-6 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-[1px] before:bg-white/5">
+                {auditLogs.length === 0 ? (
+                  <div className="p-12 text-center text-brand-textMuted italic text-xs font-semibold">
+                    No audit event logs found matching the filter criteria.
+                  </div>
+                ) : (
+                  auditLogs.map((l) => {
+                    // Determine visual icon based on action
+                    let actionIcon = '⚙️';
+                    let iconBg = 'bg-neutral-850 text-neutral-450 border border-white/5';
+                    
+                    if (l.action.includes('delete') || l.action.includes('disable') || l.action.includes('removal')) {
+                      actionIcon = '⚠️';
+                      iconBg = 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                    } else if (l.action.includes('upload') || l.action.includes('creation') || l.action.includes('upgrade') || l.action.includes('promote')) {
+                      actionIcon = '🚀';
+                      iconBg = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    } else if (l.action.includes('subscription')) {
+                      actionIcon = '💳';
+                      iconBg = 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+                    }
+                    
+                    return (
+                      <div key={l.log_id} className="relative pl-10 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+                        {/* Timeline point */}
+                        <div className={`absolute left-0 top-0.5 w-7.5 h-7.5 rounded-lg flex items-center justify-center text-xs z-10 shadow-md ${iconBg} select-none`}>
+                          {actionIcon}
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-brand-accent">{l.action}</span>
+                            <span className="text-[8px] text-neutral-500 font-mono font-bold">{new Date(l.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="text-xs text-white font-medium leading-relaxed">{l.details}</p>
+                          <div className="flex items-center gap-1.5 text-[9px] text-neutral-550 font-mono">
+                            <span className="text-neutral-500">Performed by:</span>
+                            <span className="text-neutral-450">{l.actor_email || 'system / anonymous'}</span>
+                          </div>
+                        </div>
+                        
+                        {l.metadata && (
+                          <div className="md:self-center self-start">
+                            <span className="font-mono text-[9px] text-neutral-500 bg-black/45 border border-white/5 px-2.5 py-1.5 rounded-xl max-w-[240px] truncate block select-all" title={typeof l.metadata === 'string' ? l.metadata : JSON.stringify(l.metadata)}>
+                              {typeof l.metadata === 'string' ? l.metadata : JSON.stringify(l.metadata)}
                             </span>
-                          </td>
-                          <td className="p-4 text-neutral-200">{l.details}</td>
-                          <td className="p-4 font-mono text-[10px] text-neutral-300">
-                            {l.actor_email || <span className="text-neutral-500 italic">system / anonymous</span>}
-                          </td>
-                          <td className="p-4 pr-6 font-mono text-[9px] text-neutral-400 max-w-xs truncate">
-                            {l.metadata ? JSON.stringify(l.metadata) : 'None'}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

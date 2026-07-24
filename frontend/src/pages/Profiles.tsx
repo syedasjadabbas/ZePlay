@@ -135,6 +135,55 @@ const Profiles: React.FC = () => {
     }
   };
 
+  const handleKeypadPress = (num: string) => {
+    if (isVerifyingPin) return;
+    setPinDigits(prev => {
+      const idx = prev.findIndex(d => d === '');
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = num;
+        const updatedPin = next.join('');
+        if (updatedPin.length === 4) {
+          setTimeout(() => handleVerifyPin(undefined, updatedPin), 150);
+        }
+        return next;
+      }
+      return prev;
+    });
+  };
+
+  const handleBackspace = () => {
+    if (isVerifyingPin) return;
+    setPinDigits(prev => {
+      const next = [...prev];
+      for (let i = 3; i >= 0; i--) {
+        if (next[i] !== '') {
+          next[i] = '';
+          break;
+        }
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!showPinPrompt) return;
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeypadPress(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Escape') {
+        setShowPinPrompt(false);
+        setProfileToUnlock(null);
+        setPinDigits(['', '', '', '']);
+        setPinError(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [showPinPrompt, isVerifyingPin]);
+
   const handleVerifyPin = async (e?: React.FormEvent, pinOverride?: string) => {
     if (e) e.preventDefault();
     const pinToVerify = pinOverride || pinDigits.join('');
@@ -154,9 +203,6 @@ const Profiles: React.FC = () => {
     } catch (err: any) {
       setPinError(err.response?.data?.detail || "Incorrect PIN. Please try again.");
       setPinDigits(['', '', '', '']);
-      setTimeout(() => {
-        pinRefs[0].current?.focus();
-      }, 50);
     } finally {
       setIsVerifyingPin(false);
     }
@@ -715,77 +761,72 @@ const Profiles: React.FC = () => {
 
       {/* PIN Prompt Modal */}
       {showPinPrompt && profileToUnlock && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-md animate-fadeIn">
-          <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl w-full max-w-sm p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-center space-y-6 transform animate-scaleIn">
-            <div className="space-y-2">
-              {/* Profile Avatar display */}
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center text-4xl mx-auto shadow-lg select-none">
-                {profileToUnlock.avatar_url || '🍿'}
+        <div className="fixed inset-0 bg-gradient-to-tr from-[#02050c]/98 via-[#060b18]/99 to-[#0c1630]/98 flex flex-col items-center justify-center z-[70] backdrop-blur-xl animate-fadeIn">
+          {/* Neon decorative background glow circles */}
+          <div className="absolute top-1/4 left-1/3 w-80 h-80 rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/3 w-96 h-96 rounded-full bg-blue-500/5 blur-[150px] pointer-events-none" />
+
+          {/* Glass Card Container */}
+          <div className="w-full max-w-md p-8 md:p-10 rounded-[32px] bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),_inset_0_1px_1px_rgba(255,255,255,0.1)] text-center space-y-8 transform animate-scaleIn">
+            
+            <div className="space-y-4">
+              {/* Profile Avatar with double neon ring */}
+              <div className="relative w-24 h-24 mx-auto select-none group">
+                <div className="absolute inset-[-4px] rounded-[28px] bg-gradient-to-tr from-brand-accent to-blue-400 opacity-75 blur-md group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative w-full h-full rounded-[26px] bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/15 flex items-center justify-center text-5xl shadow-inner">
+                  {profileToUnlock.avatar_url || '🍿'}
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white font-display uppercase tracking-wider">
-                Profile Locked
-              </h3>
-              <p className="text-xs text-brand-textMuted max-w-xs mx-auto">
-                Enter the 4-digit PIN to access <span className="text-white font-bold">{profileToUnlock.display_name}</span>.
-              </p>
+              
+              <div className="space-y-1">
+                <span className="text-[10px] font-black text-brand-accent tracking-[0.3em] uppercase bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20 inline-block">
+                  PROFILE LOCKED
+                </span>
+                <h2 className="text-xl md:text-2xl font-black text-white font-display uppercase tracking-tight pt-2">
+                  Enter PIN to unlock {profileToUnlock.display_name}
+                </h2>
+              </div>
             </div>
 
-            <form onSubmit={(e) => handleVerifyPin(e)} className="space-y-6">
-              <div className="flex flex-col items-center">
-                <div className={`flex gap-3 justify-center ${pinError ? 'animate-shake' : ''}`}>
-                  {pinDigits.map((digit, index) => (
-                    <input
-                      key={index}
-                      ref={pinRefs[index]}
-                      type="password"
-                      pattern="\d*"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '');
-                        const newDigits = [...pinDigits];
-                        newDigits[index] = val;
-                        setPinDigits(newDigits);
-                        setPinError(null);
-                        
-                        if (val && index < 3) {
-                          pinRefs[index + 1].current?.focus();
-                        }
-                        
-                        // Auto-submit when last digit is filled
-                        if (val && index === 3 && newDigits.every(d => d !== '')) {
-                          handleVerifyPin(undefined, newDigits.join(''));
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Backspace') {
-                          if (!pinDigits[index] && index > 0) {
-                            const newDigits = [...pinDigits];
-                            newDigits[index - 1] = '';
-                            setPinDigits(newDigits);
-                            pinRefs[index - 1].current?.focus();
-                          } else {
-                            const newDigits = [...pinDigits];
-                            newDigits[index] = '';
-                            setPinDigits(newDigits);
-                          }
-                        }
-                      }}
-                      className="w-12 h-14 text-center bg-brand-background/40 text-white border border-white/10 focus:border-brand-accent/60 rounded-xl text-3xl font-bold font-mono focus:outline-none focus:ring-1 focus:ring-brand-accent/20 transition-all shadow-inner input-premium"
-                      disabled={isVerifyingPin}
-                      required
+            <div className="flex flex-col items-center space-y-6">
+              {/* Input dots */}
+              <div className={`flex gap-6 justify-center items-center py-3 px-6 rounded-2xl bg-black/30 border border-white/5 ${pinError ? 'animate-shake' : ''}`}>
+                {pinDigits.map((digit, index) => (
+                  <div key={index} className="relative w-5 h-5 flex items-center justify-center">
+                    <div
+                      className={`rounded-full transition-all duration-350 ${
+                        digit !== ''
+                          ? 'w-4.5 h-4.5 bg-gradient-to-tr from-brand-accent to-blue-400 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.8)]'
+                          : 'w-2 h-2 bg-neutral-600 scale-100'
+                      }`}
                     />
-                  ))}
-                </div>
-                {pinError && (
-                  <p className="text-rose-400 text-xs font-semibold mt-3 animate-pulse">
-                    {pinError}
-                  </p>
-                )}
+                  </div>
+                ))}
               </div>
 
-              <div className="flex gap-3 pt-2">
+              {pinError && (
+                <div className="flex items-center gap-1.5 text-rose-500 font-extrabold text-xs tracking-wide bg-rose-500/10 px-4 py-2 border border-rose-500/20 rounded-xl animate-pulse">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{pinError}</span>
+                </div>
+              )}
+
+              {/* Numeric Keypad grid */}
+              <div className="grid grid-cols-3 gap-x-6 gap-y-4 max-w-[280px] pt-4">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handleKeypadPress(num)}
+                    className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-2xl font-extrabold flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none font-display shadow-lg"
+                  >
+                    {num}
+                  </button>
+                ))}
+                
+                {/* Back / Cancel */}
                 <button
                   type="button"
                   onClick={() => {
@@ -794,19 +835,32 @@ const Profiles: React.FC = () => {
                     setPinDigits(['', '', '', '']);
                     setPinError(null);
                   }}
-                  className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-2xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                  className="w-16 h-16 rounded-full text-xs font-black uppercase text-neutral-500 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all duration-200 cursor-pointer select-none active:scale-95"
                 >
                   Cancel
                 </button>
+                
                 <button
-                  type="submit"
-                  disabled={isVerifyingPin || pinDigits.join('').length !== 4}
-                  className="flex-1 px-4 py-3 bg-brand-accent hover:bg-blue-600 disabled:bg-brand-accent/40 text-white font-extrabold rounded-2xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 btn-premium cursor-pointer"
+                  type="button"
+                  onClick={() => handleKeypadPress('0')}
+                  className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-2xl font-extrabold flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none font-display shadow-lg"
                 >
-                  {isVerifyingPin ? 'Verifying...' : 'Unlock'}
+                  0
+                </button>
+                
+                {/* Clear / Backspace */}
+                <button
+                  type="button"
+                  onClick={handleBackspace}
+                  className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none shadow-lg"
+                  title="Backspace"
+                >
+                  <svg className="w-5 h-5 text-neutral-350" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 7-7M5 12h14" />
+                  </svg>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
