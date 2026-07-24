@@ -165,7 +165,7 @@ const Subscription: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 ml-56 flex flex-col min-h-screen">
         <TopBar profileName={profileName} profileAvatar={profileAvatar} />
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-4xl mx-auto w-full space-y-8">

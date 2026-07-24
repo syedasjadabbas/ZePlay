@@ -119,7 +119,7 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-64 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
         <TopBar profileName={profileName} />
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 space-y-16 max-w-7xl mx-auto w-full">
@@ -138,9 +138,6 @@ const Home: React.FC = () => {
                   }}
                 >
                   <div className="max-w-2xl z-10 space-y-5">
-                    <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-brand-accent tracking-widest uppercase bg-brand-accent/15 px-3 py-1 rounded-full border border-brand-accent/25">
-                      • Featured
-                    </span>
                     <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display leading-none uppercase drop-shadow-2xl text-white">
                       {heroMovie.title}
                     </h2>
@@ -148,23 +145,14 @@ const Home: React.FC = () => {
                       {heroMovie.description}
                     </p>
                     
-                    <div className="flex items-center gap-4 text-xs text-brand-textMuted font-bold pt-1">
-                      <span className="flex items-center gap-1.5 text-brand-accent">
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        8.6
-                      </span>
-                      <span>•</span>
+                    <div className="flex items-center gap-3 text-xs text-neutral-400 pt-1">
                       <span>{heroMovie.release_year}</span>
-                      <span>•</span>
+                      <span>·</span>
                       <span>{heroMovie.duration_minutes} min</span>
                       {heroMovie.genres && heroMovie.genres.length > 0 && (
                         <>
-                          <span>•</span>
-                          <span className="uppercase text-[9px] tracking-widest font-black bg-brand-cards border border-white/5 px-2.5 py-0.5 rounded-full">
-                            {heroMovie.genres.map(g => g.name).join(', ')}
-                          </span>
+                          <span>·</span>
+                          <span>{heroMovie.genres.map(g => g.name).join(', ')}</span>
                         </>
                       )}
                     </div>

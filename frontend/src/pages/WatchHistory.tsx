@@ -94,7 +94,7 @@ const WatchHistoryPage: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-64 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
         <TopBar profileName={profileName} />
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-8">
