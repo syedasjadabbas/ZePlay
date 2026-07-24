@@ -15,6 +15,22 @@ interface SuggestionItem {
   genres: { genre_id: string; name: string }[];
 }
 
+const PRESET_AVATARS = [
+  { id: 'grad-nebula', classes: 'from-indigo-600 via-purple-600 to-pink-500' },
+  { id: 'grad-sunfire', classes: 'from-amber-500 via-red-500 to-rose-600' },
+  { id: 'grad-ocean', classes: 'from-blue-600 via-indigo-700 to-teal-500' },
+  { id: 'grad-cyberpunk', classes: 'from-fuchsia-600 via-violet-600 to-cyan-500' },
+  { id: 'grad-jade', classes: 'from-emerald-500 via-teal-600 to-cyan-600' },
+  { id: 'grad-gold', classes: 'from-yellow-500 via-amber-500 to-orange-600' },
+  { id: 'grad-velvet', classes: 'from-neutral-700 via-neutral-800 to-neutral-900' },
+  { id: 'grad-aurora', classes: 'from-rose-400 via-pink-400 to-indigo-400' }
+];
+
+const getAvatarClasses = (avatarUrl: string | null) => {
+  const found = PRESET_AVATARS.find(p => p.id === avatarUrl);
+  return found ? found.classes : 'from-indigo-600 via-purple-600 to-pink-500';
+};
+
 const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -25,7 +41,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
   const [planName, setPlanName] = useState<string>('free');
   
   const [localProfileName, setLocalProfileName] = useState(() => localStorage.getItem('selectedProfileName') || profileName || 'User');
-  const [localProfileAvatar, setLocalProfileAvatar] = useState(() => localStorage.getItem('selectedProfileAvatar') || '🍿');
+  const [localProfileAvatar, setLocalProfileAvatar] = useState(() => localStorage.getItem('selectedProfileAvatar') || 'grad-nebula');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,9 +73,9 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
         );
         if (activeProfile) {
           setLocalProfileName(activeProfile.display_name);
-          setLocalProfileAvatar(activeProfile.avatar_url || '🍿');
+          setLocalProfileAvatar(activeProfile.avatar_url || 'grad-nebula');
           localStorage.setItem('selectedProfileName', activeProfile.display_name);
-          localStorage.setItem('selectedProfileAvatar', activeProfile.avatar_url || '🍿');
+          localStorage.setItem('selectedProfileAvatar', activeProfile.avatar_url || 'grad-nebula');
         }
       } catch (err) {
         console.error("Failed to sync profile details in TopBar", err);
@@ -309,15 +325,9 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
           onClick={() => navigate('/profiles')}
           className="flex items-center gap-3 cursor-pointer group active:scale-95 transition-all duration-200"
         >
-          {localProfileAvatar && ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', '🐸', '🐵', '🦄', '🚀', '🎮', '🍿'].includes(localProfileAvatar) ? (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-950 border border-white/10 flex items-center justify-center text-xl shadow-md select-none group-hover:border-white/20 group-hover:shadow-[0_0_12px_rgba(255,255,255,0.08)] transition-all">
-              {localProfileAvatar}
-            </div>
-          ) : (
-            <div className="w-9 h-9 rounded-xl bg-brand-accent text-white flex items-center justify-center font-bold text-sm tracking-wide shadow-md shadow-blue-500/10 group-hover:shadow-blue-500/20 transition-all">
-              {localProfileName ? localProfileName.substring(0, 1).toUpperCase() : 'U'}
-            </div>
-          )}
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getAvatarClasses(localProfileAvatar)} border border-white/10 flex items-center justify-center text-xs font-black text-white font-display shadow-md select-none group-hover:border-white/20 transition-all`}>
+            {localProfileName ? localProfileName.substring(0, 1).toUpperCase() : 'U'}
+          </div>
           <span className="hidden sm:inline text-sm font-semibold text-brand-textMuted group-hover:text-white transition-colors font-display">
             {localProfileName}
           </span>

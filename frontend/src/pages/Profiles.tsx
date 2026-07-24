@@ -17,7 +17,21 @@ interface Toast {
   type: 'success' | 'error';
 }
 
-const EMOJIS = ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', '🐸', '🐵', '🦄', '🚀', '🎮', '🍿'];
+const PRESET_AVATARS = [
+  { id: 'grad-nebula', classes: 'from-indigo-600 via-purple-600 to-pink-500', name: 'Space Nebula' },
+  { id: 'grad-sunfire', classes: 'from-amber-500 via-red-500 to-rose-600', name: 'Sunset Glow' },
+  { id: 'grad-ocean', classes: 'from-blue-600 via-indigo-700 to-teal-500', name: 'Deep Ocean' },
+  { id: 'grad-cyberpunk', classes: 'from-fuchsia-600 via-violet-600 to-cyan-500', name: 'Cyberpunk' },
+  { id: 'grad-jade', classes: 'from-emerald-500 via-teal-600 to-cyan-600', name: 'Forest Jade' },
+  { id: 'grad-gold', classes: 'from-yellow-500 via-amber-500 to-orange-600', name: 'Golden Aura' },
+  { id: 'grad-velvet', classes: 'from-neutral-700 via-neutral-800 to-neutral-900', name: 'Charcoal Velvet' },
+  { id: 'grad-aurora', classes: 'from-rose-400 via-pink-400 to-indigo-400', name: 'Aurora Dusk' }
+];
+
+const getAvatarClasses = (avatarUrl: string | null) => {
+  const found = PRESET_AVATARS.find(p => p.id === avatarUrl);
+  return found ? found.classes : 'from-indigo-600 via-purple-600 to-pink-500';
+};
 
 
 const Profiles: React.FC = () => {
@@ -34,8 +48,8 @@ const Profiles: React.FC = () => {
   const [newDisplayName, setNewDisplayName] = useState('');
   const [newIsKids, setNewIsKids] = useState(false);
   const [newLang, setNewLang] = useState('en');
-  const [newEmoji, setNewEmoji] = useState('🍿');
-  const [editEmoji, setEditEmoji] = useState('🍿');
+  const [newEmoji, setNewEmoji] = useState('grad-nebula');
+  const [editEmoji, setEditEmoji] = useState('grad-nebula');
 
   // PIN states
   const [newRequirePin, setNewRequirePin] = useState(false);
@@ -388,8 +402,7 @@ const Profiles: React.FC = () => {
 
             <div className="flex flex-wrap justify-center gap-8 md:gap-10">
               {profiles.map((profile) => {
-                const isEmoji = profile.avatar_url && EMOJIS.includes(profile.avatar_url);
-                const avatarBg = !isEmoji && profile.avatar_url ? profile.avatar_url : 'from-neutral-700 to-neutral-800';
+                const avatarBg = getAvatarClasses(profile.avatar_url);
 
                 return (
                   <div
@@ -399,23 +412,19 @@ const Profiles: React.FC = () => {
                   >
                     <div className="relative">
                       {/* Avatar container */}
-                      <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl p-0.5 border border-white/10 group-hover:border-brand-accent group-hover:shadow-[0_0_35px_rgba(59,130,246,0.35)] transition-all duration-300 transform group-hover:scale-105 active:scale-98 shadow-2xl overflow-hidden relative">
-                        {isEmoji ? (
-                          <div className="w-full h-full rounded-3xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/5 flex items-center justify-center text-5xl select-none">
-                            {profile.avatar_url}
-                          </div>
-                        ) : (
-                          <div className={`w-full h-full rounded-3xl bg-gradient-to-br flex items-center justify-center text-3xl font-extrabold font-display uppercase tracking-wider text-white ${avatarBg}`}>
-                            {profile.display_name.substring(0, 1)}
-                          </div>
-                        )}
+                      <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] p-0.5 border border-white/10 group-hover:border-brand-accent group-hover:shadow-[0_0_35px_rgba(59,130,246,0.3)] transition-all duration-300 transform group-hover:scale-105 active:scale-98 shadow-2xl overflow-hidden relative">
+                        <div className={`w-full h-full rounded-[30px] bg-gradient-to-br flex items-center justify-center text-4xl font-extrabold font-display uppercase tracking-wider text-white/95 ${avatarBg} shadow-inner relative`}>
+                          {/* Inner abstract gloss overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 pointer-events-none" />
+                          {profile.display_name.substring(0, 1)}
+                        </div>
                       </div>
 
                       {/* Manage Overlay */}
                       {isManageMode && (
-                        <div className="absolute inset-0 bg-black/60 rounded-3xl flex items-center justify-center transition-opacity duration-200">
-                          <div className="w-8 h-8 rounded-full bg-brand-accent text-white flex items-center justify-center shadow-lg transform scale-110 active:scale-95 cursor-pointer">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="absolute inset-0 bg-black/60 rounded-[32px] flex items-center justify-center transition-opacity duration-200">
+                          <div className="w-9 h-9 rounded-xl bg-brand-accent text-white flex items-center justify-center shadow-lg transform scale-110 active:scale-95 cursor-pointer">
+                            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                           </div>
@@ -445,7 +454,7 @@ const Profiles: React.FC = () => {
                   }}
                   className="group flex flex-col items-center cursor-pointer"
                 >
-                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border border-dashed border-white/10 hover:border-brand-accent flex items-center justify-center text-4xl text-neutral-600 hover:text-brand-accent hover:bg-white/5 transition-all duration-300 transform hover:scale-105 active:scale-98">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] border-2 border-dashed border-white/10 hover:border-brand-accent flex items-center justify-center text-4xl text-neutral-600 hover:text-brand-accent hover:bg-brand-accent/5 transition-all duration-300 transform hover:scale-105 active:scale-98">
                     +
                   </div>
                   <span className="mt-4 text-neutral-500 group-hover:text-white text-sm font-bold transition-colors duration-200">
@@ -455,7 +464,7 @@ const Profiles: React.FC = () => {
               ) : planName === 'free' ? (
                 /* Free limit upgrade CTA */
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl border border-dashed border-amber-400/30 bg-amber-500/5 flex items-center justify-center">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] border-2 border-dashed border-amber-400/30 bg-amber-500/5 flex items-center justify-center">
                     <svg className="w-10 h-10 text-amber-400/60" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
@@ -504,24 +513,29 @@ const Profiles: React.FC = () => {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   required
                   maxLength={20}
-                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/50 caret-brand-accent input-premium"
+                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/50 caret-brand-accent input-premium animate-fadeIn"
                 />
               </div>
 
               {/* Avatar Selector Grid */}
               <div>
-                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
-                <div className="grid grid-cols-7 gap-2 bg-brand-background/40 p-3 rounded-2xl border border-white/8">
-                  {EMOJIS.map(emoji => (
+                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Profile Icon Color</label>
+                <div className="grid grid-cols-4 gap-3 bg-brand-background/40 p-4 rounded-2xl border border-white/8">
+                  {PRESET_AVATARS.map(avatar => (
                     <button
-                      key={emoji}
+                      key={avatar.id}
                       type="button"
-                      onClick={() => setNewEmoji(emoji)}
-                      className={`text-2xl p-1.5 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center active:scale-90 select-none cursor-pointer ${
-                        newEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
-                      }`}
+                      onClick={() => setNewEmoji(avatar.id)}
+                      className={`h-12 rounded-xl bg-gradient-to-br ${avatar.classes} border border-white/5 hover:scale-105 active:scale-95 transition-all cursor-pointer relative shadow-inner`}
+                      title={avatar.name}
                     >
-                      {emoji}
+                      {newEmoji === avatar.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/35 rounded-xl border-2 border-brand-accent animate-scaleIn">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -638,18 +652,23 @@ const Profiles: React.FC = () => {
 
               {/* Avatar Selector Grid */}
               <div>
-                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
-                <div className="grid grid-cols-7 gap-2 bg-brand-background/40 p-3 rounded-2xl border border-white/8">
-                  {EMOJIS.map(emoji => (
+                <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Profile Icon Color</label>
+                <div className="grid grid-cols-4 gap-3 bg-brand-background/40 p-4 rounded-2xl border border-white/8">
+                  {PRESET_AVATARS.map(avatar => (
                     <button
-                      key={emoji}
+                      key={avatar.id}
                       type="button"
-                      onClick={() => setEditEmoji(emoji)}
-                      className={`text-2xl p-1.5 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center active:scale-90 select-none cursor-pointer ${
-                        editEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
-                      }`}
+                      onClick={() => setEditEmoji(avatar.id)}
+                      className={`h-12 rounded-xl bg-gradient-to-br ${avatar.classes} border border-white/5 hover:scale-105 active:scale-95 transition-all cursor-pointer relative shadow-inner`}
+                      title={avatar.name}
                     >
-                      {emoji}
+                      {editEmoji === avatar.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/35 rounded-xl border-2 border-brand-accent animate-scaleIn">
+                          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -759,45 +778,44 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
-      {/* PIN Prompt Modal */}
+      {/* PIN Prompt Modal Redesigned completely to resemble high-end Apple TV+ locking overlay */}
       {showPinPrompt && profileToUnlock && (
-        <div className="fixed inset-0 bg-gradient-to-tr from-[#02050c]/98 via-[#060b18]/99 to-[#0c1630]/98 flex flex-col items-center justify-center z-[70] backdrop-blur-xl animate-fadeIn">
-          {/* Neon decorative background glow circles */}
-          <div className="absolute top-1/4 left-1/3 w-80 h-80 rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/3 w-96 h-96 rounded-full bg-blue-500/5 blur-[150px] pointer-events-none" />
+        <div className="fixed inset-0 bg-[#040814]/97 flex flex-col items-center justify-center z-[70] backdrop-blur-3xl animate-fadeIn">
+          {/* Subtle colored spotlight gradients */}
+          <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-brand-accent/10 blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
 
-          {/* Glass Card Container */}
-          <div className="w-full max-w-md p-8 md:p-10 rounded-[32px] bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8),_inset_0_1px_1px_rgba(255,255,255,0.1)] text-center space-y-8 transform animate-scaleIn">
-            
-            <div className="space-y-4">
-              {/* Profile Avatar with double neon ring */}
-              <div className="relative w-24 h-24 mx-auto select-none group">
-                <div className="absolute inset-[-4px] rounded-[28px] bg-gradient-to-tr from-brand-accent to-blue-400 opacity-75 blur-md group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative w-full h-full rounded-[26px] bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/15 flex items-center justify-center text-5xl shadow-inner">
-                  {profileToUnlock.avatar_url || '🍿'}
+          {/* Central alignment content */}
+          <div className="w-full max-w-sm px-6 text-center space-y-10 relative z-10">
+            <div className="space-y-6">
+              {/* Profile Initials inside avatar gradient */}
+              <div className="relative w-24 h-24 mx-auto select-none transform animate-scaleIn">
+                <div className="absolute inset-[-4px] rounded-[32px] bg-gradient-to-tr from-brand-accent to-purple-500 opacity-60 blur-md" />
+                <div className={`relative w-full h-full rounded-[28px] bg-gradient-to-br ${getAvatarClasses(profileToUnlock.avatar_url)} border border-white/15 flex items-center justify-center text-4xl font-extrabold text-white font-display shadow-2xl`}>
+                  {profileToUnlock.display_name.substring(0, 1)}
                 </div>
               </div>
               
-              <div className="space-y-1">
-                <span className="text-[10px] font-black text-brand-accent tracking-[0.3em] uppercase bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20 inline-block">
-                  PROFILE LOCKED
+              <div className="space-y-2">
+                <span className="text-[9px] font-black text-brand-accent tracking-[0.25em] uppercase bg-brand-accent/10 border border-brand-accent/20 px-3.5 py-1 rounded-full inline-block">
+                  Profile PIN Required
                 </span>
-                <h2 className="text-xl md:text-2xl font-black text-white font-display uppercase tracking-tight pt-2">
+                <h2 className="text-xl md:text-2xl font-black text-white font-display uppercase tracking-tight">
                   Enter PIN to unlock {profileToUnlock.display_name}
                 </h2>
               </div>
             </div>
 
-            <div className="flex flex-col items-center space-y-6">
-              {/* Input dots */}
-              <div className={`flex gap-6 justify-center items-center py-3 px-6 rounded-2xl bg-black/30 border border-white/5 ${pinError ? 'animate-shake' : ''}`}>
+            <div className="flex flex-col items-center space-y-8">
+              {/* Custom Input Bubbles */}
+              <div className={`flex gap-5 justify-center items-center py-4 px-8 rounded-2xl bg-black/40 border border-white/5 ${pinError ? 'animate-shake' : ''}`}>
                 {pinDigits.map((digit, index) => (
-                  <div key={index} className="relative w-5 h-5 flex items-center justify-center">
+                  <div key={index} className="relative w-6 h-6 flex items-center justify-center">
                     <div
-                      className={`rounded-full transition-all duration-350 ${
+                      className={`rounded-full transition-all duration-300 ${
                         digit !== ''
-                          ? 'w-4.5 h-4.5 bg-gradient-to-tr from-brand-accent to-blue-400 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.8)]'
-                          : 'w-2 h-2 bg-neutral-600 scale-100'
+                          ? 'w-5 h-5 bg-gradient-to-tr from-brand-accent to-purple-500 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.9)]'
+                          : 'w-2.5 h-2.5 bg-neutral-700 scale-100'
                       }`}
                     />
                   </div>
@@ -805,22 +823,19 @@ const Profiles: React.FC = () => {
               </div>
 
               {pinError && (
-                <div className="flex items-center gap-1.5 text-rose-500 font-extrabold text-xs tracking-wide bg-rose-500/10 px-4 py-2 border border-rose-500/20 rounded-xl animate-pulse">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>{pinError}</span>
+                <div className="text-rose-400 font-extrabold text-[11px] tracking-wider uppercase bg-rose-500/10 px-4 py-1.5 border border-rose-500/20 rounded-xl">
+                  {pinError}
                 </div>
               )}
 
-              {/* Numeric Keypad grid */}
-              <div className="grid grid-cols-3 gap-x-6 gap-y-4 max-w-[280px] pt-4">
+              {/* Minimalist circular key interface */}
+              <div className="grid grid-cols-3 gap-x-5 gap-y-4 max-w-[260px] pt-4">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => handleKeypadPress(num)}
-                    className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-2xl font-extrabold flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none font-display shadow-lg"
+                    className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-xl font-extrabold flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none font-display shadow-md"
                   >
                     {num}
                   </button>
@@ -835,7 +850,7 @@ const Profiles: React.FC = () => {
                     setPinDigits(['', '', '', '']);
                     setPinError(null);
                   }}
-                  className="w-16 h-16 rounded-full text-xs font-black uppercase text-neutral-500 hover:text-white hover:bg-white/5 flex items-center justify-center transition-all duration-200 cursor-pointer select-none active:scale-95"
+                  className="w-14 h-14 text-neutral-500 hover:text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center justify-center transition-all duration-150 cursor-pointer select-none active:scale-95"
                 >
                   Cancel
                 </button>
@@ -843,19 +858,19 @@ const Profiles: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleKeypadPress('0')}
-                  className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-2xl font-extrabold flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none font-display shadow-lg"
+                  className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-xl font-extrabold flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none font-display shadow-md"
                 >
                   0
                 </button>
                 
-                {/* Clear / Backspace */}
+                {/* Backspace delete */}
                 <button
                   type="button"
                   onClick={handleBackspace}
-                  className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 flex items-center justify-center hover:scale-[1.08] active:scale-90 transition-all duration-200 cursor-pointer select-none shadow-lg"
+                  className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none shadow-md"
                   title="Backspace"
                 >
-                  <svg className="w-5 h-5 text-neutral-350" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 7-7M5 12h14" />
                   </svg>
                 </button>

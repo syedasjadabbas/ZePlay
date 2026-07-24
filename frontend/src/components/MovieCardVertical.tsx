@@ -44,8 +44,9 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
         )}
 
         {/* Saved Watchlist Badge Indicator */}
+        {/* Saved Watchlist Badge Indicator */}
         {isInWatchlist && (
-          <div className="absolute top-2.5 left-2.5 bg-brand-accent/90 backdrop-blur-md px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-wider shadow-md z-10 border border-white/10 flex items-center gap-1">
+          <div className="absolute top-2.5 left-2.5 bg-[#060b18]/70 backdrop-blur-md px-2 py-0.5 rounded border border-white/10 text-[8px] font-black text-brand-accent uppercase tracking-wider shadow-md z-10 flex items-center gap-1">
             <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
               <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
             </svg>
@@ -55,7 +56,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
 
         {/* Standard Rating Overlay */}
         {progressPercent === undefined && (
-          <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-lg text-[9px] font-bold text-brand-accent border border-white/5 flex items-center gap-1 select-none">
+          <div className="absolute top-2.5 right-2.5 bg-[#060b18]/75 backdrop-blur-md px-2 py-0.5 rounded border border-white/5 text-[9px] font-black text-amber-400 flex items-center gap-0.5 select-none shadow-md">
             ★ {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : '0.0'}
           </div>
         )}

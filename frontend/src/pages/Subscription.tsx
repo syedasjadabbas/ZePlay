@@ -70,7 +70,7 @@ const Subscription: React.FC = () => {
   const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
 
   const profileName = localStorage.getItem('selectedProfileName') || 'User';
-  const profileAvatar = localStorage.getItem('selectedProfileAvatar') || '🍿';
+  const profileAvatar = localStorage.getItem('selectedProfileAvatar') || 'grad-nebula';
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
