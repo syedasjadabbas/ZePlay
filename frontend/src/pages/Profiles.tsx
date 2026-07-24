@@ -433,7 +433,7 @@ const Profiles: React.FC = () => {
             <div className="pt-4">
               <button
                 onClick={() => setIsManageMode(!isManageMode)}
-                className="px-6 py-3 border border-white/5 hover:border-brand-accent bg-brand-surface hover:bg-brand-cards text-brand-textMuted hover:text-white text-[10px] font-bold tracking-widest uppercase rounded-xl transition-all"
+                className="px-6 py-3.5 border border-white/8 hover:border-brand-accent bg-brand-cards/30 hover:bg-brand-cards/50 text-brand-textMuted hover:text-white text-[10px] font-black tracking-widest uppercase rounded-2xl transition-all btn-premium cursor-pointer"
               >
                 {isManageMode ? 'Exit Configuration' : 'Manage Profiles'}
               </button>
@@ -445,7 +445,7 @@ const Profiles: React.FC = () => {
       {/* Create Profile Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-brand-surface border border-white/5 w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
+          <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl w-full max-w-md p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-6 transform animate-scaleIn">
             <h3 className="text-2xl font-bold font-display text-white">Add Profile</h3>
 
             <form onSubmit={handleCreateProfile} className="space-y-5">
@@ -458,20 +458,20 @@ const Profiles: React.FC = () => {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   required
                   maxLength={20}
-                  className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/50 caret-brand-accent input-premium"
                 />
               </div>
 
               {/* Avatar Selector Grid */}
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
-                <div className="grid grid-cols-7 gap-2 bg-[#101C40] p-3 rounded-xl border border-white/10">
+                <div className="grid grid-cols-7 gap-2 bg-brand-background/40 p-3 rounded-2xl border border-white/8">
                   {EMOJIS.map(emoji => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => setNewEmoji(emoji)}
-                      className={`text-2xl p-1.5 rounded-lg hover:bg-white/10 transition-all flex items-center justify-center ${
+                      className={`text-2xl p-1.5 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center active:scale-90 select-none cursor-pointer ${
                         newEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
                       }`}
                     >
@@ -529,7 +529,7 @@ const Profiles: React.FC = () => {
                         value={newPin}
                         onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
                         required={newRequirePin}
-                        className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono"
+                        className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono input-premium"
                       />
                     </div>
                   )}
@@ -541,7 +541,7 @@ const Profiles: React.FC = () => {
                 <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl outline-none border border-white/10 focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent input-premium"
                 >
                   <option value="en">English</option>
                   <option value="es">Español</option>
@@ -553,14 +553,14 @@ const Profiles: React.FC = () => {
               <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-brand-accent text-white font-bold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider shadow-md"
+                  className="px-5 py-2.5 bg-brand-accent text-white font-extrabold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider shadow-md btn-premium cursor-pointer"
                 >
                   Create
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -573,7 +573,7 @@ const Profiles: React.FC = () => {
       {/* Edit Profile Modal */}
       {showEditModal && selectedProfile && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-brand-surface border border-white/5 w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
+          <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl w-full max-w-md p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-6 transform animate-scaleIn">
             <h3 className="text-2xl font-bold font-display text-white">Edit Profile</h3>
 
             <form onSubmit={handleUpdateProfile} className="space-y-5">
@@ -586,20 +586,20 @@ const Profiles: React.FC = () => {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   required
                   maxLength={20}
-                  className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/50 caret-brand-accent input-premium"
                 />
               </div>
 
               {/* Avatar Selector Grid */}
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Avatar Emoji</label>
-                <div className="grid grid-cols-7 gap-2 bg-[#101C40] p-3 rounded-xl border border-white/10">
+                <div className="grid grid-cols-7 gap-2 bg-brand-background/40 p-3 rounded-2xl border border-white/8">
                   {EMOJIS.map(emoji => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => setEditEmoji(emoji)}
-                      className={`text-2xl p-1.5 rounded-lg hover:bg-white/10 transition-all flex items-center justify-center ${
+                      className={`text-2xl p-1.5 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center active:scale-90 select-none cursor-pointer ${
                         editEmoji === emoji ? 'bg-brand-accent/20 border border-brand-accent/50 scale-110 shadow-md' : 'border border-transparent'
                       }`}
                     >
@@ -659,7 +659,7 @@ const Profiles: React.FC = () => {
                         value={newPin}
                         onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
                         required={newRequirePin && !selectedProfile.has_pin}
-                        className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl border border-white/10 outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono"
+                        className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl border border-white/10 outline-none focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 transition-all text-sm placeholder:text-white/30 caret-brand-accent font-mono input-premium"
                       />
                     </div>
                   )}
@@ -671,7 +671,7 @@ const Profiles: React.FC = () => {
                 <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#101C40] text-white rounded-xl outline-none border border-white/10 focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/20 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent input-premium"
                 >
                   <option value="en">English</option>
                   <option value="es">Español</option>
@@ -684,7 +684,7 @@ const Profiles: React.FC = () => {
                 <div className="flex gap-4">
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-brand-accent text-white font-bold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider shadow-md"
+                    className="px-5 py-2.5 bg-brand-accent text-white font-extrabold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider shadow-md btn-premium cursor-pointer"
                   >
                     Save
                   </button>
@@ -694,7 +694,7 @@ const Profiles: React.FC = () => {
                       setShowEditModal(false);
                       setSelectedProfile(null);
                     }}
-                    className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                    className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -703,7 +703,7 @@ const Profiles: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => initiateDeleteProfile(selectedProfile)}
-                  className="px-5 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  className="px-5 py-2.5 bg-red-700/80 hover:bg-red-600 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
                 >
                   Delete
                 </button>
@@ -716,7 +716,7 @@ const Profiles: React.FC = () => {
       {/* PIN Prompt Modal */}
       {showPinPrompt && profileToUnlock && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-md animate-fadeIn">
-          <div className="bg-[#0B1535] border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] text-center space-y-6 transform animate-scaleIn">
+          <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl w-full max-w-sm p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-center space-y-6 transform animate-scaleIn">
             <div className="space-y-2">
               {/* Profile Avatar display */}
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center text-4xl mx-auto shadow-lg select-none">
@@ -772,7 +772,7 @@ const Profiles: React.FC = () => {
                           }
                         }
                       }}
-                      className="w-12 h-14 text-center bg-[#101C40] text-white border border-white/10 focus:border-brand-accent/60 rounded-xl text-3xl font-bold font-mono focus:outline-none focus:ring-1 focus:ring-brand-accent/20 transition-all shadow-inner"
+                      className="w-12 h-14 text-center bg-brand-background/40 text-white border border-white/10 focus:border-brand-accent/60 rounded-xl text-3xl font-bold font-mono focus:outline-none focus:ring-1 focus:ring-brand-accent/20 transition-all shadow-inner input-premium"
                       disabled={isVerifyingPin}
                       required
                     />
@@ -794,14 +794,14 @@ const Profiles: React.FC = () => {
                     setPinDigits(['', '', '', '']);
                     setPinError(null);
                   }}
-                  className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
+                  className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-2xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isVerifyingPin || pinDigits.join('').length !== 4}
-                  className="flex-1 px-4 py-2.5 bg-brand-accent hover:bg-blue-600 disabled:bg-brand-accent/40 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+                  className="flex-1 px-4 py-3 bg-brand-accent hover:bg-blue-600 disabled:bg-brand-accent/40 text-white font-extrabold rounded-2xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 btn-premium cursor-pointer"
                 >
                   {isVerifyingPin ? 'Verifying...' : 'Unlock'}
                 </button>

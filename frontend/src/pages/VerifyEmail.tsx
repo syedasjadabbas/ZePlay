@@ -91,9 +91,22 @@ const VerifyEmail: React.FC = () => {
     }
   };
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.7)';
+    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.7), 0 0 12px rgba(59, 130, 246, 0.25)';
+    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.6)';
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+    e.currentTarget.style.boxShadow = 'none';
+    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.4)';
+  };
+
   const inputStyle = {
-    background: 'rgba(16,28,64,0.8)',
-    border: '1px solid rgba(255,255,255,0.09)',
+    background: 'rgba(16, 28, 64, 0.4)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
   return (
@@ -177,6 +190,8 @@ const VerifyEmail: React.FC = () => {
                     required
                     className="w-full px-4 py-3 text-sm text-white rounded-xl placeholder:text-white/20 outline-none"
                     style={inputStyle}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                   />
                 </div>
               )}
@@ -196,6 +211,8 @@ const VerifyEmail: React.FC = () => {
                   autoFocus
                   className="w-full px-4 py-4 text-center text-3xl tracking-[12px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200"
                   style={inputStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
                 />
               </div>
 
@@ -203,11 +220,7 @@ const VerifyEmail: React.FC = () => {
                 id="verify-submit"
                 type="submit"
                 disabled={loading || otp.length < 6}
-                className="w-full py-3.5 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                }}
+                className="w-full py-3.5 text-white font-extrabold rounded-2xl text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.98] active:translate-y-0 shadow-[0_8px_24px_rgba(59,130,246,0.25),_inset_0_1px_0_rgba(255,255,255,0.1)] btn-premium cursor-pointer"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">

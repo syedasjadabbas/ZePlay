@@ -983,7 +983,7 @@ const AdminUpload: React.FC = () => {
                   <select
                     value={selectedMovieId}
                     onChange={(e) => setSelectedMovieId(e.target.value)}
-                    className="w-full px-4 py-3 bg-brand-cards/40 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/25 transition-all cursor-pointer select-none"
+                    className="w-full px-4 py-3 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-2xl text-xs text-white focus:outline-none transition-all cursor-pointer select-none input-premium"
                   >
                     <option value="" className="bg-[#0B1535]">Unlinked (Orphan Video Asset)</option>
                     {movies.map((m) => (
@@ -1003,7 +1003,7 @@ const AdminUpload: React.FC = () => {
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/50 bg-brand-cards/10 hover:bg-brand-cards/20 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300"
+                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/40 bg-brand-cards/5 hover:bg-brand-cards/15 rounded-2xl p-10 text-center cursor-pointer transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.99] select-none"
                   >
                     <input
                       type="file"
@@ -1037,7 +1037,7 @@ const AdminUpload: React.FC = () => {
                     <div className="w-full bg-white/5 h-2.5 rounded-full overflow-hidden border border-white/5">
                       <div
                         style={{ width: `${uploadProgress}%` }}
-                        className="bg-brand-accent h-full rounded-full transition-all duration-300"
+                        className="bg-brand-accent h-full rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(59,130,246,0.7)]"
                       />
                     </div>
                   </div>
@@ -1046,15 +1046,14 @@ const AdminUpload: React.FC = () => {
                 <button
                   type="submit"
                   disabled={uploading || !file}
-                  className="w-full py-4 bg-brand-accent text-white hover:bg-blue-600 disabled:bg-neutral-800/40 disabled:text-neutral-600 disabled:cursor-not-allowed rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-xl btn-premium select-none cursor-pointer border border-white/10 hover:border-white/20 hover:scale-[1.01] active:scale-[0.99]"
+                  className="w-full py-4 bg-brand-accent text-white hover:bg-blue-600 disabled:bg-neutral-800/40 disabled:text-neutral-600 disabled:cursor-not-allowed rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-xl btn-premium select-none cursor-pointer active:scale-[0.98]"
                 >
                   {uploading ? 'Processing Video...' : 'Ingest and Process Asset'}
                 </button>
               </form>
             </div>
-
-            {/* List of Ingested Videos */}
-            <div className="bg-[#0B1533]/80 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-md">
+                   {/* List of Ingested Videos */}
+            <div className="bg-brand-surface/40 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
               <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/10">
                 <h3 className="text-sm font-black uppercase tracking-wider text-brand-accent">Ingested Video Assets</h3>
                 <span className="text-[10px] font-bold text-brand-textMuted">Total Ingested Assets: {videos.length}</span>
@@ -1087,13 +1086,13 @@ const AdminUpload: React.FC = () => {
                           <td className="p-4 font-mono text-[10px] text-neutral-400">{formatFileSize(v.file_size_bytes)}</td>
                           <td className="p-4">
                             {v.status === 'completed' ? (
-                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">COMPLETED</span>
+                              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.06)]">COMPLETED</span>
                             ) : v.status === 'processing' ? (
-                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">PROCESSING {v.processing_progress ? `${v.processing_progress}%` : ''}</span>
+                              <span className="text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.06)] animate-pulse">PROCESSING {v.processing_progress ? `${v.processing_progress}%` : ''}</span>
                             ) : v.status === 'uploaded' ? (
-                              <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20">UPLOADED</span>
+                              <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded-full border border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.06)]">UPLOADED</span>
                             ) : (
-                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">FAILED</span>
+                              <span className="text-[9px] font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20 shadow-[0_0_10px_rgba(239,68,68,0.06)]">FAILED</span>
                             )}
                           </td>
                           <td className="p-4 pr-6 text-right">
@@ -1101,7 +1100,7 @@ const AdminUpload: React.FC = () => {
                               {v.status === 'completed' && (
                                 <button
                                   onClick={() => setActivePreviewVideo(v)}
-                                  className="px-2.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-extrabold rounded-xl transition-all"
+                                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
                                 >
                                   Preview
                                 </button>
@@ -1109,13 +1108,13 @@ const AdminUpload: React.FC = () => {
                               <button
                                 onClick={() => handleProcessHLS(v.video_id)}
                                 disabled={processingId === v.video_id || v.status === 'processing'}
-                                className="px-2.5 py-1.5 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/30 disabled:opacity-50 text-[10px] font-extrabold rounded-xl transition-all"
+                                className="px-3 py-1.5 bg-brand-accent/12 hover:bg-brand-accent/20 text-brand-accent border border-brand-accent/25 disabled:opacity-50 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
                               >
                                 {processingId === v.video_id ? 'Processing...' : 'Reprocess HLS'}
                               </button>
                               <button
                                 onClick={() => handleDeleteVideo(v.video_id)}
-                                className="px-2.5 py-1.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/20 text-[10px] font-extrabold rounded-xl transition-all"
+                                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-[10px] font-extrabold rounded-xl transition-all btn-premium cursor-pointer active:scale-95"
                               >
                                 Delete
                               </button>
@@ -1132,10 +1131,10 @@ const AdminUpload: React.FC = () => {
             {/* Video Playback Preview Modal */}
             {activePreviewVideo && (
               <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-8">
-                <div className="bg-[#0B1533] border border-white/10 max-w-3xl w-full rounded-3xl overflow-hidden shadow-2xl relative">
+                <div className="bg-brand-surface/75 border border-white/8 backdrop-blur-3xl max-w-3xl w-full rounded-3xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.85)] relative transform animate-scaleIn">
                   <button
                     onClick={() => setActivePreviewVideo(null)}
-                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all"
+                    className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/60 border border-white/10 hover:bg-brand-accent hover:border-brand-accent text-white flex items-center justify-center font-bold transition-all active:scale-90 cursor-pointer"
                   >
                     ×
                   </button>

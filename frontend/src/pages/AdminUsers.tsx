@@ -103,7 +103,7 @@ const AdminUsers: React.FC = () => {
                  placeholder="Search users by name or email..."
                  value={search}
                  onChange={(e) => setSearch(e.target.value)}
-                 className="px-4 py-2.5 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/60 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all focus:ring-1 focus:ring-brand-accent/20 w-64"
+                 className="px-4 py-2.5 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/50 focus:ring-1 focus:ring-brand-accent/15 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all w-64 input-premium"
                />
                <button
                  onClick={() => navigate('/admin/upload')}
@@ -117,14 +117,14 @@ const AdminUsers: React.FC = () => {
            {message && (
              <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 border animate-scaleIn ${
                message.type === 'success' 
-                 ? 'bg-emerald-950/40 border-emerald-800/30 text-emerald-300' 
-                 : 'bg-red-950/40 border-red-800/30 text-rose-300'
+                 ? 'bg-emerald-950/40 border-emerald-800/30 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                 : 'bg-red-950/40 border-red-800/30 text-rose-300 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
              }`}>
                <span>{message.text}</span>
              </div>
            )}
  
-           <div className="bg-brand-surface/40 border border-white/5 backdrop-blur-md rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn">
+           <div className="bg-brand-surface/40 border border-white/5 backdrop-blur-xl rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn">
              {loading ? (
                <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse">
                  Loading platform users...
@@ -158,18 +158,18 @@ const AdminUsers: React.FC = () => {
                          <td className="p-4 text-neutral-300 font-mono text-[11px]">{u.email}</td>
                          <td className="p-4">
                            {u.is_verified ? (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.06)]">
                                Verified
                              </span>
                            ) : (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.06)]">
                                Pending
                              </span>
                            )}
                          </td>
                          <td className="p-4">
                            {u.is_admin ? (
-                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-brand-accent bg-brand-accent/15 px-2.5 py-0.5 rounded-full border border-brand-accent/30">
+                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-brand-accent bg-brand-accent/15 px-2.5 py-0.5 rounded-full border border-brand-accent/30 shadow-[0_0_10px_rgba(59,130,246,0.08)]">
                                Admin
                              </span>
                            ) : (
@@ -185,9 +185,9 @@ const AdminUsers: React.FC = () => {
                            <button
                              onClick={() => handleToggleAdmin(u)}
                              disabled={updatingUserId === u.user_id}
-                             className={`px-4 py-1.5 rounded-xl text-[10px] font-extrabold transition-all border btn-premium select-none cursor-pointer ${
+                             className={`px-4 py-2 rounded-2xl text-[10px] font-extrabold transition-all border btn-premium select-none cursor-pointer ${
                                u.is_admin
-                                 ? 'bg-red-500/10 hover:bg-red-500/25 text-rose-350 border-red-500/20'
+                                 ? 'bg-red-500/10 hover:bg-red-500/25 text-rose-300 border-red-500/20'
                                  : 'bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border-brand-accent/30'
                              }`}
                            >
