@@ -18,3 +18,9 @@ For every future sprint, the agent must adhere to the following priority guideli
 * **Zero Local State**: Server instances must remain stateless. All transient state coords must reside in Redis, and permanent states in PostgreSQL.
 * **Non-Blocking Execution**: Offload CPU-heavy actions (transcoding, video upload packaging) and high-latency IO calls (email dispatching) to asynchronous background workers.
 * **Direct-to-CDN Distribution**: Decouple host servers from streaming bandwidth consumption by redirecting all video segment and playlist requests directly to geolocated edge CDNs.
+
+---
+
+## UI Freeze Rule
+* **Strict UI Freeze**: The ZePlay frontend UI, styling, layout, typography, components, animations, navigation, colors, footer, and logo branding are strictly frozen. No design changes, visual modifications, redesigns, or cosmetic polishes may be made unless explicitly requested. Only functional backend, APIs, HLS streaming, database, and infrastructure optimizations are permitted.
+
