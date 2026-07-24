@@ -7,6 +7,7 @@ import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
 import StarRating from '../components/StarRating';
 import { useModal } from '../components/ModalProvider';
+import PremiumPoster from '../components/PremiumPoster';
 
 interface Genre {
   genre_id: string;
@@ -44,6 +45,7 @@ const MovieDetails: React.FC = () => {
   const [shouldResume, setShouldResume] = useState(false);
   const [isInWatchlist, setIsInWatchlist] = useState<boolean>(false);
   const [watchlistSubmitting, setWatchlistSubmitting] = useState<boolean>(false);
+  const [imageError, setImageError] = useState(false);
 
   const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
   const [levels, setLevels] = useState<{ index: number; name: string }[]>([]);
@@ -196,6 +198,7 @@ const MovieDetails: React.FC = () => {
     };
 
     if (id) {
+      setImageError(false);
       fetchMovieDetails();
     }
   }, [id, activeProfileId]);
@@ -478,10 +481,16 @@ const MovieDetails: React.FC = () => {
 
                   {!isPlaying && (
                     <>
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
-                        style={{ backgroundImage: `url(${movie.thumbnail_url})` }}
-                      />
+                      {!movie.thumbnail_url || imageError ? (
+                        <PremiumPoster title={movie.title} aspectRatio="landscape" />
+                      ) : (
+                        <img 
+                          className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
+                          src={movie.thumbnail_url}
+                          alt=""
+                          onError={() => setImageError(true)}
+                        />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-[#060B18] via-[#060B18]/30 to-transparent" />
                       
                       <div className="z-10 text-center p-6 space-y-4 max-w-md">

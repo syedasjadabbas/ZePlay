@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import PremiumPoster from './PremiumPoster';
 
 interface MovieCardVerticalProps {
   movie_id: string;
@@ -22,6 +23,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   ratingScore,
 }) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = React.useState(false);
 
   return (
     <div 
@@ -29,15 +31,17 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
       className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/25 border border-white/5 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:scale-[1.03] hover:border-brand-accent/30 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15),_0_0_15px_rgba(59,130,246,0.08)] transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.98] group flex flex-col justify-between"
     >
       {/* Poster Image Container */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-900">
-        <img 
-          src={thumbnail_url} 
-          alt={title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-[var(--ease-out-premium)]"
-          onError={(e) => {
-            e.currentTarget.src = `https://placehold.co/300x450/0b1535/3b82f6?text=${encodeURIComponent(title)}`;
-          }}
-        />
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
+        {!thumbnail_url || imageError ? (
+          <PremiumPoster title={title} aspectRatio="portrait" />
+        ) : (
+          <img 
+            src={thumbnail_url} 
+            alt={title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-[var(--ease-out-premium)]"
+            onError={() => setImageError(true)}
+          />
+        )}
 
         {/* Saved Watchlist Badge Indicator */}
         {isInWatchlist && (

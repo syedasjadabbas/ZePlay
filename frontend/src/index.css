@@ -17,6 +17,8 @@
   
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.025em;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
   }
 
   /* Force visible input text colors globally */
@@ -132,6 +134,40 @@
 
 .text-shadow-glow {
   text-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+}
+
+/* Premium typography utility classes */
+.font-display {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* Glowing Neon Elements */
+.glow-accent {
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.glow-accent-hover:hover {
+  box-shadow: 0 0 35px rgba(59, 130, 246, 0.35);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Cinematic lighting layout spot */
+.ambient-glow {
+  position: relative;
+}
+.ambient-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 
