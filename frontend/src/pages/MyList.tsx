@@ -4,6 +4,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useModal } from '../components/ModalProvider';
+import Footer from '../components/Footer';
 
 interface Genre {
   genre_id: string;
@@ -181,9 +182,7 @@ const MyList: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
-          &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
-        </footer>
+        <Footer />
       </div>
     </div>
   );

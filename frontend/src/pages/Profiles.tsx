@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { clearAuthSession } from '../services/api';
 import { useModal } from '../components/ModalProvider';
+import Footer from '../components/Footer';
 
 interface ProfileData {
   profile_id: string;
@@ -59,6 +60,7 @@ const Profiles: React.FC = () => {
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '']);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+  const [pinAction, setPinAction] = useState<'unlock' | 'delete'>('unlock');
 
   const pinRefs = [
     useRef<HTMLInputElement>(null),
@@ -207,13 +209,22 @@ const Profiles: React.FC = () => {
     setPinError(null);
     try {
       await api.post(`/profiles/${profileToUnlock.profile_id}/verify-pin`, { pin: pinToVerify });
-      localStorage.setItem('selectedProfileId', profileToUnlock.profile_id);
-      localStorage.setItem('selectedProfileName', profileToUnlock.display_name);
-      localStorage.setItem('selectedProfileAvatar', profileToUnlock.avatar_url || '🍿');
-      setShowPinPrompt(false);
-      setProfileToUnlock(null);
-      setPinDigits(['', '', '', '']);
-      navigate('/');
+      
+      if (pinAction === 'delete') {
+        const targetProfile = profileToUnlock;
+        setShowPinPrompt(false);
+        setProfileToUnlock(null);
+        setPinDigits(['', '', '', '']);
+        await executeProfileDeletion(targetProfile);
+      } else {
+        localStorage.setItem('selectedProfileId', profileToUnlock.profile_id);
+        localStorage.setItem('selectedProfileName', profileToUnlock.display_name);
+        localStorage.setItem('selectedProfileAvatar', profileToUnlock.avatar_url || '🍿');
+        setShowPinPrompt(false);
+        setProfileToUnlock(null);
+        setPinDigits(['', '', '', '']);
+        navigate('/');
+      }
     } catch (err: any) {
       setPinError(err.response?.data?.detail || "Incorrect PIN. Please try again.");
       setPinDigits(['', '', '', '']);
@@ -304,6 +315,20 @@ const Profiles: React.FC = () => {
     );
     if (!confirm) return;
 
+    if (profile.has_pin) {
+      setShowEditModal(false);
+      setProfileToUnlock(profile);
+      setPinAction('delete');
+      setPinDigits(['', '', '', '']);
+      setPinError(null);
+      setShowPinPrompt(true);
+    } else {
+      setShowEditModal(false);
+      await executeProfileDeletion(profile);
+    }
+  };
+
+  const executeProfileDeletion = async (profile: ProfileData) => {
     try {
       await api.delete(`/profiles/${profile.profile_id}`);
 
@@ -321,7 +346,6 @@ const Profiles: React.FC = () => {
         }
       }
 
-      setShowEditModal(false);
       setSelectedProfile(null);
       resetForm();
       await fetchProfiles();
@@ -862,20 +886,7 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="p-6 text-center text-xs text-neutral-600 space-y-1">
-        <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-        <div>
-          <a
-            href="https://www.zeploy.tech"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
-          >
-            POWERED BY ZEPLOY TECH
-          </a>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

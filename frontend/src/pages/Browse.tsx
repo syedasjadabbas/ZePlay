@@ -4,6 +4,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
+import Footer from '../components/Footer';
 
 interface Genre {
   genre_id: string;
@@ -252,7 +253,6 @@ const Browse: React.FC = () => {
                     release_year={movie.release_year}
                     duration_minutes={movie.duration_minutes}
                     genres={movie.genres || []}
-                    ratingScore={movie.average_rating}
                   />
                 ))}
               </div>
@@ -260,9 +260,7 @@ const Browse: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
-          &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
-        </footer>
+        <Footer />
       </div>
     </div>
   );

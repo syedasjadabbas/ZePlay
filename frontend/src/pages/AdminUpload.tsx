@@ -624,7 +624,6 @@ const AdminUpload: React.FC = () => {
                 { label: 'Total Users', value: analytics.total_users, desc: `${analytics.free_users} Free / ${analytics.premium_users} Premium`, icon: '👥', color: 'from-blue-500/20 to-indigo-500/5' },
                 { label: 'Total Profiles', value: analytics.total_profiles, desc: 'Across all active accounts', icon: '👤', color: 'from-purple-500/20 to-pink-500/5' },
                 { label: 'Catalog Movies', value: analytics.total_movies, desc: `Ingested HLS Assets: ${analytics.total_videos}`, icon: '🎬', color: 'from-amber-500/20 to-orange-500/5' },
-                { label: 'Total Ratings', value: analytics.total_ratings, desc: `Average Rating: ${analytics.average_rating} ★`, icon: '★', color: 'from-yellow-500/20 to-amber-500/5' },
                 { label: 'Total Views', value: analytics.total_views, desc: 'Aggregated video playback sessions', icon: '👁', color: 'from-emerald-500/20 to-teal-500/5' },
                 { label: 'Total Watch Time', value: `${Math.round(analytics.total_watch_time / 60)} hrs`, desc: 'Accumulated streaming duration', icon: '⏱', color: 'from-cyan-500/20 to-blue-500/5' },
                 { label: 'Active Viewers', value: analytics.active_users, desc: 'Unique playback users tracked', icon: '🔥', color: 'from-rose-500/20 to-red-500/5' },
@@ -675,7 +674,7 @@ const AdminUpload: React.FC = () => {
 
         {/* Tab 2: Content Analytics */}
         {activeTab === 'content' && contentRankings && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fadeIn">
             {/* 1. Most Watched Movies */}
             <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
               <h2 className="text-sm font-black uppercase mb-5 tracking-wider text-brand-accent font-display">Most Watched Movies</h2>
@@ -701,30 +700,7 @@ const AdminUpload: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Highest Rated Movies */}
-            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">
-              <h2 className="text-sm font-black uppercase mb-5 tracking-wider text-brand-accent font-display">Highest Rated Movies</h2>
-              <div className="space-y-4">
-                {contentRankings.highest_rated_movies.map((m, idx) => (
-                  <div key={m.movie_id} className="flex items-center justify-between border-b border-white/5 pb-3.5 last:border-b-0 last:pb-0 group">
-                    <div className="flex items-center gap-4">
-                      <span className={`text-xs font-black w-5 text-center ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-neutral-400' : idx === 2 ? 'text-amber-600' : 'text-neutral-500'}`}>
-                        #{idx + 1}
-                      </span>
-                      <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
-                        {m.thumbnail_url ? (
-                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-white group-hover:text-brand-accent transition-colors">{m.title}</span>
-                    </div>
-                    <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">★ {m.rating.toFixed(1)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+
 
             {/* 3. Most Added to Watchlist */}
             <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl">

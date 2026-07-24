@@ -11,7 +11,6 @@ interface MovieCardVerticalProps {
   genres: Array<{ name: string }>;
   progressPercent?: number; // Optional watch progress percentage
   isInWatchlist?: boolean; // Optional watchlist saved status
-  ratingScore?: number; // Optional live average rating score
 }
 
 const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
@@ -20,7 +19,6 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   thumbnail_url,
   progressPercent,
   isInWatchlist,
-  ratingScore,
 }) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = React.useState(false);
@@ -53,12 +51,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
           </div>
         )}
 
-        {/* Standard Rating Overlay */}
-        {progressPercent === undefined && (
-          <div className="absolute top-2.5 right-2.5 bg-black/65 px-1.5 py-0.5 rounded text-[9px] font-black text-amber-400 flex items-center gap-0.5 select-none">
-            ★ {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : '0.0'}
-          </div>
-        )}
+
 
         {/* Progress Overlays for Continue Watching */}
         {progressPercent !== undefined && (
@@ -91,17 +84,10 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
         >
           {title}
         </h4>
-        {progressPercent !== undefined ? (
+        {progressPercent !== undefined && (
           <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-extrabold mt-0.5">
             Resume Playing
           </span>
-        ) : (
-          <div className="flex items-center gap-1 mt-0.5">
-            <span className="text-[9px] text-yellow-500">★</span>
-            <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-black">
-              {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : '0.0'}
-            </span>
-          </div>
         )}
       </div>
     </div>
