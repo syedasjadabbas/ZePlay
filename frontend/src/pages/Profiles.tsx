@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { clearAuthSession } from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import Footer from '../components/Footer';
+import Logo from '../components/Logo';
 
 interface ProfileData {
   profile_id: string;
@@ -431,9 +432,7 @@ const Profiles: React.FC = () => {
 
       {/* Header */}
       <header className="p-6 flex justify-between items-center relative z-10">
-        <h1 className="text-2xl font-black text-brand-accent tracking-wider font-display">
-          ZePlay
-        </h1>
+        <Logo height={36} className="w-auto" />
         <button
           onClick={handleLogout}
           className="px-4 py-2 bg-brand-surface hover:bg-brand-cards border border-white/5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"

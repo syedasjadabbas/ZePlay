@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
+import Logo from '../components/Logo';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -90,8 +91,8 @@ const Register: React.FC = () => {
       >
         {/* Header bar */}
         <header className="px-8 py-6 md:px-16 flex items-center justify-between relative z-10 w-full">
-          <Link to="/" className="text-3xl font-black text-brand-accent tracking-wider font-display drop-shadow-md">
-            ZePlay
+          <Link to="/" className="hover:scale-[1.01] transition-transform select-none">
+            <Logo height={42} className="w-auto" />
           </Link>
           <div className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/30 px-3 py-1 rounded-full text-brand-accent shadow-[0_0_15px_rgba(59,130,246,0.15)]">
             Stream Center
@@ -210,8 +211,8 @@ const Register: React.FC = () => {
     >
       {/* Top Header bar */}
       <header className="px-8 py-6 md:px-16 flex items-center justify-between relative z-10 w-full">
-        <Link to="/" className="text-3xl font-black text-brand-accent tracking-wider font-display drop-shadow-md">
-          ZePlay
+        <Link to="/" className="hover:scale-[1.01] transition-transform select-none">
+          <Logo height={42} className="w-auto" />
         </Link>
         <div className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/30 px-3 py-1 rounded-full text-brand-accent shadow-[0_0_15px_rgba(59,130,246,0.15)]">
           Stream Center

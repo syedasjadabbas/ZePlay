@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api, { getToken } from '../services/api';
+import Logo from './Logo';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -56,9 +57,7 @@ const Sidebar: React.FC = () => {
       {/* Brand */}
       <div className="space-y-8">
         <div className="px-4 cursor-pointer select-none" onClick={() => navigate('/')}>
-          <span className="text-xl font-black tracking-[0.08em] text-[#3B82F6] font-display uppercase">
-            ZePlay
-          </span>
+          <Logo height={42} className="w-auto" />
         </div>
 
         {/* Navigation */}
