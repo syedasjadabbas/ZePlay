@@ -4,6 +4,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
+import Footer from '../components/Footer';
 
 interface Genre {
   genre_id: string;
@@ -31,7 +32,8 @@ const Home: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
-  const [heroMovie, setHeroMovie] = useState<Movie | null>(null);
+  const [heroMovies, setHeroMovies] = useState<Movie[]>([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   // Recommendation engine state
   const [personalizedMovies, setPersonalizedMovies] = useState<Movie[]>([]);
@@ -86,12 +88,15 @@ const Home: React.FC = () => {
       setPopularMovies(popularRes.data || []);
       setRecentlyAddedMovies(recAddedRes.data || []);
 
+      // Carousel movies: select up to 5 movies
+      let carouselMovies: Movie[] = [];
       const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
       if (interstellar) {
-        setHeroMovie(interstellar);
-      } else if (moviesData.length > 0) {
-        setHeroMovie(moviesData[0]);
+        carouselMovies.push(interstellar);
       }
+      const others = moviesData.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
+      carouselMovies = [...carouselMovies, ...others].slice(0, 5);
+      setHeroMovies(carouselMovies);
 
       if (activeProfileId) {
         const [cwRes, persRes, bywRes] = await Promise.all([
@@ -115,6 +120,14 @@ const Home: React.FC = () => {
     fetchDashboardData();
   }, [activeProfileId]);
 
+  useEffect(() => {
+    if (heroMovies.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % heroMovies.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [heroMovies.length]);
+
   return (
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
@@ -129,52 +142,83 @@ const Home: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Featured Hero Banner */}
-              {heroMovie && (
-                <div 
-                  className="relative w-full h-[65vh] min-h-[480px] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] flex items-end p-8 md:p-16 bg-cover bg-center group"
-                  style={{
-                    backgroundImage: `linear-gradient(to top, rgba(6, 11, 24, 1) 0%, rgba(6, 11, 24, 0.75) 30%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, rgba(6, 11, 24, 0.95) 20%, rgba(6, 11, 24, 0.45) 65%, rgba(0, 0, 0, 0) 100%), url(${heroMovie.thumbnail_url})`
-                  }}
-                >
-                  <div className="max-w-2xl z-10 space-y-5">
-                    <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display leading-none uppercase drop-shadow-2xl text-white">
-                      {heroMovie.title}
-                    </h2>
-                    <p className="text-sm text-brand-textMuted leading-relaxed line-clamp-2 max-w-xl">
-                      {heroMovie.description}
-                    </p>
-                    
-                    <div className="flex items-center gap-3 text-xs text-neutral-400 pt-1">
-                      <span>{heroMovie.release_year}</span>
-                      <span>·</span>
-                      <span>{heroMovie.duration_minutes} min</span>
-                      {heroMovie.genres && heroMovie.genres.length > 0 && (
-                        <>
-                          <span>·</span>
-                          <span>{heroMovie.genres.map(g => g.name).join(', ')}</span>
-                        </>
-                      )}
-                    </div>
- 
-                    <div className="flex items-center gap-4 pt-2">
-                      <button 
-                        onClick={() => navigate(`/movies/${heroMovie.movie_id}`)}
-                        className="px-8 py-3.5 bg-white hover:bg-neutral-200 text-black font-extrabold rounded-2xl transition-all flex items-center gap-2 shadow-lg text-sm active:scale-95 btn-premium cursor-pointer"
+              {/* Featured Hero Carousel */}
+              {heroMovies.length > 0 && (
+                <div className="relative w-full h-[65vh] min-h-[480px] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] bg-[#060B18]">
+                  {/* Preloaded Slides */}
+                  {heroMovies.map((movie, index) => {
+                    const isActive = index === currentSlideIndex;
+                    return (
+                      <div
+                        key={movie.movie_id}
+                        className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                          isActive ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
+                        } will-change-opacity transform-gpu`}
+                        style={{
+                          backgroundImage: `linear-gradient(to top, rgba(6, 11, 24, 1) 0%, rgba(6, 11, 24, 0.75) 30%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, rgba(6, 11, 24, 0.95) 20%, rgba(6, 11, 24, 0.45) 65%, rgba(0, 0, 0, 0) 100%), url(${movie.thumbnail_url})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }}
                       >
-                        <svg className="w-4 h-4 fill-current text-black" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        Play
-                      </button>
-                      <button 
-                        onClick={() => navigate(`/movies/${heroMovie.movie_id}`)}
-                        className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-extrabold rounded-2xl transition-all text-sm active:scale-95 backdrop-blur-md btn-premium cursor-pointer"
-                      >
-                        More Info
-                      </button>
+                        <div className={`max-w-2xl absolute bottom-0 left-0 p-8 md:p-16 space-y-5 transition-all duration-1000 ease-out transform ${
+                          isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+                        } will-change-[transform,opacity] transform-gpu`}>
+                          <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display leading-none uppercase drop-shadow-2xl text-white">
+                            {movie.title}
+                          </h2>
+                          <p className="text-sm text-brand-textMuted leading-relaxed line-clamp-2 max-w-xl">
+                            {movie.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-3 text-xs text-neutral-400 pt-1">
+                            <span>{movie.release_year}</span>
+                            <span>·</span>
+                            <span>{movie.duration_minutes} min</span>
+                            {movie.genres && movie.genres.length > 0 && (
+                              <>
+                                <span>·</span>
+                                <span>{movie.genres.map(g => g.name).join(', ')}</span>
+                              </>
+                            )}
+                          </div>
+       
+                          <div className="flex items-center gap-4 pt-2">
+                            <button 
+                              onClick={() => navigate(`/movies/${movie.movie_id}`)}
+                              className="px-8 py-3.5 bg-white hover:bg-neutral-200 text-black font-extrabold rounded-2xl transition-all flex items-center gap-2 shadow-lg text-sm active:scale-95 btn-premium cursor-pointer"
+                            >
+                              <svg className="w-4 h-4 fill-current text-black" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                              Play
+                            </button>
+                            <button 
+                              onClick={() => navigate(`/movies/${movie.movie_id}`)}
+                              className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-extrabold rounded-2xl transition-all text-sm active:scale-95 backdrop-blur-md btn-premium cursor-pointer"
+                            >
+                              More Info
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Dot Indicators */}
+                  {heroMovies.length > 1 && (
+                    <div className="absolute bottom-8 right-8 md:right-16 z-20 flex gap-2">
+                      {heroMovies.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentSlideIndex(index)}
+                          className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                            index === currentSlideIndex ? 'bg-white w-6' : 'bg-white/45'
+                          }`}
+                          title={`Go to slide ${index + 1}`}
+                        />
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -229,7 +273,6 @@ const Home: React.FC = () => {
                                 duration_minutes={m.duration_minutes}
                                 genres={m.genres || []}
                                 progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
-                                ratingScore={m.average_rating}
                               />
                             );
                           })}
@@ -276,7 +319,6 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
-                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -322,7 +364,6 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
-                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -368,7 +409,6 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
-                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -414,7 +454,6 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
-                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -460,7 +499,6 @@ const Home: React.FC = () => {
                               release_year={movie.release_year}
                               duration_minutes={movie.duration_minutes}
                               genres={movie.genres}
-                              ratingScore={movie.average_rating}
                             />
                           ))}
                         </div>
@@ -482,19 +520,7 @@ const Home: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-500 bg-[#081225]/40 backdrop-blur-sm space-y-1">
-          <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-          <div>
-            <a 
-              href="https://zeploy.tech" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-brand-accent hover:underline font-bold tracking-wider"
-            >
-              POWERED BY ZEPLOY TECH
-            </a>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );

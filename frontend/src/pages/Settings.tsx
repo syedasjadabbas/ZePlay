@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { clearAuthSession } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import Footer from '../components/Footer';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -269,6 +270,7 @@ const Settings: React.FC = () => {
             </form>
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   );

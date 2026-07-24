@@ -5,9 +5,9 @@ import api, { API_ORIGIN, getToken } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
-import StarRating from '../components/StarRating';
 import { useModal } from '../components/ModalProvider';
 import PremiumPoster from '../components/PremiumPoster';
+import Footer from '../components/Footer';
 
 interface Genre {
   genre_id: string;
@@ -56,10 +56,6 @@ const MovieDetails: React.FC = () => {
   const [playerError, setPlayerError] = useState<string | null>(null);
 
   const playerContainerRef = useRef<HTMLDivElement>(null);
-
-  const [ratingStats, setRatingStats] = useState<{ average_rating: number; total_ratings: number }>({ average_rating: 0, total_ratings: 0 });
-  const [userScore, setUserScore] = useState<number | null>(null);
-  const [ratingSubmitting, setRatingSubmitting] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const similarRef = useRef<HTMLDivElement>(null);
@@ -158,19 +154,7 @@ const MovieDetails: React.FC = () => {
             console.log("Failed to check watchlist status.", e);
           }
 
-          try {
-            const ratingRes = await api.get(`/ratings/movie/${id}?profile_id=${activeProfileId}`);
-            if (ratingRes.data) {
-              setRatingStats({
-                average_rating: ratingRes.data.average_rating,
-                total_ratings: ratingRes.data.total_ratings,
-              });
-              setUserScore(ratingRes.data.user_rating);
-            }
-          } catch (e) {
-            console.log("Failed to fetch rating stats.", e);
           }
-        }
       } catch (err: any) {
         setError(
           err.response?.data?.detail || 
@@ -187,26 +171,7 @@ const MovieDetails: React.FC = () => {
     }
   }, [id, activeProfileId]);
 
-  const handleRateMovie = async (score: number) => {
-    if (!activeProfileId || !movie || ratingSubmitting) return;
-    try {
-      setRatingSubmitting(true);
-      await api.post(`/ratings/movie/${movie.movie_id}?profile_id=${activeProfileId}`, { score });
-      setUserScore(score);
 
-      const ratingRes = await api.get(`/ratings/movie/${movie.movie_id}?profile_id=${activeProfileId}`);
-      if (ratingRes.data) {
-        setRatingStats({
-          average_rating: ratingRes.data.average_rating,
-          total_ratings: ratingRes.data.total_ratings,
-        });
-      }
-    } catch (err) {
-      console.error("Failed to rate movie", err);
-    } finally {
-      setRatingSubmitting(false);
-    }
-  };
 
   const getFullPlaybackUrl = (urlPath: string): string => {
     if (!urlPath) return '';
@@ -645,41 +610,13 @@ const MovieDetails: React.FC = () => {
                       <span className="text-brand-accent font-black">{movie.release_year}</span>
                       <span className="text-neutral-600">•</span>
                       <span>{movie.duration_minutes} minutes</span>
-                      <span className="text-neutral-600">•</span>
-                      <span className="text-brand-accent font-black">
-                        ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating.toFixed(1) : '0.0'}
-                        {ratingStats.total_ratings > 0 && <span className="text-[10px] font-semibold text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
-                      </span>
                       <span className="ml-auto text-[8px] text-neutral-500 font-bold">HLS / 4K</span>
                     </div>
                     <p className="text-xs md:text-sm text-brand-textMuted leading-relaxed pt-2 font-sans max-w-[65ch]">
                       {movie.description}
                     </p>
 
-                     {/* 1-5 Star User Rating Widget */}
-                     <div className="p-4 bg-brand-cards/25 rounded-2xl space-y-2">
-                      <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-neutral-300">Rate this Movie</span>
-                        {ratingStats.average_rating > 0 && (
-                          <span className="text-amber-400 font-bold flex items-center gap-1">
-                            ★ {ratingStats.average_rating.toFixed(1)} <span className="text-neutral-500 font-normal">({ratingStats.total_ratings} votes)</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <StarRating
-                          rating={userScore || 0}
-                          onRate={handleRateMovie}
-                          readonly={ratingSubmitting}
-                          size="md"
-                        />
-                        {userScore ? (
-                          <span className="text-xs text-amber-400 font-bold ml-2">Your Rating: {userScore}/5</span>
-                        ) : (
-                          <span className="text-[10px] text-neutral-500 ml-2">Click star to rate</span>
-                        )}
-                      </div>
-                    </div>
+
 
                     {/* Watchlist Toggle Action Button */}
                     <div className="pt-1">
@@ -780,9 +717,7 @@ const MovieDetails: React.FC = () => {
           ) : null}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
-          &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
-        </footer>
+        <Footer />
       </div>
     </div>
   );

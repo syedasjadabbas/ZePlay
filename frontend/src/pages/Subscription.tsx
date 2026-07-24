@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import Footer from '../components/Footer';
 
 interface Plan {
   id: string;
@@ -366,6 +367,7 @@ const Subscription: React.FC = () => {
             </>
           )}
         </main>
+        <Footer />
       </div>
 
       {/* Cancel Confirmation Modal */}
