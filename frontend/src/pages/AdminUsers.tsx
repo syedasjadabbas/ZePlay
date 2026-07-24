@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import { useModal } from '../components/ModalProvider';
 
 interface UserData {
   user_id: string;
@@ -15,6 +16,7 @@ interface UserData {
 }
 
 const AdminUsers: React.FC = () => {
+  const { showConfirm } = useModal();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,13 @@ const AdminUsers: React.FC = () => {
 
   const handleToggleAdmin = async (user: UserData) => {
     const targetAction = user.is_admin ? 'revoke admin privileges from' : 'promote to admin';
-    if (!window.confirm(`Are you sure you want to ${targetAction} ${user.email}?`)) return;
+    const confirm = await showConfirm(
+      "Modify Access Privileges",
+      `Are you sure you want to ${targetAction} ${user.email}?`,
+      user.is_admin ? 'danger' : 'info',
+      user.is_admin ? 'Revoke Admin' : 'Promote'
+    );
+    if (!confirm) return;
 
     try {
       setUpdatingUserId(user.user_id);
@@ -89,107 +97,107 @@ const AdminUsers: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Search users by name or email..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="px-4 py-2.5 bg-brand-surface border border-white/10 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-brand-accent w-64"
-              />
-              <button
-                onClick={() => navigate('/admin/upload')}
-                className="px-4 py-2.5 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/40 rounded-xl text-xs font-bold transition-all"
-              >
-                Catalog Ingestion
-              </button>
-            </div>
-          </div>
-
-          {message && (
-            <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 border ${
-              message.type === 'success' 
-                ? 'bg-emerald-950/40 border-emerald-800/30 text-emerald-300' 
-                : 'bg-red-950/40 border-red-800/30 text-rose-300'
-            }`}>
-              <span>{message.text}</span>
-            </div>
-          )}
-
-          <div className="bg-[#0B1533]/80 border border-white/5 backdrop-blur-md rounded-3xl overflow-hidden shadow-2xl">
-            {loading ? (
-              <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse">
-                Loading platform users...
-              </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="p-12 text-center text-brand-textMuted text-sm">
-                No matching users found.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
-                      <th className="p-4 pl-6">User</th>
-                      <th className="p-4">Email</th>
-                      <th className="p-4">Verification</th>
-                      <th className="p-4">Role</th>
-                      <th className="p-4">Joined</th>
-                      <th className="p-4 pr-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5 text-xs">
-                    {filteredUsers.map((u) => (
-                      <tr key={u.user_id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="p-4 pl-6 font-bold text-white flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
-                            {u.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span>{u.name}</span>
-                        </td>
-                        <td className="p-4 text-neutral-300 font-mono text-[11px]">{u.email}</td>
-                        <td className="p-4">
-                          {u.is_verified ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                              Verified
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
-                              Pending
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {u.is_admin ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-brand-accent bg-brand-accent/15 px-2.5 py-0.5 rounded-full border border-brand-accent/30">
-                              Admin
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-800/40 px-2.5 py-0.5 rounded-full border border-white/5">
-                              Member
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 text-neutral-400 text-[11px]">
-                          {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="p-4 pr-6 text-right">
-                          <button
-                            onClick={() => handleToggleAdmin(u)}
-                            disabled={updatingUserId === u.user_id}
-                            className={`px-3 py-1.5 rounded-xl text-[10px] font-extrabold transition-all border ${
-                              u.is_admin
-                                ? 'bg-red-500/10 hover:bg-red-500/20 text-rose-300 border-red-500/30'
-                                : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/40'
-                            }`}
-                          >
-                            {updatingUserId === u.user_id ? 'Updating...' : u.is_admin ? 'Revoke Admin' : 'Promote to Admin'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+             <div className="flex items-center gap-3">
+               <input
+                 type="text"
+                 placeholder="Search users by name or email..."
+                 value={search}
+                 onChange={(e) => setSearch(e.target.value)}
+                 className="px-4 py-2.5 bg-brand-cards/40 border border-white/10 focus:border-brand-accent/60 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all focus:ring-1 focus:ring-brand-accent/20 w-64"
+               />
+               <button
+                 onClick={() => navigate('/admin/upload')}
+                 className="px-4 py-2.5 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border border-brand-accent/30 rounded-xl text-xs font-bold transition-all btn-premium select-none cursor-pointer"
+               >
+                 Catalog Ingestion
+               </button>
+             </div>
+           </div>
+ 
+           {message && (
+             <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 border animate-scaleIn ${
+               message.type === 'success' 
+                 ? 'bg-emerald-950/40 border-emerald-800/30 text-emerald-300' 
+                 : 'bg-red-950/40 border-red-800/30 text-rose-300'
+             }`}>
+               <span>{message.text}</span>
+             </div>
+           )}
+ 
+           <div className="bg-brand-surface/40 border border-white/5 backdrop-blur-md rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-scaleIn">
+             {loading ? (
+               <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse">
+                 Loading platform users...
+               </div>
+             ) : filteredUsers.length === 0 ? (
+               <div className="p-12 text-center text-brand-textMuted text-sm">
+                 No matching users found.
+               </div>
+             ) : (
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left border-collapse">
+                   <thead>
+                     <tr className="border-b border-white/5 text-[10px] uppercase font-bold text-brand-textMuted tracking-wider bg-black/20">
+                       <th className="p-4 pl-6">User</th>
+                       <th className="p-4">Email</th>
+                       <th className="p-4">Verification</th>
+                       <th className="p-4">Role</th>
+                       <th className="p-4">Joined</th>
+                       <th className="p-4 pr-6 text-right">Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-white/5 text-xs">
+                     {filteredUsers.map((u) => (
+                       <tr key={u.user_id} className="hover:bg-white/[0.02] transition-colors">
+                         <td className="p-4 pl-6 font-bold text-white flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-accent to-blue-700 flex items-center justify-center font-black text-xs text-white">
+                             {u.name.charAt(0).toUpperCase()}
+                           </div>
+                           <span>{u.name}</span>
+                         </td>
+                         <td className="p-4 text-neutral-300 font-mono text-[11px]">{u.email}</td>
+                         <td className="p-4">
+                           {u.is_verified ? (
+                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                               Verified
+                             </span>
+                           ) : (
+                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                               Pending
+                             </span>
+                           )}
+                         </td>
+                         <td className="p-4">
+                           {u.is_admin ? (
+                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase text-brand-accent bg-brand-accent/15 px-2.5 py-0.5 rounded-full border border-brand-accent/30">
+                               Admin
+                             </span>
+                           ) : (
+                             <span className="text-[10px] font-semibold text-neutral-400 bg-neutral-800/40 px-2.5 py-0.5 rounded-full border border-white/5">
+                               Member
+                             </span>
+                           )}
+                         </td>
+                         <td className="p-4 text-neutral-400 text-[11px]">
+                           {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                         </td>
+                         <td className="p-4 pr-6 text-right">
+                           <button
+                             onClick={() => handleToggleAdmin(u)}
+                             disabled={updatingUserId === u.user_id}
+                             className={`px-4 py-1.5 rounded-xl text-[10px] font-extrabold transition-all border btn-premium select-none cursor-pointer ${
+                               u.is_admin
+                                 ? 'bg-red-500/10 hover:bg-red-500/25 text-rose-350 border-red-500/20'
+                                 : 'bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent border-brand-accent/30'
+                             }`}
+                           >
+                             {updatingUserId === u.user_id ? 'Updating...' : u.is_admin ? 'Revoke Admin' : 'Promote to Admin'}
+                           </button>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
               </div>
             )}
           </div>

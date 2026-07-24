@@ -193,7 +193,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
               setShowDropdown(true);
             }}
             placeholder="Search movies, descriptions, genres, release year..."
-            className="w-full pl-12 pr-16 py-3 bg-[#101C40] text-white border border-white/[0.12] focus:border-brand-accent/60 backdrop-blur-md rounded-xl text-xs focus:outline-none select-none placeholder:text-white/40 shadow-lg shadow-black/20 caret-brand-accent transition-all"
+            className="w-full pl-12 pr-16 py-3.5 bg-brand-cards text-white border border-white/10 focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/25 backdrop-blur-lg rounded-2xl text-xs focus:outline-none select-none placeholder:text-white/30 shadow-2xl caret-brand-accent transition-all"
           />
           {/* Keyboard shortcut hint badge */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 border border-white/10 bg-white/5 px-2 py-0.5 rounded-lg text-[9px] text-neutral-400 font-mono pointer-events-none">
@@ -203,10 +203,10 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
 
         {/* Live Auto-Complete Suggestions & Recent Searches Dropdown */}
         {showDropdown && isFocused && (
-          <div className="absolute left-0 right-0 top-full mt-2 bg-[#0B1533]/95 border border-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5">
+          <div className="absolute left-0 right-0 top-full mt-3 bg-[#0B1535]/95 border border-white/10 backdrop-blur-2xl rounded-2xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] overflow-hidden z-50 divide-y divide-white/5 animate-scaleIn">
             {/* Live Movie Suggestions */}
             {query.trim() && suggestions.length > 0 && (
-              <div className="p-3 space-y-1">
+              <div className="p-4 space-y-1">
                 <div className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent px-3 py-1">
                   Matching Suggestions
                 </div>
@@ -214,18 +214,18 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
                   <div
                     key={m.movie_id}
                     onClick={() => handleSelectSuggestion(m)}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl cursor-pointer transition-colors group"
+                    className="flex items-center gap-4 px-4 py-3 hover:bg-white/5 border border-transparent hover:border-white/5 rounded-2xl cursor-pointer transition-all duration-200 group"
                   >
                     <img 
                       src={m.thumbnail_url} 
                       alt={m.title} 
-                      className="w-10 h-10 object-cover rounded-lg border border-white/10 group-hover:scale-105 transition-transform"
+                      className="w-11 h-11 object-cover rounded-lg border border-white/10 group-hover:scale-105 transition-transform"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-white group-hover:text-brand-accent transition-colors truncate">
                         {m.title}
                       </p>
-                      <div className="flex items-center gap-2 text-[10px] text-brand-textMuted">
+                      <div className="flex items-center gap-2 text-[10px] text-brand-textMuted mt-0.5">
                         <span>{m.release_year}</span>
                         {m.genres && m.genres.length > 0 && (
                           <>
@@ -235,7 +235,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
                         )}
                       </div>
                     </div>
-                    <svg className="w-4 h-4 text-neutral-500 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-neutral-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -245,8 +245,8 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
 
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
-              <div className="p-3 space-y-1">
-                <div className="flex items-center justify-between px-3 py-1">
+              <div className="p-4 space-y-2">
+                <div className="flex items-center justify-between px-3">
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-400">
                     Recent Searches
                   </span>
@@ -257,14 +257,14 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
                     Clear All
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 px-3 pt-1">
+                <div className="flex flex-wrap gap-2 px-3">
                   {recentSearches.map((term, i) => (
                     <button
                       key={i}
                       onClick={() => handleSelectRecent(term)}
-                      className="px-2.5 py-1 bg-white/5 hover:bg-brand-accent/20 border border-white/10 hover:border-brand-accent/30 text-xs text-neutral-300 hover:text-white rounded-lg transition-all flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-white/5 hover:bg-brand-accent/15 border border-white/5 hover:border-brand-accent/20 text-xs text-neutral-300 hover:text-white rounded-xl transition-all flex items-center gap-2 select-none cursor-pointer"
                     >
-                      <svg className="w-3 h-3 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span>{term}</span>
@@ -276,7 +276,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
 
             {/* Default prompt when input is empty & no recent searches */}
             {!query.trim() && recentSearches.length === 0 && (
-              <div className="p-5 text-center text-xs text-neutral-400">
+              <div className="p-5 text-center text-xs text-neutral-450">
                 Type keywords to search title, description, genre, or release year...
               </div>
             )}

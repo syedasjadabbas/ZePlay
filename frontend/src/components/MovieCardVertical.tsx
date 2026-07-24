@@ -26,14 +26,14 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   return (
     <div 
       onClick={() => navigate(`/movies/${movie_id}`)}
-      className="flex-shrink-0 w-36 sm:w-44 bg-brand-surface border border-white/5 rounded-xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:border-brand-accent/40 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] transition-all duration-300 group flex flex-col justify-between"
+      className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/40 border border-white/5 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:border-brand-accent/35 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] transition-all duration-300 group flex flex-col justify-between"
     >
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-900">
         <img 
           src={thumbnail_url} 
           alt={title} 
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
             e.currentTarget.src = `https://placehold.co/300x450/0b1535/3b82f6?text=${encodeURIComponent(title)}`;
           }}
@@ -41,7 +41,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
 
         {/* Saved Watchlist Badge Indicator */}
         {isInWatchlist && (
-          <div className="absolute top-2.5 left-2.5 bg-brand-accent/95 backdrop-blur-md px-2 py-0.5 rounded-md text-[8px] font-black text-white uppercase tracking-wider shadow-md z-10 border border-white/20 flex items-center gap-1">
+          <div className="absolute top-2.5 left-2.5 bg-brand-accent/90 backdrop-blur-md px-2 py-0.5 rounded-lg text-[8px] font-black text-white uppercase tracking-wider shadow-md z-10 border border-white/10 flex items-center gap-1">
             <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
               <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
             </svg>
@@ -82,19 +82,19 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
       {/* Details (Title and score/progress) below card */}
       <div className="p-3 flex flex-col gap-0.5">
         <h4 
-          className="font-bold text-white text-[11px] sm:text-xs tracking-wide uppercase truncate"
+          className="font-bold text-white text-[11px] sm:text-xs tracking-wide uppercase truncate group-hover:text-brand-accent transition-colors font-display"
           title={title}
         >
           {title}
         </h4>
         {progressPercent !== undefined ? (
-          <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-wider font-semibold">
+          <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-bold mt-0.5">
             Resume Playing
           </span>
         ) : (
           <div className="flex items-center gap-1 mt-0.5">
             <span className="text-[9px] text-yellow-500">★</span>
-            <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-wider font-bold">
+            <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-extrabold">
               {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : '0.0'}
             </span>
           </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { clearAuthSession } from '../services/api';
+import { useModal } from '../components/ModalProvider';
 
 interface ProfileData {
   profile_id: string;
@@ -20,6 +21,7 @@ const EMOJIS = ['😀', '😎', '🤖', '👽', '🦁', '🐼', '🐱', '🦊', 
 
 
 const Profiles: React.FC = () => {
+  const { showConfirm } = useModal();
   const [profiles, setProfiles] = useState<ProfileData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +29,6 @@ const Profiles: React.FC = () => {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [profileToDelete, setProfileToDelete] = useState<ProfileData | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
 
   const [newDisplayName, setNewDisplayName] = useState('');
@@ -43,9 +42,16 @@ const Profiles: React.FC = () => {
   const [newPin, setNewPin] = useState('');
   const [showPinPrompt, setShowPinPrompt] = useState(false);
   const [profileToUnlock, setProfileToUnlock] = useState<ProfileData | null>(null);
-  const [enteredPin, setEnteredPin] = useState('');
+  const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '']);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
+
+  const pinRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,9 +120,12 @@ const Profiles: React.FC = () => {
     } else {
       if (profile.has_pin) {
         setProfileToUnlock(profile);
-        setEnteredPin('');
+        setPinDigits(['', '', '', '']);
         setPinError(null);
         setShowPinPrompt(true);
+        setTimeout(() => {
+          pinRefs[0].current?.focus();
+        }, 100);
       } else {
         localStorage.setItem('selectedProfileId', profile.profile_id);
         localStorage.setItem('selectedProfileName', profile.display_name);
@@ -126,24 +135,28 @@ const Profiles: React.FC = () => {
     }
   };
 
-  const handleVerifyPin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profileToUnlock || enteredPin.length !== 4) return;
+  const handleVerifyPin = async (e?: React.FormEvent, pinOverride?: string) => {
+    if (e) e.preventDefault();
+    const pinToVerify = pinOverride || pinDigits.join('');
+    if (!profileToUnlock || pinToVerify.length !== 4) return;
 
     setIsVerifyingPin(true);
     setPinError(null);
     try {
-      await api.post(`/profiles/${profileToUnlock.profile_id}/verify-pin`, { pin: enteredPin });
+      await api.post(`/profiles/${profileToUnlock.profile_id}/verify-pin`, { pin: pinToVerify });
       localStorage.setItem('selectedProfileId', profileToUnlock.profile_id);
       localStorage.setItem('selectedProfileName', profileToUnlock.display_name);
       localStorage.setItem('selectedProfileAvatar', profileToUnlock.avatar_url || '🍿');
       setShowPinPrompt(false);
       setProfileToUnlock(null);
-      setEnteredPin('');
+      setPinDigits(['', '', '', '']);
       navigate('/');
     } catch (err: any) {
       setPinError(err.response?.data?.detail || "Incorrect PIN. Please try again.");
-      setEnteredPin('');
+      setPinDigits(['', '', '', '']);
+      setTimeout(() => {
+        pinRefs[0].current?.focus();
+      }, 50);
     } finally {
       setIsVerifyingPin(false);
     }
@@ -217,25 +230,26 @@ const Profiles: React.FC = () => {
   };
 
   /** Step 1: open the confirmation modal — never calls window.confirm */
-  const initiateDeleteProfile = (profile: ProfileData) => {
+  const initiateDeleteProfile = async (profile: ProfileData) => {
     if (profiles.length <= 1) {
       showToast("Cannot delete your last profile.", 'error');
       return;
     }
-    setProfileToDelete(profile);
-    setShowDeleteConfirm(true);
-  };
+    
+    const confirm = await showConfirm(
+      "Delete Profile?",
+      `"${profile.display_name}" and all its watch history, watchlist, and ratings will be permanently removed. This cannot be undone.`,
+      "danger",
+      "Delete"
+    );
+    if (!confirm) return;
 
-  /** Step 2: user confirmed — call the API */
-  const confirmDeleteProfile = async () => {
-    if (!profileToDelete) return;
-    setIsDeleting(true);
     try {
-      await api.delete(`/profiles/${profileToDelete.profile_id}`);
+      await api.delete(`/profiles/${profile.profile_id}`);
 
       const activeProfileId = localStorage.getItem('selectedProfileId');
-      if (activeProfileId === profileToDelete.profile_id) {
-        const remaining = profiles.filter(p => p.profile_id !== profileToDelete.profile_id);
+      if (activeProfileId === profile.profile_id) {
+        const remaining = profiles.filter(p => p.profile_id !== profile.profile_id);
         if (remaining.length > 0) {
           localStorage.setItem('selectedProfileId', remaining[0].profile_id);
           localStorage.setItem('selectedProfileName', remaining[0].display_name);
@@ -247,19 +261,14 @@ const Profiles: React.FC = () => {
         }
       }
 
-      setShowDeleteConfirm(false);
       setShowEditModal(false);
       setSelectedProfile(null);
-      setProfileToDelete(null);
       resetForm();
       await fetchProfiles();
-      showToast(`"${profileToDelete.display_name}" was deleted.`, 'success');
+      showToast(`"${profile.display_name}" was deleted.`, 'success');
     } catch (err: any) {
       const detail = err.response?.data?.detail || "Could not delete profile.";
-      setShowDeleteConfirm(false);
       showToast(detail, 'error');
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -704,57 +713,10 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && profileToDelete && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-          <div className="bg-brand-surface border border-red-800/30 w-full max-w-sm p-8 rounded-2xl shadow-2xl space-y-5 text-center">
-            {/* Warning Icon */}
-            <div className="w-14 h-14 rounded-full bg-red-900/30 border border-red-700/30 flex items-center justify-center mx-auto">
-              <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="text-lg font-extrabold text-white font-display">Delete Profile?</h3>
-              <p className="text-xs text-brand-textMuted leading-relaxed">
-                <span className="text-white font-bold">"{profileToDelete.display_name}"</span> and all its watch history, watchlist, and ratings will be permanently removed. This cannot be undone.
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <button
-                onClick={() => { setShowDeleteConfirm(false); setProfileToDelete(null); }}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                id="confirm-delete-profile-btn"
-                onClick={confirmDeleteProfile}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Deleting...
-                  </>
-                ) : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* PIN Prompt Modal */}
       {showPinPrompt && profileToUnlock && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-md animate-[fadeIn_0.2s_ease]">
-          <div className="bg-brand-surface border border-white/5 w-full max-w-sm p-8 rounded-3xl shadow-2xl text-center space-y-6 transform scale-100 transition-transform">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[70] backdrop-blur-md animate-fadeIn">
+          <div className="bg-[#0B1535] border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] text-center space-y-6 transform animate-scaleIn">
             <div className="space-y-2">
               {/* Profile Avatar display */}
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/10 flex items-center justify-center text-4xl mx-auto shadow-lg select-none">
@@ -768,24 +730,54 @@ const Profiles: React.FC = () => {
               </p>
             </div>
 
-            <form onSubmit={handleVerifyPin} className="space-y-6">
+            <form onSubmit={(e) => handleVerifyPin(e)} className="space-y-6">
               <div className="flex flex-col items-center">
-                <input
-                  type="password"
-                  pattern="\d*"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="••••"
-                  value={enteredPin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    setEnteredPin(val);
-                  }}
-                  autoFocus
-                  required
-                  disabled={isVerifyingPin}
-                  className="w-44 text-center bg-[#101C40] text-white border border-white/10 rounded-2xl px-4 py-3 text-3xl tracking-[0.5em] focus:outline-none focus:border-brand-accent/60 font-mono transition-all placeholder:text-white/20"
-                />
+                <div className={`flex gap-3 justify-center ${pinError ? 'animate-shake' : ''}`}>
+                  {pinDigits.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={pinRefs[index]}
+                      type="password"
+                      pattern="\d*"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        const newDigits = [...pinDigits];
+                        newDigits[index] = val;
+                        setPinDigits(newDigits);
+                        setPinError(null);
+                        
+                        if (val && index < 3) {
+                          pinRefs[index + 1].current?.focus();
+                        }
+                        
+                        // Auto-submit when last digit is filled
+                        if (val && index === 3 && newDigits.every(d => d !== '')) {
+                          handleVerifyPin(undefined, newDigits.join(''));
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Backspace') {
+                          if (!pinDigits[index] && index > 0) {
+                            const newDigits = [...pinDigits];
+                            newDigits[index - 1] = '';
+                            setPinDigits(newDigits);
+                            pinRefs[index - 1].current?.focus();
+                          } else {
+                            const newDigits = [...pinDigits];
+                            newDigits[index] = '';
+                            setPinDigits(newDigits);
+                          }
+                        }
+                      }}
+                      className="w-12 h-14 text-center bg-[#101C40] text-white border border-white/10 focus:border-brand-accent/60 rounded-xl text-3xl font-bold font-mono focus:outline-none focus:ring-1 focus:ring-brand-accent/20 transition-all shadow-inner"
+                      disabled={isVerifyingPin}
+                      required
+                    />
+                  ))}
+                </div>
                 {pinError && (
                   <p className="text-rose-400 text-xs font-semibold mt-3 animate-pulse">
                     {pinError}
@@ -799,7 +791,7 @@ const Profiles: React.FC = () => {
                   onClick={() => {
                     setShowPinPrompt(false);
                     setProfileToUnlock(null);
-                    setEnteredPin('');
+                    setPinDigits(['', '', '', '']);
                     setPinError(null);
                   }}
                   className="flex-1 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider"
@@ -808,7 +800,7 @@ const Profiles: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isVerifyingPin || enteredPin.length !== 4}
+                  disabled={isVerifyingPin || pinDigits.join('').length !== 4}
                   className="flex-1 px-4 py-2.5 bg-brand-accent hover:bg-blue-600 disabled:bg-brand-accent/40 text-white font-bold rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
                 >
                   {isVerifyingPin ? 'Verifying...' : 'Unlock'}

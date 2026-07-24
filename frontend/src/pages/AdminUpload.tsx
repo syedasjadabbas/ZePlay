@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useModal } from '../components/ModalProvider';
 
 interface MovieOption {
   movie_id: string;
@@ -98,6 +99,7 @@ interface AuditLog {
 }
 
 const AdminUpload: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('overview');
 
   // States for ingestion
@@ -323,7 +325,13 @@ const AdminUpload: React.FC = () => {
 
   const handleToggleUserActive = async (user: UserData) => {
     const targetAction = user.is_active ? 'disable' : 'enable';
-    if (!window.confirm(`Are you sure you want to ${targetAction} user account: ${user.email}?`)) return;
+    const confirm = await showConfirm(
+      "Toggle User Account Status",
+      `Are you sure you want to ${targetAction} user account: ${user.email}?`,
+      user.is_active ? 'danger' : 'info',
+      user.is_active ? 'Disable' : 'Enable'
+    );
+    if (!confirm) return;
 
     try {
       setUpdatingUserId(user.user_id);
@@ -346,7 +354,13 @@ const AdminUpload: React.FC = () => {
 
   const handleToggleAdminRole = async (user: UserData) => {
     const targetAction = user.is_admin ? 'demote' : 'promote';
-    if (!window.confirm(`Are you sure you want to ${targetAction} user: ${user.email} to/from administrator role?`)) return;
+    const confirm = await showConfirm(
+      "Modify Administrator Role",
+      `Are you sure you want to ${targetAction} user: ${user.email} to/from administrator role?`,
+      user.is_admin ? 'danger' : 'info',
+      user.is_admin ? 'Demote' : 'Promote'
+    );
+    if (!confirm) return;
 
     try {
       setUpdatingUserId(user.user_id);
@@ -474,7 +488,13 @@ const AdminUpload: React.FC = () => {
   };
 
   const handleDeleteVideo = async (videoId: string) => {
-    if (!window.confirm('Are you sure you want to delete this video asset?')) return;
+    const confirm = await showConfirm(
+      "Delete Video Asset",
+      "Are you sure you want to delete this video asset?",
+      "danger",
+      "Delete"
+    );
+    if (!confirm) return;
 
     try {
       await api.delete(`/videos/admin/${videoId}`);
@@ -486,7 +506,7 @@ const AdminUpload: React.FC = () => {
       fetchHealth();
       fetchAuditLogs();
     } catch (err) {
-      alert('Failed to delete video asset.');
+      showAlert("Error", "Failed to delete video asset.", "danger");
     }
   };
 
@@ -951,8 +971,8 @@ const AdminUpload: React.FC = () => {
           <div className="space-y-8 animate-fadeIn">
 
             {/* Catalog Upload Form */}
-            <div className="bg-[#0B1533]/80 border border-white/5 p-8 rounded-3xl backdrop-blur-md">
-              <h2 className="text-lg font-black uppercase mb-6 tracking-wide text-brand-accent">Ingest Video Catalog</h2>
+            <div className="bg-brand-surface/40 border border-white/5 p-8 rounded-3xl backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+              <h2 className="text-lg font-extrabold uppercase mb-6 tracking-wide text-brand-accent font-display">Ingest Video Catalog</h2>
               <form onSubmit={handleUpload} className="space-y-6">
 
                 {/* Select Movie Linkage */}
@@ -963,11 +983,11 @@ const AdminUpload: React.FC = () => {
                   <select
                     value={selectedMovieId}
                     onChange={(e) => setSelectedMovieId(e.target.value)}
-                    className="w-full px-4 py-3 bg-brand-surface border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-all cursor-pointer"
+                    className="w-full px-4 py-3 bg-brand-cards/40 border border-white/10 rounded-2xl text-xs text-white focus:outline-none focus:border-brand-accent/60 focus:ring-1 focus:ring-brand-accent/25 transition-all cursor-pointer select-none"
                   >
-                    <option value="">Unlinked (Orphan Video Asset)</option>
+                    <option value="" className="bg-[#0B1535]">Unlinked (Orphan Video Asset)</option>
                     {movies.map((m) => (
-                      <option key={m.movie_id} value={m.movie_id}>
+                      <option key={m.movie_id} value={m.movie_id} className="bg-[#0B1535]">
                         {m.title} ({m.release_year})
                       </option>
                     ))}
@@ -983,7 +1003,7 @@ const AdminUpload: React.FC = () => {
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/50 bg-brand-surface/30 hover:bg-brand-surface/50 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300"
+                    className="border-2 border-dashed border-white/10 hover:border-brand-accent/50 bg-brand-cards/10 hover:bg-brand-cards/20 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300"
                   >
                     <input
                       type="file"
@@ -1009,7 +1029,7 @@ const AdminUpload: React.FC = () => {
 
                 {/* Upload Status */}
                 {uploading && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 animate-pulse">
                     <div className="flex justify-between text-[10px] font-bold text-brand-accent">
                       <span>Ingesting catalog video file...</span>
                       <span>{uploadProgress}%</span>
@@ -1026,7 +1046,7 @@ const AdminUpload: React.FC = () => {
                 <button
                   type="submit"
                   disabled={uploading || !file}
-                  className="w-full py-4 bg-brand-accent text-white hover:bg-brand-accent-hover disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-xl"
+                  className="w-full py-4 bg-brand-accent text-white hover:bg-blue-600 disabled:bg-neutral-800/40 disabled:text-neutral-600 disabled:cursor-not-allowed rounded-2xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-xl btn-premium select-none cursor-pointer border border-white/10 hover:border-white/20 hover:scale-[1.01] active:scale-[0.99]"
                 >
                   {uploading ? 'Processing Video...' : 'Ingest and Process Asset'}
                 </button>
