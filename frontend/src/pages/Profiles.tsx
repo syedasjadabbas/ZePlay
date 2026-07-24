@@ -74,7 +74,8 @@ const Profiles: React.FC = () => {
   const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '']);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isVerifyingPin, setIsVerifyingPin] = useState(false);
-  const [pinAction, setPinAction] = useState<'unlock' | 'delete'>('unlock');
+  const [pinAction, setPinAction] = useState<'unlock' | 'delete' | 'edit'>('unlock');
+  const [pendingUpdatePayload, setPendingUpdatePayload] = useState<any>(null);
 
   const pinRefs = [
     useRef<HTMLInputElement>(null),
@@ -230,6 +231,14 @@ const Profiles: React.FC = () => {
         setProfileToUnlock(null);
         setPinDigits(['', '', '', '']);
         await executeProfileDeletion(targetProfile);
+      } else if (pinAction === 'edit') {
+        const targetProfile = profileToUnlock;
+        const payload = pendingUpdatePayload;
+        setShowPinPrompt(false);
+        setProfileToUnlock(null);
+        setPinDigits(['', '', '', '']);
+        setPendingUpdatePayload(null);
+        await executeProfileUpdate(targetProfile, payload);
       } else {
         localStorage.setItem('selectedProfileId', profileToUnlock.profile_id);
         localStorage.setItem('selectedProfileName', profileToUnlock.display_name);
@@ -280,34 +289,48 @@ const Profiles: React.FC = () => {
       return;
     }
 
-    try {
-      const payload: any = {
-        display_name: newDisplayName,
-        is_kids_profile: newIsKids,
-        language_pref: newLang,
-        avatar_url: editEmoji,
-      };
+    const payload: any = {
+      display_name: newDisplayName,
+      is_kids_profile: newIsKids,
+      language_pref: newLang,
+      avatar_url: editEmoji,
+    };
 
-      if (newRequirePin) {
-        if (newPin) {
-          payload.pin = newPin;
-        }
-      } else {
-        payload.pin = null;
+    if (newRequirePin) {
+      if (newPin) {
+        payload.pin = newPin;
       }
+    } else {
+      payload.pin = null;
+    }
 
-      await api.put(`/profiles/${selectedProfile.profile_id}`, payload);
+    if (selectedProfile.has_pin) {
+      setPendingUpdatePayload(payload);
+      setShowEditModal(false);
+      setProfileToUnlock(selectedProfile);
+      setPinAction('edit');
+      setPinDigits(['', '', '', '']);
+      setPinError(null);
+      setShowPinPrompt(true);
+    } else {
+      await executeProfileUpdate(selectedProfile, payload);
+    }
+  };
+
+  const executeProfileUpdate = async (profile: ProfileData, payload: any) => {
+    try {
+      await api.put(`/profiles/${profile.profile_id}`, payload);
 
       const activeProfileId = localStorage.getItem('selectedProfileId');
-      if (activeProfileId === selectedProfile.profile_id) {
-        localStorage.setItem('selectedProfileName', newDisplayName);
-        localStorage.setItem('selectedProfileAvatar', editEmoji);
+      if (activeProfileId === profile.profile_id) {
+        localStorage.setItem('selectedProfileName', payload.display_name);
+        localStorage.setItem('selectedProfileAvatar', payload.avatar_url);
       }
 
       setShowEditModal(false);
       setSelectedProfile(null);
       resetForm();
-      fetchProfiles();
+      await fetchProfiles();
       showToast('Profile updated successfully!', 'success');
     } catch (err: any) {
       showToast("Failed to update profile details.", 'error');

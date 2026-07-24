@@ -531,7 +531,7 @@ const AdminUpload: React.FC = () => {
       {/* Top Navbar */}
       <header className="border-b border-white/5 bg-black sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-xl font-black text-[#E50914] tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
+          <Link to="/" className="text-xl font-black text-[#3B82F6] tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
             ZEPLAY STUDIO
           </Link>
           <span className="text-[9px] font-bold tracking-widest uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-full text-neutral-300">

@@ -18,7 +18,6 @@ const ForgotPassword: React.FC = () => {
     try {
       await api.post('/auth/forgot-password', { email });
       setSubmitted(true);
-      navigate('/reset-password', { state: { email } });
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
@@ -153,14 +152,13 @@ const ForgotPassword: React.FC = () => {
                   Check Your Email
                 </h2>
                 <p className="text-[11px] text-brand-textMuted leading-relaxed">
-                  If a matching account exists, a 6-digit OTP reset code has been sent to{' '}
-                  <span className="text-brand-accent font-semibold">{email}</span>.
+                  If the email exists, a password reset code will be sent.
                 </p>
               </div>
 
               <button
                 id="enter-reset-code"
-                onClick={() => navigate('/reset-password')}
+                onClick={() => navigate('/reset-password', { state: { email } })}
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm text-white bg-blue-600 hover:bg-blue-500 active:scale-[0.98] transition-all duration-300 btn-premium cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -190,17 +188,8 @@ const ForgotPassword: React.FC = () => {
 
       {/* Footer bar */}
       <footer className="px-8 py-6 text-center text-xs text-neutral-600 relative z-10 space-y-1">
-        <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-        <div>
-          <a
-            href="https://zeploy.tech"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
-          >
-            POWERED BY ZEPLOY TECH
-          </a>
-        </div>
+        <div>&copy; 2026 ZePlay. All Rights Reserved.</div>
+        <div className="text-[10px]">Powered by Zeploy Tech</div>
       </footer>
     </div>
   );
