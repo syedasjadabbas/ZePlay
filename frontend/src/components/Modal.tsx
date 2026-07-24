@@ -32,16 +32,16 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
       <div 
-        className="relative w-full max-w-md bg-[#0b1329]/95 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.9)] space-y-6 text-left transform transition-all duration-300 scale-100"
+        className="relative w-full max-w-md bg-[#0b1329]/95 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-left transform transition-all duration-300 scale-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center border ${
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
               isDanger 
-                ? 'bg-red-500/10 border-red-500/30 text-red-400' 
-                : 'bg-brand-accent/10 border-brand-accent/30 text-brand-accent'
+                ? 'text-red-400' 
+                : 'text-brand-accent'
             }`}>
               {isDanger ? (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isLoading}
-                className="px-5 py-2.5 rounded-xl border border-white/10 text-neutral-300 hover:text-white hover:bg-white/5 text-xs font-bold transition-all"
+                className="px-5 py-2.5 rounded-xl text-neutral-300 hover:text-white hover:bg-white/5 text-xs font-bold transition-all"
               >
                 {cancelText}
               </button>
@@ -91,10 +91,10 @@ export const Modal: React.FC<ModalProps> = ({
                 type="button"
                 onClick={onConfirm}
                 disabled={isLoading}
-                className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 ${
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white transition-all transform hover:scale-102 active:scale-98 flex items-center gap-2 ${
                   isDanger
-                    ? 'bg-red-600 hover:bg-red-500 shadow-red-600/30'
-                    : 'bg-brand-accent hover:bg-blue-600 shadow-brand-accent/30'
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : 'bg-brand-accent hover:bg-blue-600'
                 }`}
               >
                 {isLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}

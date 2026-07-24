@@ -73,13 +73,8 @@ const PremiumPoster: React.FC<PremiumPosterProps> = ({
 
   return (
     <div
-      className={`absolute inset-0 bg-gradient-to-br ${palette.from} ${palette.via} ${palette.to} flex flex-col justify-between overflow-hidden border border-white/5 shadow-2xl relative select-none ${className}`}
+      className={`absolute inset-0 bg-gradient-to-br ${palette.from} ${palette.via} ${palette.to} flex flex-col justify-end overflow-hidden shadow-2xl relative select-none ${className}`}
     >
-      {/* Cinematic Lighting Background Effects */}
-      <div className={`absolute top-[-20%] left-[-20%] w-[90%] h-[90%] rounded-full blur-[80px] pointer-events-none opacity-60 mix-blend-screen ${palette.circle}`} />
-      <div className="absolute top-[30%] right-[-10%] w-[70%] h-[70%] rounded-full blur-[100px] pointer-events-none opacity-40 mix-blend-screen bg-blue-500/5" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.03] via-transparent to-black/80 pointer-events-none" />
-
       {/* Film Grain Texture Overlay */}
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay"
@@ -87,21 +82,6 @@ const PremiumPoster: React.FC<PremiumPosterProps> = ({
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
         }}
       />
-
-      {/* Top Header Badge */}
-      <div className="flex items-center justify-between p-4 z-10 w-full">
-        <div className="flex items-center gap-1.5">
-          <span className={`text-[8px] font-black tracking-[0.25em] px-2 py-0.5 rounded border uppercase backdrop-blur-md ${palette.accent}`}>
-            ZEPLAY
-          </span>
-          <span className="text-[7px] font-bold text-white/30 tracking-widest uppercase">ORIGINAL</span>
-        </div>
-        <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md">
-          <svg className="w-2.5 h-2.5 text-white/65 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
-          </svg>
-        </div>
-      </div>
 
       {/* Movie Icon / Watermark Overlay */}
       <div className="absolute inset-0 flex items-center justify-center opacity-[0.02] pointer-events-none select-none">

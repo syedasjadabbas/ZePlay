@@ -104,11 +104,8 @@ const SearchResults: React.FC = () => {
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-8">
           {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
-                Search Results Catalog
-              </div>
               <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
                 {queryTerm ? `Results for "${queryTerm}"` : 'All Catalog Titles'}
               </h1>
@@ -123,7 +120,7 @@ const SearchResults: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="bg-black/40 text-white border border-white/10 text-xs rounded-xl px-3 py-2.5 font-medium focus:outline-none cursor-pointer input-premium"
+                className="bg-black/40 text-white text-xs rounded-xl px-3 py-2.5 font-medium focus:outline-none cursor-pointer"
               >
                 <option value="relevance">Relevance</option>
                 <option value="year_desc">Newest Release</option>
@@ -140,10 +137,10 @@ const SearchResults: React.FC = () => {
             <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
               <button
                 onClick={() => handleGenreSelect(null)}
-                className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                   !selectedGenre 
-                    ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                    : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                    ? 'bg-brand-accent text-white' 
+                    : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                 }`}
               >
                 All Genres
@@ -152,10 +149,10 @@ const SearchResults: React.FC = () => {
                 <button
                   key={g.genre_id}
                   onClick={() => handleGenreSelect(g.name)}
-                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                     selectedGenre.toLowerCase() === g.name.toLowerCase()
-                      ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                      : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                      ? 'bg-brand-accent text-white' 
+                      : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
                   {g.name}
@@ -172,7 +169,7 @@ const SearchResults: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface border border-white/5 rounded-2xl">
+            <div className="text-center py-12 bg-brand-surface rounded-2xl">
               <p className="text-rose-400 font-semibold mb-2">{error}</p>
               <button 
                 onClick={fetchSearchResults}
@@ -182,7 +179,7 @@ const SearchResults: React.FC = () => {
               </button>
             </div>
           ) : movies.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -194,7 +191,7 @@ const SearchResults: React.FC = () => {
                 onClick={() => {
                   setSearchParams({});
                 }}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all"
               >
                 Clear Search & View All Movies
               </button>
@@ -217,7 +214,7 @@ const SearchResults: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
+        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>
       </div>

@@ -137,9 +137,6 @@ const ResetPassword: React.FC = () => {
             boxShadow: '0 30px 80px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
           }}
         >
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-500/8 rounded-full blur-[40px] pointer-events-none" />
-
           <div className="space-y-2 mb-6 relative z-10">
             <h2 className="text-3xl font-extrabold tracking-tight text-white font-display">Reset Password</h2>
             <p className="text-xs text-brand-textMuted font-medium">
@@ -257,7 +254,7 @@ const ResetPassword: React.FC = () => {
               id="reset-submit"
               type="submit"
               disabled={loading || !!successMessage || otp.length < 6}
-              className="w-full py-3.5 text-white font-extrabold rounded-2xl text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.98] active:translate-y-0 shadow-[0_8px_24px_rgba(59,130,246,0.25),_inset_0_1px_0_rgba(255,255,255,0.1)] btn-premium cursor-pointer"
+              className="w-full py-3.5 text-white font-extrabold rounded-2xl text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 active:scale-[0.98] btn-premium cursor-pointer"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

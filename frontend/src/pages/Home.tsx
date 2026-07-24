@@ -179,7 +179,7 @@ const Home: React.FC = () => {
               )}
 
               {movies.length === 0 ? (
-                <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-2xl">
+                <div className="text-center py-20 bg-brand-surface rounded-2xl">
                   <p className="text-neutral-400 mb-2">No videos cataloged in this workspace.</p>
                   <div className="text-xs text-neutral-600">Register catalog elements using admin endpoint.</div>
                 </div>
@@ -189,11 +189,8 @@ const Home: React.FC = () => {
                   {continueWatchingItems.length > 0 && (
                     <div className="space-y-5">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
-                          <span>Continue Watching</span>
-                          <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30 font-sans">
-                            Active ({continueWatchingItems.length})
-                          </span>
+                        <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                          Continue Watching
                         </h3>
                         <span 
                           onClick={() => navigate('/history')}
@@ -208,7 +205,7 @@ const Home: React.FC = () => {
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(continueRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -240,7 +237,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(continueRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -253,16 +250,13 @@ const Home: React.FC = () => {
                   {/* 2. Recommended For You */}
                   {personalizedMovies.length > 0 && (
                     <div className="space-y-5">
-                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
-                        <span>Recommended For You</span>
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 font-sans">
-                          Personalized
-                        </span>
+                      <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                        Recommended For You
                       </h3>
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(recommendedRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -289,7 +283,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(recommendedRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -308,7 +302,7 @@ const Home: React.FC = () => {
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(becauseRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -335,7 +329,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(becauseRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -354,7 +348,7 @@ const Home: React.FC = () => {
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(trendingRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -381,7 +375,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(trendingRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -400,7 +394,7 @@ const Home: React.FC = () => {
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(recentlyAddedRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -427,7 +421,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(recentlyAddedRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -446,7 +440,7 @@ const Home: React.FC = () => {
                       <div className="relative group/row">
                         <button 
                           onClick={() => scroll(popularRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -473,7 +467,7 @@ const Home: React.FC = () => {
 
                         <button 
                           onClick={() => scroll(popularRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
                         >
                           <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -488,7 +482,7 @@ const Home: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-500 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm space-y-1">
+        <footer className="p-6 text-center text-xs text-neutral-500 bg-[#081225]/40 backdrop-blur-sm space-y-1">
           <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
           <div>
             <a 
