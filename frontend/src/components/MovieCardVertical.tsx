@@ -28,7 +28,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   return (
     <div 
       onClick={() => navigate(`/movies/${movie_id}`)}
-      className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/25 border border-white/5 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:scale-[1.03] hover:border-brand-accent/30 hover:shadow-[0_20px_40px_rgba(59,130,246,0.15),_0_0_15px_rgba(59,130,246,0.08)] transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.98] group flex flex-col justify-between"
+      className="flex-shrink-0 w-36 sm:w-44 bg-brand-cards/25 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-2 hover:scale-[1.03] transition-all duration-350 ease-[var(--ease-out-premium)] active:scale-[0.98] group flex flex-col justify-between"
     >
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
@@ -44,9 +44,8 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
         )}
 
         {/* Saved Watchlist Badge Indicator */}
-        {/* Saved Watchlist Badge Indicator */}
         {isInWatchlist && (
-          <div className="absolute top-2.5 left-2.5 bg-[#060b18]/70 backdrop-blur-md px-2 py-0.5 rounded border border-white/10 text-[8px] font-black text-brand-accent uppercase tracking-wider shadow-md z-10 flex items-center gap-1">
+          <div className="absolute top-2.5 left-2.5 text-[8px] font-black text-brand-accent uppercase tracking-wider z-10 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 rounded">
             <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
               <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
             </svg>
@@ -56,7 +55,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
 
         {/* Standard Rating Overlay */}
         {progressPercent === undefined && (
-          <div className="absolute top-2.5 right-2.5 bg-[#060b18]/75 backdrop-blur-md px-2 py-0.5 rounded border border-white/5 text-[9px] font-black text-amber-400 flex items-center gap-0.5 select-none shadow-md">
+          <div className="absolute top-2.5 right-2.5 bg-black/65 px-1.5 py-0.5 rounded text-[9px] font-black text-amber-400 flex items-center gap-0.5 select-none">
             ★ {ratingScore !== undefined && ratingScore > 0 ? ratingScore.toFixed(1) : '0.0'}
           </div>
         )}
@@ -66,7 +65,7 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
           <>
             {/* Centered Play Button on Hover */}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-              <div className="w-10 h-10 rounded-full bg-brand-accent text-white flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-all duration-350 ease-[var(--ease-out-premium)] shadow-blue-500/25">
+              <div className="w-10 h-10 rounded-full bg-brand-accent text-white flex items-center justify-center transform scale-90 group-hover:scale-100 transition-all duration-350 ease-[var(--ease-out-premium)]">
                 <svg className="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
@@ -74,9 +73,9 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
             </div>
 
             {/* Progress Indicator Bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-950/60 backdrop-blur-sm">
+            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-950/60">
               <div 
-                className="h-full bg-brand-accent rounded-r shadow-[0_0_8px_rgba(59,130,246,0.7)]"
+                className="h-full bg-brand-accent rounded-r"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>

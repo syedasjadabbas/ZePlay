@@ -111,9 +111,6 @@ const Browse: React.FC = () => {
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-10">
           {/* Header & Title */}
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
-              Catalog Exploration
-            </span>
             <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
               Browse Movies
             </h1>
@@ -123,7 +120,7 @@ const Browse: React.FC = () => {
           </div>
 
           {/* Discovery Controls Bar: Search, Genres, Year, Sort */}
-          <div className="bg-neutral-900/50 border border-white/8 backdrop-blur-md p-6 rounded-3xl space-y-6 shadow-xl">
+          <div className="bg-neutral-900/50 backdrop-blur-md p-6 rounded-3xl space-y-6">
             {/* Search Input */}
             <div className="relative">
               <input 
@@ -154,10 +151,10 @@ const Browse: React.FC = () => {
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                   onClick={() => setSelectedGenre(null)}
-                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                     !selectedGenre 
-                      ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                      : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                      ? 'bg-brand-accent text-white font-black' 
+                      : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
                   All Genres
@@ -166,10 +163,10 @@ const Browse: React.FC = () => {
                   <button
                     key={g.genre_id}
                     onClick={() => setSelectedGenre(g.name)}
-                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
                       selectedGenre === g.name 
-                        ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                        : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                        ? 'bg-brand-accent text-white font-black' 
+                        : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                     }`}
                   >
                     {g.name}
@@ -179,7 +176,7 @@ const Browse: React.FC = () => {
             </div>
 
             {/* Sub-Filters: Year & Sorting */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
               {/* Year Selector */}
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <span className="text-xs font-semibold text-neutral-400">Release Era:</span>
@@ -218,7 +215,7 @@ const Browse: React.FC = () => {
               <div className="text-sm font-medium text-neutral-400 animate-pulse">Loading catalog grid...</div>
             </div>
           ) : filteredMovies.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -263,7 +260,7 @@ const Browse: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
+        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>
       </div>

@@ -119,7 +119,7 @@ const WatchHistoryPage: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface border border-white/5 rounded-2xl">
+            <div className="text-center py-12 bg-brand-surface rounded-2xl">
               <p className="text-rose-400 font-semibold mb-2">{error}</p>
               <button 
                 onClick={fetchHistory}
@@ -129,7 +129,7 @@ const WatchHistoryPage: React.FC = () => {
               </button>
             </div>
           ) : history.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -139,7 +139,7 @@ const WatchHistoryPage: React.FC = () => {
               </p>
               <button 
                 onClick={() => navigate('/')}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all"
               >
                 Start Browsing
               </button>
@@ -154,7 +154,7 @@ const WatchHistoryPage: React.FC = () => {
                   <div 
                     key={item.history_id}
                     onClick={() => movie && navigate(`/movies/${movie.movie_id}`)}
-                    className="bg-brand-surface border border-white/5 rounded-2xl overflow-hidden hover:border-brand-accent/40 transition-all duration-300 hover:-translate-y-1 shadow-xl cursor-pointer group flex flex-col justify-between"
+                    className="bg-brand-surface rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer group flex flex-col justify-between"
                   >
                     <div>
                       {/* Thumbnail & Progress Bar */}
@@ -167,14 +167,14 @@ const WatchHistoryPage: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                         {/* Percent Badge */}
-                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-bold text-brand-accent">
+                        <div className="absolute top-3 right-3 bg-black/70 px-2 py-0.5 rounded text-[10px] font-bold text-brand-accent">
                           {percent >= 95 ? 'Watched' : `${percent}% Watched`}
                         </div>
 
                         {/* Progress Bar overlay */}
                         <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-800">
                           <div 
-                            className="h-full bg-brand-accent transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                            className="h-full bg-brand-accent transition-all duration-300"
                             style={{ width: `${percent}%` }}
                           />
                         </div>
@@ -198,7 +198,7 @@ const WatchHistoryPage: React.FC = () => {
                     </div>
 
                     {/* Card Footer Actions */}
-                    <div className="px-5 py-3 border-t border-white/5 bg-black/20 flex items-center justify-between text-xs">
+                    <div className="px-5 py-3 bg-black/20 flex items-center justify-between text-xs">
                       <span className="text-[10px] text-neutral-500 font-mono">
                         {formatTimestamp(item.last_watched)}
                       </span>
@@ -221,7 +221,7 @@ const WatchHistoryPage: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
+        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>
       </div>

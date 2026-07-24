@@ -43,7 +43,7 @@ const PlanBadge: React.FC<{ name: string; size?: 'sm' | 'lg' }> = ({ name, size 
 const FeatureRow: React.FC<{ label: string; free: React.ReactNode; premium: React.ReactNode }> = ({
   label, free, premium
 }) => (
-  <div className="grid grid-cols-3 items-center py-3.5 border-b border-white/5 last:border-0">
+  <div className="grid grid-cols-3 items-center py-3.5">
     <span className="text-xs text-brand-textMuted font-semibold">{label}</span>
     <div className="text-center">{free}</div>
     <div className="text-center">{premium}</div>
@@ -190,13 +190,7 @@ const Subscription: React.FC = () => {
           ) : (
             <>
               {/* Current Plan Card */}
-              <div className={`relative overflow-hidden bg-[#0B1533]/80 border backdrop-blur-md p-8 rounded-3xl shadow-2xl ${
-                isPremium ? 'border-amber-400/20 shadow-amber-500/5' : 'border-white/5'
-              }`}>
-                {isPremium && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-yellow-400/5 pointer-events-none" />
-                )}
-
+              <div className="relative overflow-hidden bg-[#0B1533]/80 p-8 rounded-3xl">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -213,19 +207,19 @@ const Subscription: React.FC = () => {
 
                     {/* Plan features grid */}
                     <div className="flex flex-wrap gap-3 pt-2">
-                      <div className="flex items-center gap-2 bg-white/5 border border-white/8 rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
                         <svg className="w-4 h-4 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         <span className="text-xs font-bold text-white">{subscription?.plan.max_profiles} Profile{subscription?.plan.max_profiles !== 1 ? 's' : ''}</span>
                       </div>
-                      <div className="flex items-center gap-2 bg-white/5 border border-white/8 rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
                         <svg className="w-4 h-4 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                         </svg>
                         <span className="text-xs font-bold text-white">{subscription?.plan.supports_4k ? '4K Ready' : 'Standard'}</span>
                       </div>
-                      <div className="flex items-center gap-2 bg-white/5 border border-white/8 rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
                         <svg className="w-4 h-4 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
@@ -241,7 +235,7 @@ const Subscription: React.FC = () => {
                         onClick={handleUpgrade}
                         disabled={actionLoading}
                         id="upgrade-btn"
-                        className="w-full py-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed text-black font-extrabold rounded-xl transition-all shadow-lg shadow-amber-500/20 text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                       >
                         {actionLoading ? (
                           <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -293,7 +287,7 @@ const Subscription: React.FC = () => {
               </div>
 
               {/* Plan Comparison Table */}
-              <div className="bg-[#0B1533]/80 border border-white/5 backdrop-blur-md p-8 rounded-3xl shadow-2xl">
+              <div className="bg-[#0B1533]/80 p-8 rounded-3xl">
                 <h2 className="text-base font-bold text-white mb-6 flex items-center gap-2">
                   <svg className="w-5 h-5 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -302,7 +296,7 @@ const Subscription: React.FC = () => {
                 </h2>
 
                 {/* Column headers */}
-                <div className="grid grid-cols-3 items-center pb-3 border-b border-white/10 mb-1">
+                <div className="grid grid-cols-3 items-center pb-3 mb-1">
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-neutral-500">Feature</span>
                   <div className="text-center">
                     <PlanBadge name="free" />
@@ -346,9 +340,8 @@ const Subscription: React.FC = () => {
 
               {/* Free upgrade CTA */}
               {!isPremium && isActive && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-[#0B1533]/80 to-yellow-400/5 border border-amber-400/20 backdrop-blur-md p-8 rounded-3xl shadow-2xl">
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/5 rounded-full blur-3xl pointer-events-none" />
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="relative overflow-hidden bg-[#0B1533]/80 p-8 rounded-3xl">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
@@ -363,7 +356,7 @@ const Subscription: React.FC = () => {
                     <button
                       onClick={handleUpgrade}
                       disabled={actionLoading}
-                      className="shrink-0 px-8 py-3.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed text-black font-extrabold rounded-2xl transition-all shadow-lg shadow-amber-500/25 text-sm uppercase tracking-wider"
+                      className="shrink-0 px-8 py-3.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-extrabold rounded-2xl transition-all text-sm uppercase tracking-wider"
                     >
                       Upgrade Now
                     </button>

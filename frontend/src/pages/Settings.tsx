@@ -137,12 +137,7 @@ const Settings: React.FC = () => {
           </div>
 
           {/* Your Plan Card */}
-          <div className={`relative overflow-hidden bg-[#0B1533]/80 border backdrop-blur-md p-6 rounded-3xl shadow-2xl ${
-            planName === 'premium' ? 'border-amber-400/20' : 'border-white/5'
-          }`}>
-            {planName === 'premium' && (
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-yellow-400/5 pointer-events-none rounded-3xl" />
-            )}
+          <div className="relative overflow-hidden bg-[#0B1533]/80 p-6 rounded-3xl">
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
@@ -162,7 +157,7 @@ const Settings: React.FC = () => {
                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-brand-textMuted">Your Plan</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-base font-extrabold text-white capitalize">{planName}</span>
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full border bg-white/5 border-white/10 text-brand-textMuted">
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-brand-textMuted">
                       {planMaxProfiles} Profile{planMaxProfiles !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -180,8 +175,8 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-[#0B1533]/80 border border-white/5 backdrop-blur-md p-8 rounded-3xl shadow-2xl space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/5">
+          <div className="bg-[#0B1533]/80 p-8 rounded-3xl space-y-6">
+            <div className="flex items-center gap-3 pb-4">
               <svg className="w-6 h-6 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>

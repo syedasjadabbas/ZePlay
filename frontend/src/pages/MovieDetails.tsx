@@ -412,11 +412,11 @@ const MovieDetails: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="text-center space-y-4 max-w-md mx-auto bg-brand-surface border border-white/5 p-8 rounded-2xl shadow-xl">
+            <div className="text-center space-y-4 max-w-md mx-auto bg-brand-surface p-8 rounded-2xl">
               <p className="text-red-500 font-semibold">{error}</p>
               <button 
                 onClick={() => navigate('/')}
-                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-xl transition-colors text-sm shadow-md"
+                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-xl transition-colors text-sm"
               >
                 Return Home
               </button>
@@ -424,12 +424,12 @@ const MovieDetails: React.FC = () => {
           ) : movie ? (
             <>
               {/* Main Video & Details Card */}
-              <div className="w-full bg-brand-surface/40 border border-white/5 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
+              <div className="w-full bg-brand-surface/40 rounded-3xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
                 
                 {/* Left Column: Interactive Video Player */}
                 <div 
                   ref={playerContainerRef}
-                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5"
+                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden"
                 >
                   <video
                     ref={videoRef}
@@ -482,17 +482,17 @@ const MovieDetails: React.FC = () => {
                           <div className="space-y-3">
                             <button 
                               onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] btn-premium cursor-pointer"
+                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] btn-premium cursor-pointer"
                             >
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
                               <span>Resume Watching ({formatTime(savedProgress.current_position)})</span>
                             </button>
-
+ 
                             <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
                               <div 
-                                className="bg-brand-accent h-full transition-all"
+                                className="bg-brand-accent h-full"
                                 style={{ width: `${savedProgress.percentage_watched}%` }}
                               />
                             </div>
@@ -507,7 +507,7 @@ const MovieDetails: React.FC = () => {
                         ) : (
                           <button 
                             onClick={() => handleStartPlay(false)}
-                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 shadow-[0_0_40px_rgba(59,130,246,0.35)] flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium"
+                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium"
                           >
                             <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
                               <path d="M8 5v14l11-7z" />
@@ -519,18 +519,14 @@ const MovieDetails: React.FC = () => {
                           <h4 className="font-extrabold text-xl font-display text-white tracking-wide">
                             Watch {movie.title}
                           </h4>
-                          <div className="flex items-center justify-center gap-2 mt-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/5 text-neutral-300 border border-white/10">
-                              4K HDR ULTRA HD
-                            </span>
-                          </div>
+                          <div className="flex items-center justify-center gap-2 mt-1" />
                         </div>
                       </div>
                     </>
                   )}
                   {isPlaying && (
                     <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded bg-brand-accent/20 text-brand-accent border border-brand-accent/30 backdrop-blur-md">
+                        <span className="text-[10px] font-black uppercase text-brand-accent">
                           {streamType} Mode
                         </span>
                         <button
@@ -538,13 +534,13 @@ const MovieDetails: React.FC = () => {
                             if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
                             setIsPlaying(false);
                           }}
-                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded border border-white/10 backdrop-blur-md transition-colors"
+                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded transition-colors"
                         >
                           Close Player
                         </button>
                         <button
                           onClick={toggleContainerFullscreen}
-                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded border border-white/10 backdrop-blur-md transition-colors flex items-center gap-1.5"
+                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded transition-colors flex items-center gap-1.5"
                           title="Toggle Fullscreen"
                         >
                           <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -642,9 +638,6 @@ const MovieDetails: React.FC = () => {
                 {/* Right Column: Metadata Detail Fields */}
                 <div className="w-full lg:w-2/5 p-8 md:p-12 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
-                    <div className="inline-flex px-2.5 py-0.5 bg-brand-accent/15 text-brand-accent text-[9px] font-black uppercase rounded-full tracking-widest">
-                      ZePlay Premium Stream
-                    </div>
                     <h2 className="text-3xl md:text-5xl font-black tracking-tighter font-display leading-tight text-white uppercase">
                       {movie.title}
                     </h2>
@@ -657,14 +650,14 @@ const MovieDetails: React.FC = () => {
                         ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating.toFixed(1) : '0.0'}
                         {ratingStats.total_ratings > 0 && <span className="text-[10px] font-semibold text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
                       </span>
-                      <span className="ml-auto border border-white/10 px-2 py-0.5 rounded-full text-[8px] text-neutral-400 font-bold">HLS / 4K</span>
+                      <span className="ml-auto text-[8px] text-neutral-500 font-bold">HLS / 4K</span>
                     </div>
                     <p className="text-xs md:text-sm text-brand-textMuted leading-relaxed pt-2 font-sans max-w-[65ch]">
                       {movie.description}
                     </p>
 
-                    {/* 1-5 Star User Rating Widget */}
-                    <div className="p-4 bg-brand-cards/25 border border-white/5 rounded-2xl space-y-2">
+                     {/* 1-5 Star User Rating Widget */}
+                     <div className="p-4 bg-brand-cards/25 rounded-2xl space-y-2">
                       <div className="flex justify-between items-center text-xs font-semibold">
                         <span className="text-neutral-300">Rate this Movie</span>
                         {ratingStats.average_rating > 0 && (
@@ -695,8 +688,8 @@ const MovieDetails: React.FC = () => {
                         disabled={watchlistSubmitting}
                         className={`w-full py-3.5 px-5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all btn-premium cursor-pointer ${
                           isInWatchlist
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-lg'
-                            : 'bg-brand-accent/10 hover:bg-brand-accent/20 text-white border-brand-accent/35 shadow-lg'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                            : 'bg-brand-accent/10 hover:bg-brand-accent/20 text-white border-brand-accent/35'
                         }`}
                       >
                         {isInWatchlist ? (
@@ -718,14 +711,14 @@ const MovieDetails: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-4 pt-6 border-t border-white/5">
+                  <div className="space-y-4 pt-6">
                     <div>
                       <span className="text-xs text-neutral-500 uppercase tracking-wider block mb-2 font-medium">Genres</span>
                       <div className="flex flex-wrap gap-2">
                         {movie.genres.map(g => (
                           <span 
                             key={g.genre_id}
-                            className="px-3 py-1 bg-brand-cards/30 text-xs rounded-xl text-neutral-300 border border-white/5"
+                            className="px-3 py-1 bg-brand-cards/30 text-xs rounded-xl text-neutral-300"
                           >
                             {g.name}
                           </span>
@@ -740,18 +733,15 @@ const MovieDetails: React.FC = () => {
               {similarMovies.length > 0 && (
                 <div className="space-y-5 pt-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-extrabold tracking-tight text-white font-display flex items-center gap-3">
-                      <span>Similar Movies</span>
-                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-brand-accent/20 text-brand-accent border border-brand-accent/30 font-sans">
-                        Related Content
-                      </span>
+                    <h3 className="text-2xl font-extrabold tracking-tight text-white font-display">
+                      Similar Movies
                     </h3>
                   </div>
 
                   <div className="relative group/row">
                     <button 
                       onClick={() => scrollSimilar('left')}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none shadow-xl cursor-pointer"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none cursor-pointer"
                     >
                       <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -777,7 +767,7 @@ const MovieDetails: React.FC = () => {
 
                     <button 
                       onClick={() => scrollSimilar('right')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none shadow-xl cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none cursor-pointer"
                     >
                       <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -790,7 +780,7 @@ const MovieDetails: React.FC = () => {
           ) : null}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
+        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>
       </div>

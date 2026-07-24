@@ -102,7 +102,7 @@ const MyList: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface border border-white/5 rounded-2xl">
+            <div className="text-center py-12 bg-brand-surface rounded-2xl">
               <p className="text-rose-400 font-semibold mb-2">{error}</p>
               <button 
                 onClick={fetchWatchlist}
@@ -112,7 +112,7 @@ const MyList: React.FC = () => {
               </button>
             </div>
           ) : watchlist.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface border border-white/5 rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
@@ -122,7 +122,7 @@ const MyList: React.FC = () => {
               </p>
               <button 
                 onClick={() => navigate('/browse')}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all"
               >
                 Explore Catalog
               </button>
@@ -137,7 +137,7 @@ const MyList: React.FC = () => {
                   <div 
                     key={item.watchlist_id}
                     onClick={() => navigate(`/movies/${movie.movie_id}`)}
-                    className="bg-brand-surface border border-white/5 rounded-2xl overflow-hidden hover:border-brand-accent/40 transition-all duration-300 hover:-translate-y-2 shadow-xl cursor-pointer group flex flex-col justify-between"
+                    className="bg-brand-surface rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-2 cursor-pointer group flex flex-col justify-between"
                   >
                     <div>
                       {/* Thumbnail */}
@@ -148,11 +148,6 @@ const MyList: React.FC = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-70" />
-
-                        {/* Saved Badge */}
-                        <div className="absolute top-2.5 right-2.5 bg-brand-accent/90 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-extrabold text-white shadow-md">
-                          ★ Saved
-                        </div>
                       </div>
 
                       {/* Details */}
@@ -168,7 +163,7 @@ const MyList: React.FC = () => {
                     </div>
 
                     {/* Card Footer Actions */}
-                    <div className="px-4 py-2.5 border-t border-white/5 bg-black/30 flex items-center justify-between text-xs">
+                    <div className="px-4 py-2.5 bg-black/30 flex items-center justify-between text-xs">
                       <button
                         onClick={(e) => handleRemoveFromList(movie.movie_id, e)}
                         className="w-full flex items-center justify-center gap-1.5 py-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors font-bold text-[11px]"
@@ -186,7 +181,7 @@ const MyList: React.FC = () => {
           )}
         </main>
 
-        <footer className="p-6 text-center text-xs text-neutral-600 border-t border-white/5 bg-[#081225]/40 backdrop-blur-sm">
+        <footer className="p-6 text-center text-xs text-neutral-600 bg-[#081225]/40 backdrop-blur-sm">
           &copy; {new Date().getFullYear()} ZePlay. All rights reserved.
         </footer>
       </div>
