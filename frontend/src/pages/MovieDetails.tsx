@@ -374,7 +374,7 @@ const MovieDetails: React.FC = () => {
           <div className="self-start">
             <button 
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-xs text-brand-textMuted hover:text-white border border-white/10 px-4 py-2 rounded-xl bg-white/5 backdrop-blur-md transition-all font-semibold"
+              className="flex items-center gap-2 text-xs text-brand-textMuted hover:text-white border border-white/10 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 backdrop-blur-md transition-all font-semibold btn-premium cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -437,12 +437,12 @@ const MovieDetails: React.FC = () => {
           ) : movie ? (
             <>
               {/* Main Video & Details Card */}
-              <div className="w-full bg-brand-surface border border-white/5 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(6,11,24,0.85)] flex flex-col lg:flex-row min-h-[450px]">
+              <div className="w-full bg-brand-surface/40 border border-white/5 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
                 
                 {/* Left Column: Interactive Video Player */}
                 <div 
                   ref={playerContainerRef}
-                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden"
+                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5"
                 >
                   <video
                     ref={videoRef}
@@ -479,17 +479,17 @@ const MovieDetails: React.FC = () => {
                   {!isPlaying && (
                     <>
                       <div 
-                        className="absolute inset-0 bg-cover bg-center opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700"
+                        className="absolute inset-0 bg-cover bg-center opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
                         style={{ backgroundImage: `url(${movie.thumbnail_url})` }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#060B18] via-[#060B18]/30 to-transparent" />
                       
                       <div className="z-10 text-center p-6 space-y-4 max-w-md">
                         {hasResumeOption ? (
                           <div className="space-y-3">
                             <button 
                               onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.5)] flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-105"
+                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl shadow-[0_0_30px_rgba(59,130,246,0.3)] flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] btn-premium cursor-pointer"
                             >
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
@@ -514,9 +514,9 @@ const MovieDetails: React.FC = () => {
                         ) : (
                           <button 
                             onClick={() => handleStartPlay(false)}
-                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 shadow-[0_0_40px_rgba(59,130,246,0.5)] flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 transition-all duration-300 group/btn"
+                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 shadow-[0_0_40px_rgba(59,130,246,0.35)] flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium"
                           >
-                            <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-110 transition-transform" viewBox="0 0 24 24">
+                            <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
                               <path d="M8 5v14l11-7z" />
                             </svg>
                           </button>
@@ -674,7 +674,7 @@ const MovieDetails: React.FC = () => {
                     </p>
 
                     {/* 1-5 Star User Rating Widget */}
-                    <div className="p-4 bg-brand-background/60 border border-white/5 rounded-2xl space-y-2">
+                    <div className="p-4 bg-brand-cards/25 border border-white/5 rounded-2xl space-y-2">
                       <div className="flex justify-between items-center text-xs font-semibold">
                         <span className="text-neutral-300">Rate this Movie</span>
                         {ratingStats.average_rating > 0 && (
@@ -703,10 +703,10 @@ const MovieDetails: React.FC = () => {
                       <button
                         onClick={handleToggleWatchlist}
                         disabled={watchlistSubmitting}
-                        className={`w-full py-3 px-5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 border transition-all ${
+                        className={`w-full py-3.5 px-5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all btn-premium cursor-pointer ${
                           isInWatchlist
-                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/30 shadow-md'
-                            : 'bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border-brand-accent/40 shadow-md'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20 shadow-lg'
+                            : 'bg-brand-accent/10 hover:bg-brand-accent/20 text-white border-brand-accent/35 shadow-lg'
                         }`}
                       >
                         {isInWatchlist ? (
@@ -735,7 +735,7 @@ const MovieDetails: React.FC = () => {
                         {movie.genres.map(g => (
                           <span 
                             key={g.genre_id}
-                            className="px-2.5 py-1 bg-brand-background text-xs rounded text-neutral-300 border border-white/5"
+                            className="px-3 py-1 bg-brand-cards/30 text-xs rounded-xl text-neutral-300 border border-white/5"
                           >
                             {g.name}
                           </span>
@@ -744,7 +744,7 @@ const MovieDetails: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-xs text-neutral-500 uppercase tracking-wider block mb-2 font-medium">HLS Transcode Stream Pointer</span>
-                      <span className="text-xs text-neutral-400 font-mono break-all bg-brand-background border border-white/5 p-2.5 rounded-lg block select-text">
+                      <span className="text-xs text-neutral-400 font-mono break-all bg-brand-cards/20 border border-white/5 p-3 rounded-xl block select-text">
                         {movie.video_url}
                       </span>
                     </div>
@@ -767,7 +767,7 @@ const MovieDetails: React.FC = () => {
                   <div className="relative group/row">
                     <button 
                       onClick={() => scrollSimilar('left')}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none shadow-xl cursor-pointer"
                     >
                       <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -793,7 +793,7 @@ const MovieDetails: React.FC = () => {
 
                     <button 
                       onClick={() => scrollSimilar('right')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300 shadow-xl"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center border border-white/10 text-white z-10 opacity-0 group-hover/row:opacity-100 transition-all duration-300 active:scale-90 select-none shadow-xl cursor-pointer"
                     >
                       <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

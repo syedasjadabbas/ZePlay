@@ -30,18 +30,21 @@ const ForgotPassword: React.FC = () => {
   };
 
   const inputStyle = {
-    background: 'rgba(16,28,64,0.8)',
-    border: '1px solid rgba(255,255,255,0.09)',
+    background: 'rgba(16, 28, 64, 0.4)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.border = '1px solid rgba(59,130,246,0.5)';
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), inset 0 1px 0 rgba(255,255,255,0.04)';
+    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.7)';
+    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.7), 0 0 12px rgba(59, 130, 246, 0.25)';
+    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.6)';
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)';
+    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
     e.currentTarget.style.boxShadow = 'none';
+    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.4)';
   };
 
   return (
@@ -140,21 +143,7 @@ const ForgotPassword: React.FC = () => {
                   id="forgot-submit"
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 text-white font-bold rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{
-                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                    boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                  }}
-                  onMouseEnter={e => {
-                    if (!loading) {
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 32px rgba(59,130,246,0.45), inset 0 1px 0 rgba(255,255,255,0.15)';
-                      (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)';
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                  }}
+                  className="w-full py-3.5 text-white font-extrabold rounded-2xl text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.98] active:translate-y-0 shadow-[0_8px_24px_rgba(59,130,246,0.25),_inset_0_1px_0_rgba(255,255,255,0.1)] btn-premium cursor-pointer"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -202,11 +191,7 @@ const ForgotPassword: React.FC = () => {
               <button
                 id="enter-reset-code"
                 onClick={() => navigate('/reset-password')}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all duration-200"
-                style={{
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
-                  boxShadow: '0 8px 24px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.12)',
-                }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 active:scale-[0.98] transition-all duration-300 shadow-[0_8px_24px_rgba(59,130,246,0.25),_inset_0_1px_0_rgba(255,255,255,0.1)] btn-premium cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -217,20 +202,7 @@ const ForgotPassword: React.FC = () => {
               <button
                 id="forgot-back-to-login"
                 onClick={() => navigate('/login')}
-                className="w-full py-3 rounded-xl font-bold text-sm transition-all duration-200"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#8895b3',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#fff';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#8895b3';
-                }}
+                className="w-full py-3.5 rounded-2xl font-extrabold text-sm transition-all duration-300 bg-white/5 hover:bg-white/10 text-neutral-350 hover:text-white border border-white/5 active:scale-[0.98] btn-premium cursor-pointer"
               >
                 Return to Login
               </button>
