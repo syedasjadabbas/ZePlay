@@ -121,7 +121,7 @@ const Browse: React.FC = () => {
           </div>
 
           {/* Discovery Controls Bar: Search, Genres, Year, Sort */}
-          <div className="bg-neutral-900/50 backdrop-blur-md p-6 rounded-3xl space-y-6">
+          <div className="bg-neutral-900/50 backdrop-blur-md p-6 rounded-xl space-y-6">
             {/* Search Input */}
             <div className="relative">
               <input 
@@ -129,7 +129,7 @@ const Browse: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search catalog titles, descriptions, or genres..."
-                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all input-premium"
+                className="w-full bg-black/40 border border-white/10 rounded-lg px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all"
               />
               <svg className="w-5 h-5 text-neutral-400 absolute left-4 top-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -152,7 +152,7 @@ const Browse: React.FC = () => {
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                   onClick={() => setSelectedGenre(null)}
-                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     !selectedGenre 
                       ? 'bg-brand-accent text-white font-black' 
                       : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
@@ -164,7 +164,7 @@ const Browse: React.FC = () => {
                   <button
                     key={g.genre_id}
                     onClick={() => setSelectedGenre(g.name)}
-                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                    className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                       selectedGenre === g.name 
                         ? 'bg-brand-accent text-white font-black' 
                         : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
@@ -184,7 +184,7 @@ const Browse: React.FC = () => {
                 <select 
                   value={selectedYearRange}
                   onChange={(e) => setSelectedYearRange(e.target.value)}
-                  className="bg-black/40 border border-white/10 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium input-premium cursor-pointer"
+                  className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium cursor-pointer"
                 >
                   <option value="all">All Release Years</option>
                   <option value="2020s">2020s & Newer</option>
@@ -199,7 +199,7 @@ const Browse: React.FC = () => {
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-black/40 border border-white/10 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium input-premium cursor-pointer"
+                  className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium cursor-pointer"
                 >
                   <option value="relevance">Default Catalog Order</option>
                   <option value="title">Title (A-Z)</option>
@@ -212,11 +212,16 @@ const Browse: React.FC = () => {
 
           {/* Full Catalog Grid */}
           {loading ? (
-            <div className="h-[40vh] flex items-center justify-center">
-              <div className="text-sm font-medium text-neutral-400 animate-pulse">Loading catalog grid...</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                <div key={i} className="space-y-3">
+                  <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
+                  <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
+                </div>
+              ))}
             </div>
           ) : filteredMovies.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -231,7 +236,7 @@ const Browse: React.FC = () => {
                   setSearchQuery('');
                   setSortBy('relevance');
                 }}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                className="px-6 py-2.5 bg-[#E50914] text-white text-xs font-bold rounded-lg transition-all"
               >
                 Reset All Filters
               </button>

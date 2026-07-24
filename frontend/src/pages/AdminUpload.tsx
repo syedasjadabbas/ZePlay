@@ -101,7 +101,7 @@ interface AuditLog {
 
 const AdminUpload: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('movies_manage');
 
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
@@ -527,32 +527,28 @@ const AdminUpload: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-brand-accent selection:text-white pb-20 relative overflow-hidden">
-      {/* Cinematic ambient background glow circles */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-brand-accent/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[20%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-500/5 blur-[100px] pointer-events-none" />
-
+    <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-[#E50914] selection:text-white pb-20 relative overflow-hidden">
       {/* Top Navbar */}
-      <header className="border-b border-white/5 bg-[#060b18]/65 backdrop-blur-xl sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <header className="border-b border-white/5 bg-black sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-xl font-black text-brand-accent tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
+          <Link to="/" className="text-xl font-black text-[#E50914] tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
             ZEPLAY STUDIO
           </Link>
-          <span className="text-[9px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/35 px-3 py-1 rounded-full text-brand-accent shadow-inner">
-            Media Hub Console
+          <span className="text-[9px] font-bold tracking-widest uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-full text-neutral-300">
+            Studio Ingestion Console
           </span>
         </div>
         <div className="flex items-center gap-4">
           <Link 
             to="/" 
-            className="px-4 py-2.5 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-md"
+            className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 border border-white/5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
           >
             <span>Exit Studio</span>
-            <svg className="w-3.5 h-3.5 text-neutral-450" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </Link>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-accent to-blue-750 flex items-center justify-center font-black text-xs text-white shadow-md shadow-blue-500/20 select-none">
+          <div className="w-9 h-9 rounded-lg bg-neutral-800 border border-white/5 flex items-center justify-center font-bold text-xs text-white select-none">
             A
           </div>
         </div>
@@ -588,11 +584,11 @@ const AdminUpload: React.FC = () => {
         {/* Dashboard Tabs bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 select-none">
           {[
-            { id: 'overview', label: 'Overview', icon: '📊', desc: 'System metrics' },
-            { id: 'content', label: 'Analytics', icon: '📈', desc: 'Ratings & Views' },
-            { id: 'users', label: 'Users', icon: '👥', desc: 'Access Control' },
-            { id: 'ingestion', label: 'Ingestion', icon: '📤', desc: 'Video assets' },
             { id: 'movies_manage', label: 'Catalog', icon: '🎬', desc: 'Movies directory' },
+            { id: 'ingestion', label: 'Ingestion', icon: '📤', desc: 'Video assets' },
+            { id: 'users', label: 'Users', icon: '👥', desc: 'Access Control' },
+            { id: 'overview', label: 'Overview', icon: '📊', desc: 'System metrics' },
+            { id: 'content', label: 'Analytics', icon: '📈', desc: 'Views & Engagement' },
             { id: 'health', label: 'Services', icon: '⚡', desc: 'DB & Redis health' },
             { id: 'audit', label: 'Security', icon: '🛡️', desc: 'Audit trails' },
           ].map((t) => (
@@ -603,9 +599,9 @@ const AdminUpload: React.FC = () => {
                 setError(null);
                 setSuccessMsg(null);
               }}
-              className={`flex flex-col items-start p-4 rounded-2xl border transition-all duration-300 text-left group cursor-pointer hover:-translate-y-0.5 active:scale-98 ${activeTab === t.id
-                  ? 'bg-brand-accent/15 border-brand-accent/50 text-white shadow-[0_10px_25px_rgba(59,130,246,0.12)] font-black'
-                  : 'bg-[#0b1225]/40 border-white/5 text-neutral-400 hover:border-white/12 hover:text-white'
+              className={`flex flex-col items-start p-4 rounded-lg border transition-all duration-300 text-left group cursor-pointer hover:border-white/10 active:scale-98 ${activeTab === t.id
+                  ? 'bg-white/10 border-white/20 text-white shadow-lg font-black'
+                  : 'bg-white/[0.02] border-white/5 text-neutral-400 hover:text-white'
                 }`}
             >
               <span className="text-xl mb-2 group-hover:scale-110 transition-transform duration-250">{t.icon}</span>

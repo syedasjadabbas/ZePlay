@@ -38,6 +38,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
   const [localProfileName, setLocalProfileName] = useState(() => localStorage.getItem('selectedProfileName') || profileName || 'User');
   const [localProfileAvatar, setLocalProfileAvatar] = useState(() => localStorage.getItem('selectedProfileAvatar') || 'grad-nebula');
@@ -117,6 +118,30 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
     return () => clearTimeout(timer);
   }, [query]);
 
+  useEffect(() => {
+    setActiveSuggestionIndex(-1);
+  }, [suggestions]);
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter') {
+      if (activeSuggestionIndex >= 0 && activeSuggestionIndex < suggestions.length) {
+        e.preventDefault();
+        handleSelectSuggestion(suggestions[activeSuggestionIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+      searchInputRef.current?.blur();
+    }
+  };
+
   const saveRecentSearch = (searchTerm: string) => {
     const trimmed = searchTerm.trim();
     if (!trimmed) return;
@@ -171,22 +196,24 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => { setIsFocused(true); setShowDropdown(true); }}
+            onKeyDown={handleInputKeyDown}
             placeholder="Search titles, genres, years..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.05] text-white rounded-xl text-sm focus:outline-none placeholder:text-neutral-600 caret-white transition-colors duration-200 focus:bg-white/[0.08]"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.05] text-white rounded-lg text-sm focus:outline-none placeholder:text-neutral-600 caret-white transition-colors duration-200 focus:bg-white/[0.08]"
           />
         </form>
 
-        {/* Dropdown */}
         {showDropdown && isFocused && (
-          <div className="absolute left-0 right-0 top-full mt-2 bg-[#0d1117] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden z-50 animate-scaleIn">
+          <div className="absolute left-0 right-0 top-full mt-2 bg-[#141414] rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden z-50 animate-scaleIn border border-white/5">
             {query.trim() && suggestions.length > 0 && (
               <div className="p-2">
-                <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-600 px-3 py-2">Results</div>
-                {suggestions.map((m) => (
+                <div className="text-[9px] font-semibold uppercase tracking-widest text-neutral-500 px-3 py-2">Results</div>
+                {suggestions.map((m, idx) => (
                   <div
                     key={m.movie_id}
                     onClick={() => handleSelectSuggestion(m)}
-                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors group ${
+                      idx === activeSuggestionIndex ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-neutral-300 hover:text-white'
+                    }`}
                   >
                     <img
                       src={m.thumbnail_url}

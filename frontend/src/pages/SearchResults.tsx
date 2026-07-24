@@ -121,7 +121,7 @@ const SearchResults: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => handleSortChange(e.target.value)}
-                className="bg-black/40 text-white text-xs rounded-xl px-3 py-2.5 font-medium focus:outline-none cursor-pointer"
+                className="bg-black/40 text-white text-xs rounded-lg px-3 py-2.5 font-medium focus:outline-none cursor-pointer"
               >
                 <option value="relevance">Relevance</option>
                 <option value="year_desc">Newest Release</option>
@@ -138,7 +138,7 @@ const SearchResults: React.FC = () => {
             <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
               <button
                 onClick={() => handleGenreSelect(null)}
-                className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                   !selectedGenre 
                     ? 'bg-brand-accent text-white' 
                     : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
@@ -150,7 +150,7 @@ const SearchResults: React.FC = () => {
                 <button
                   key={g.genre_id}
                   onClick={() => handleGenreSelect(g.name)}
-                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     selectedGenre.toLowerCase() === g.name.toLowerCase()
                       ? 'bg-brand-accent text-white' 
                       : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
@@ -164,23 +164,26 @@ const SearchResults: React.FC = () => {
 
           {/* Results Display */}
           {loading ? (
-            <div className="h-[40vh] flex items-center justify-center">
-              <div className="text-sm text-neutral-400 animate-pulse font-medium">
-                Searching catalog...
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                <div key={i} className="space-y-3">
+                  <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
+                  <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
+                </div>
+              ))}
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface rounded-2xl">
+            <div className="text-center py-12 bg-brand-surface rounded-xl">
               <p className="text-rose-400 font-semibold mb-2">{error}</p>
               <button 
                 onClick={fetchSearchResults}
-                className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl"
+                className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-lg"
               >
                 Retry Search
               </button>
             </div>
           ) : movies.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
+            <div className="text-center py-20 bg-brand-surface rounded-xl p-12 space-y-4">
               <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
