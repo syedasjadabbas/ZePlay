@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
-import Logo from '../components/Logo';
 
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -119,7 +118,10 @@ const ResetPassword: React.FC = () => {
       {/* Top Header bar */}
       <header className="px-8 py-6 md:px-16 flex items-center justify-between relative z-10 w-full">
         <Link to="/" className="hover:scale-[1.01] transition-transform select-none">
-          <Logo height={42} className="w-auto" />
+          <span className="text-3xl font-black tracking-wider font-display drop-shadow-md">
+            <span className="text-[#1E3A8A]">Ze</span>
+            <span className="text-[#3B82F6]">Play</span>
+          </span>
         </Link>
         <div className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/30 px-3 py-1 rounded-full text-brand-accent shadow-[0_0_15px_rgba(59,130,246,0.15)]">
           Stream Center
@@ -291,7 +293,11 @@ const ResetPassword: React.FC = () => {
       {/* Footer bar */}
       <footer className="px-8 py-6 text-center text-xs text-neutral-600 relative z-10 space-y-1">
         <div>&copy; 2026 ZePlay. All Rights Reserved.</div>
-        <div className="text-[10px]">Powered by Zeploy Tech</div>
+        <div className="text-[10px]">
+          <a href="https://zeploy.tech" target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Powered by Zeploy Tech
+          </a>
+        </div>
       </footer>
     </div>
   );
