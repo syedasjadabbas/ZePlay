@@ -1,8 +1,8 @@
 import os
 from typing import Optional, List
 from uuid import UUID
-from fastapi import APIRouter, Depends, File, UploadFile, Form, Header, HTTPException, status, BackgroundTasks
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import APIRouter, Depends, File, UploadFile, Form, Header, HTTPException, status, BackgroundTasks, Request
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -125,11 +125,13 @@ async def stream_video(
 @router.get("/{video_id}/hls/master.m3u8")
 async def get_hls_master_playlist(
     video_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.verify_user_entitlement)
 ):
     """
     Serves the HLS master/variant playlist file (.m3u8) for adaptive video playback.
+    Propagates query authentication token to sub-variant playlists.
     """
     video = await video_storage_service.get_video_by_id(db, video_id)
     
@@ -152,6 +154,20 @@ async def get_hls_master_playlist(
             detail="HLS master playlist not found."
         )
 
+    token = request.query_params.get("token")
+    if token:
+        with open(playlist_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        lines = []
+        for line in content.splitlines():
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and (".m3u8" in stripped or ".ts" in stripped):
+                delimiter = "&" if "?" in stripped else "?"
+                lines.append(f"{stripped}{delimiter}token={token}")
+            else:
+                lines.append(line)
+        return Response(content="\n".join(lines), media_type="application/x-mpegURL")
+
     return FileResponse(
         playlist_path,
         media_type="application/x-mpegURL",
@@ -162,11 +178,13 @@ async def get_hls_master_playlist(
 async def get_hls_file(
     video_id: UUID,
     file_path: str,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.verify_user_entitlement)
 ):
     """
     Serves HLS files (variant playlists, segment chunks) supporting multi-bitrate subdirectory layouts.
+    Propagates query authentication token to TS chunk segments.
     """
     video = await video_storage_service.get_video_by_id(db, video_id)
     
@@ -186,10 +204,23 @@ async def get_hls_file(
         )
 
     # Resolve media type dynamically
-    media_type = "application/x-mpegURL"
-    if file_path.endswith(".ts"):
-        media_type = "video/MP2T"
+    if file_path.endswith(".m3u8"):
+        token = request.query_params.get("token")
+        if token:
+            with open(target_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            lines = []
+            for line in content.splitlines():
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#") and (".ts" in stripped or ".m3u8" in stripped):
+                    delimiter = "&" if "?" in stripped else "?"
+                    lines.append(f"{stripped}{delimiter}token={token}")
+                else:
+                    lines.append(line)
+            return Response(content="\n".join(lines), media_type="application/x-mpegURL")
+        return FileResponse(target_path, media_type="application/x-mpegURL", filename=os.path.basename(file_path))
 
+    media_type = "video/MP2T" if file_path.endswith(".ts") else "application/octet-stream"
     return FileResponse(
         target_path,
         media_type=media_type,

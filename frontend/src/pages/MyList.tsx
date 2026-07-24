@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import { useModal } from '../components/ModalProvider';
 
 interface Genre {
   genre_id: string;
@@ -28,6 +29,7 @@ interface WatchlistItem {
 }
 
 const MyList: React.FC = () => {
+  const { showAlert } = useModal();
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [profileName, setProfileName] = useState('User');
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ const MyList: React.FC = () => {
       await api.delete(`/watchlist/${movieId}?profile_id=${activeProfileId}`);
       setWatchlist(prev => prev.filter(item => item.movie_id !== movieId));
     } catch (err) {
-      alert("Failed to remove item from My List.");
+      showAlert("Error", "Failed to remove item from My List.", "danger");
     }
   };
 

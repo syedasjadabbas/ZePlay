@@ -1,5 +1,6 @@
 import uuid
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+from fastapi import Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,22 +10,28 @@ from app.database import get_db
 from app.models.user import User
 
 reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl="/api/auth/login"
+    tokenUrl="/api/auth/login",
+    auto_error=False
 )
 
 async def get_current_user(
-    db: AsyncSession = Depends(get_db),
-    token: str = Depends(reusable_oauth2)
+    token: Optional[str] = Query(None),
+    header_token: Optional[str] = Depends(reusable_oauth2),
+    db: AsyncSession = Depends(get_db)
 ) -> User:
     """Dependency to retrieve and validate the current logged-in user."""
+    auth_token = header_token or token
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    if not auth_token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            auth_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
         )
         user_id_str: str = payload.get("sub")
         if user_id_str is None:

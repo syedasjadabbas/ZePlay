@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import { useModal } from '../components/ModalProvider';
 
 interface Movie {
   movie_id: string;
@@ -25,6 +26,7 @@ interface WatchHistoryItem {
 }
 
 const WatchHistoryPage: React.FC = () => {
+  const { showAlert } = useModal();
   const [history, setHistory] = useState<WatchHistoryItem[]>([]);
   const [profileName, setProfileName] = useState('User');
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ const WatchHistoryPage: React.FC = () => {
       await api.delete(`/watch-history/${historyId}`);
       setHistory(prev => prev.filter(item => item.history_id !== historyId));
     } catch (err) {
-      alert("Failed to remove item from history.");
+      showAlert("Error", "Failed to remove item from history.", "danger");
     }
   };
 

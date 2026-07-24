@@ -6,9 +6,6 @@ const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [emailConfigured, setEmailConfigured] = useState<boolean | null>(null);
-  const [resetToken, setResetToken] = useState<string | null>(null);
-  const [devNotice, setDevNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -20,6 +17,7 @@ const ForgotPassword: React.FC = () => {
 
     try {
       await api.post('/auth/forgot-password', { email });
+      setSubmitted(true);
       navigate('/reset-password', { state: { email } });
     } catch (err: any) {
       setError(

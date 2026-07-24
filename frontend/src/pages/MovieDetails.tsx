@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
-import api, { API_ORIGIN } from '../services/api';
+import api, { API_ORIGIN, getToken } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
 import StarRating from '../components/StarRating';
+import { useModal } from '../components/ModalProvider';
 
 interface Genre {
   genre_id: string;
@@ -30,6 +31,7 @@ interface SavedProgress {
 }
 
 const MovieDetails: React.FC = () => {
+  const { showAlert } = useModal();
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
@@ -79,7 +81,7 @@ const MovieDetails: React.FC = () => {
       }
     } catch (err) {
       console.error("Failed to toggle watchlist status.", err);
-      alert("Could not update My List.");
+      showAlert("Error", "Could not update My List.", "danger");
     } finally {
       setWatchlistSubmitting(false);
     }
@@ -252,7 +254,9 @@ const MovieDetails: React.FC = () => {
 
     const rawUrl = movie.video_url || '';
     const isHls = rawUrl.includes('/hls/') || rawUrl.endsWith('.m3u8');
-    const streamUrl = getFullPlaybackUrl(rawUrl);
+    const baseUrl = getFullPlaybackUrl(rawUrl);
+    const token = getToken();
+    const streamUrl = token ? (baseUrl.includes('?') ? `${baseUrl}&token=${token}` : `${baseUrl}?token=${token}`) : baseUrl;
 
     setStreamType(isHls ? 'HLS' : 'MP4');
 
@@ -268,9 +272,16 @@ const MovieDetails: React.FC = () => {
       hls = new Hls({
         debug: false,
         enableWorker: true,
+        xhrSetup: (xhr, _url) => {
+          if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          }
+        }
       });
       hls.loadSource(streamUrl);
-      hls.attachMedia(videoRef.current);
+      if (videoRef.current) {
+        hls.attachMedia(videoRef.current);
+      }
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (shouldResume && savedProgress && savedProgress.current_position > 0 && videoRef.current) {
           videoRef.current.currentTime = savedProgress.current_position;
@@ -288,14 +299,16 @@ const MovieDetails: React.FC = () => {
           detectedLevels.sort((a, b) => b.index - a.index);
           setLevels([{ index: -1, name: 'Auto' }, ...detectedLevels]);
           setHlsInstance(hls);
-          setSelectedLevel(hls.currentLevel); // Default should map to whatever is configured
+          setSelectedLevel(hls.currentLevel);
         }
       });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           console.warn('HLS.js fatal error, falling back to MP4 stream', data);
           if (videoRef.current) {
-            videoRef.current.src = streamUrl.replace('/hls/master.m3u8', '/stream');
+            const fallbackUrl = baseUrl.replace('/hls/master.m3u8', '/stream');
+            const fallbackAuthUrl = token ? (fallbackUrl.includes('?') ? `${fallbackUrl}&token=${token}` : `${fallbackUrl}?token=${token}`) : fallbackUrl;
+            videoRef.current.src = fallbackAuthUrl;
             if (shouldResume && savedProgress && savedProgress.current_position > 0) {
               videoRef.current.currentTime = savedProgress.current_position;
             }
@@ -309,7 +322,7 @@ const MovieDetails: React.FC = () => {
           }
         }
       });
-    } else {
+    } else if (videoRef.current) {
       videoRef.current.src = streamUrl;
       videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
       videoRef.current.play().catch(() => {});
@@ -427,8 +440,43 @@ const MovieDetails: React.FC = () => {
               <div className="w-full bg-brand-surface border border-white/5 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(6,11,24,0.85)] flex flex-col lg:flex-row min-h-[450px]">
                 
                 {/* Left Column: Interactive Video Player */}
-                <div className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden">
-                  {!isPlaying ? (
+                <div 
+                  ref={playerContainerRef}
+                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden"
+                >
+                  <video
+                    ref={videoRef}
+                    controls
+                    autoPlay
+                    className={`w-full h-full object-contain ${isPlaying ? 'block' : 'hidden'}`}
+                    onPause={() => {
+                      if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                    }}
+                    onWaiting={() => setIsBuffering(true)}
+                    onPlaying={() => {
+                      setIsBuffering(false);
+                      setIsPlayerLoading(false);
+                      setPlayerError(null);
+                    }}
+                    onLoadStart={() => {
+                      setIsPlayerLoading(true);
+                      setPlayerError(null);
+                    }}
+                    onCanPlay={() => setIsPlayerLoading(false)}
+                    onSeeking={() => setIsBuffering(true)}
+                    onSeeked={() => setIsBuffering(false)}
+                    onError={() => {
+                      if (videoRef.current && videoRef.current.error) {
+                        setPlayerError(`Playback error code: ${videoRef.current.error.code} - ${videoRef.current.error.message}`);
+                      } else {
+                        setPlayerError("An unexpected error occurred during media playback.");
+                      }
+                      setIsPlayerLoading(false);
+                      setIsBuffering(false);
+                    }}
+                  />
+
+                  {!isPlaying && (
                     <>
                       <div 
                         className="absolute inset-0 bg-cover bg-center opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700"
@@ -489,43 +537,9 @@ const MovieDetails: React.FC = () => {
                         </div>
                       </div>
                     </>
-                  ) : (
-                    <div 
-                      ref={playerContainerRef}
-                      className="relative w-full h-full bg-black flex items-center justify-center"
-                    >
-                      <video
-                        ref={videoRef}
-                        controls
-                        autoPlay
-                        className="w-full h-full object-contain"
-                        onPause={() => {
-                          if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
-                        }}
-                        onWaiting={() => setIsBuffering(true)}
-                        onPlaying={() => {
-                          setIsBuffering(false);
-                          setIsPlayerLoading(false);
-                          setPlayerError(null);
-                        }}
-                        onLoadStart={() => {
-                          setIsPlayerLoading(true);
-                          setPlayerError(null);
-                        }}
-                        onCanPlay={() => setIsPlayerLoading(false)}
-                        onSeeking={() => setIsBuffering(true)}
-                        onSeeked={() => setIsBuffering(false)}
-                        onError={() => {
-                          if (videoRef.current && videoRef.current.error) {
-                            setPlayerError(`Playback error code: ${videoRef.current.error.code} - ${videoRef.current.error.message}`);
-                          } else {
-                            setPlayerError("An unexpected video playback error occurred.");
-                          }
-                          setIsBuffering(false);
-                          setIsPlayerLoading(false);
-                        }}
-                      />
-                      <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                  )}
+                  {isPlaying && (
+                    <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                         <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded bg-brand-accent/20 text-brand-accent border border-brand-accent/30 backdrop-blur-md">
                           {streamType} Mode
                         </span>
@@ -549,6 +563,7 @@ const MovieDetails: React.FC = () => {
                           <span>Fullscreen</span>
                         </button>
                       </div>
+                  )}
 
                       {streamType === 'HLS' && levels.length > 1 && (
                         <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/50 hover:bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg transition-all duration-300">
@@ -632,8 +647,6 @@ const MovieDetails: React.FC = () => {
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
                 </div>
 
                 {/* Right Column: Metadata Detail Fields */}
