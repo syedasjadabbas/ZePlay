@@ -778,70 +778,54 @@ const Profiles: React.FC = () => {
         </div>
       )}
 
-      {/* PIN Prompt Modal Redesigned completely to resemble high-end Apple TV+ locking overlay */}
+      {/* PIN Prompt — Netflix-style clean profile lock */}
       {showPinPrompt && profileToUnlock && (
-        <div className="fixed inset-0 bg-[#040814]/97 flex flex-col items-center justify-center z-[70] backdrop-blur-3xl animate-fadeIn">
-          {/* Subtle colored spotlight gradients */}
-          <div className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-brand-accent/10 blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
-
-          {/* Central alignment content */}
-          <div className="w-full max-w-sm px-6 text-center space-y-10 relative z-10">
-            <div className="space-y-6">
-              {/* Profile Initials inside avatar gradient */}
-              <div className="relative w-24 h-24 mx-auto select-none transform animate-scaleIn">
-                <div className="absolute inset-[-4px] rounded-[32px] bg-gradient-to-tr from-brand-accent to-purple-500 opacity-60 blur-md" />
-                <div className={`relative w-full h-full rounded-[28px] bg-gradient-to-br ${getAvatarClasses(profileToUnlock.avatar_url)} border border-white/15 flex items-center justify-center text-4xl font-extrabold text-white font-display shadow-2xl`}>
-                  {profileToUnlock.display_name.substring(0, 1)}
-                </div>
+        <div className="fixed inset-0 bg-[#080c12] flex flex-col items-center justify-center z-[70] animate-fadeIn">
+          <div className="w-full max-w-xs px-6 text-center space-y-10">
+            {/* Profile avatar */}
+            <div className="space-y-4">
+              <div className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${getAvatarClasses(profileToUnlock.avatar_url)} flex items-center justify-center text-3xl font-bold text-white select-none`}>
+                {profileToUnlock.display_name.substring(0, 1)}
               </div>
-              
-              <div className="space-y-2">
-                <span className="text-[9px] font-black text-brand-accent tracking-[0.25em] uppercase bg-brand-accent/10 border border-brand-accent/20 px-3.5 py-1 rounded-full inline-block">
-                  Profile PIN Required
-                </span>
-                <h2 className="text-xl md:text-2xl font-black text-white font-display uppercase tracking-tight">
-                  Enter PIN to unlock {profileToUnlock.display_name}
-                </h2>
+              <div>
+                <h2 className="text-lg font-semibold text-white">{profileToUnlock.display_name}</h2>
+                <p className="text-sm text-neutral-500 mt-1">Enter your PIN to continue</p>
               </div>
             </div>
 
-            <div className="flex flex-col items-center space-y-8">
-              {/* Custom Input Bubbles */}
-              <div className={`flex gap-5 justify-center items-center py-4 px-8 rounded-2xl bg-black/40 border border-white/5 ${pinError ? 'animate-shake' : ''}`}>
+            {/* PIN dots */}
+            <div className="flex flex-col items-center gap-6">
+              <div className={`flex gap-4 ${pinError ? 'animate-shake' : ''}`}>
                 {pinDigits.map((digit, index) => (
-                  <div key={index} className="relative w-6 h-6 flex items-center justify-center">
-                    <div
-                      className={`rounded-full transition-all duration-300 ${
-                        digit !== ''
-                          ? 'w-5 h-5 bg-gradient-to-tr from-brand-accent to-purple-500 scale-110 shadow-[0_0_15px_rgba(59,130,246,0.9)]'
-                          : 'w-2.5 h-2.5 bg-neutral-700 scale-100'
-                      }`}
-                    />
-                  </div>
+                  <div
+                    key={index}
+                    className={`rounded-full transition-all duration-200 ${
+                      digit !== ''
+                        ? 'w-4 h-4 bg-white'
+                        : 'w-4 h-4 border-2 border-neutral-600'
+                    }`}
+                  />
                 ))}
               </div>
 
               {pinError && (
-                <div className="text-rose-400 font-extrabold text-[11px] tracking-wider uppercase bg-rose-500/10 px-4 py-1.5 border border-rose-500/20 rounded-xl">
-                  {pinError}
-                </div>
+                <p className="text-sm text-red-400">{pinError}</p>
               )}
 
-              {/* Minimalist circular key interface */}
-              <div className="grid grid-cols-3 gap-x-5 gap-y-4 max-w-[260px] pt-4">
+              {/* Numpad */}
+              <div className="grid grid-cols-3 gap-3 w-full max-w-[240px]">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => handleKeypadPress(num)}
-                    className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-xl font-extrabold flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none font-display shadow-md"
+                    className="h-14 rounded-2xl bg-white/[0.06] hover:bg-white/10 text-white text-xl font-semibold active:scale-95 transition-all duration-100 cursor-pointer select-none"
                   >
                     {num}
                   </button>
                 ))}
-                
-                {/* Back / Cancel */}
+
+                {/* Cancel */}
                 <button
                   type="button"
                   onClick={() => {
@@ -850,28 +834,28 @@ const Profiles: React.FC = () => {
                     setPinDigits(['', '', '', '']);
                     setPinError(null);
                   }}
-                  className="w-14 h-14 text-neutral-500 hover:text-white font-extrabold text-[10px] uppercase tracking-wider flex items-center justify-center transition-all duration-150 cursor-pointer select-none active:scale-95"
+                  className="h-14 text-neutral-500 hover:text-white text-sm font-medium transition-colors cursor-pointer select-none"
                 >
                   Cancel
                 </button>
-                
+
+                {/* 0 */}
                 <button
                   type="button"
                   onClick={() => handleKeypadPress('0')}
-                  className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 text-xl font-extrabold flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none font-display shadow-md"
+                  className="h-14 rounded-2xl bg-white/[0.06] hover:bg-white/10 text-white text-xl font-semibold active:scale-95 transition-all duration-100 cursor-pointer select-none"
                 >
                   0
                 </button>
-                
-                {/* Backspace delete */}
+
+                {/* Backspace */}
                 <button
                   type="button"
                   onClick={handleBackspace}
-                  className="w-14 h-14 rounded-full bg-white/[0.02] border border-white/5 hover:border-brand-accent/30 text-white hover:bg-brand-accent/15 flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 cursor-pointer select-none shadow-md"
-                  title="Backspace"
+                  className="h-14 rounded-2xl bg-white/[0.06] hover:bg-white/10 flex items-center justify-center active:scale-95 transition-all duration-100 cursor-pointer select-none"
                 >
-                  <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 7-7M5 12h14" />
+                  <svg className="w-5 h-5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
                   </svg>
                 </button>
               </div>
