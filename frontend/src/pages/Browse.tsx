@@ -137,7 +137,7 @@ const Browse: React.FC = () => {
           </div>
 
           {/* Discovery Controls Bar: Search, Genres, Year, Sort */}
-          <div className="bg-brand-surface border border-white/5 p-6 rounded-3xl space-y-6 shadow-xl">
+          <div className="bg-neutral-900/50 border border-white/8 backdrop-blur-md p-6 rounded-3xl space-y-6 shadow-xl">
             {/* Search Input */}
             <div className="relative">
               <input 
@@ -145,7 +145,7 @@ const Browse: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search catalog titles, descriptions, or genres..."
-                className="w-full bg-[#081225] border border-white/10 rounded-2xl px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all"
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all input-premium"
               />
               <svg className="w-5 h-5 text-neutral-400 absolute left-4 top-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -153,7 +153,7 @@ const Browse: React.FC = () => {
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-3.5 text-xs text-neutral-400 hover:text-white bg-white/10 px-2 py-1 rounded-lg"
+                  className="absolute right-4 top-3.5 text-xs text-neutral-400 hover:text-white bg-white/10 px-2 py-1 rounded-lg transition-all active:scale-95"
                 >
                   Clear
                 </button>
@@ -162,16 +162,16 @@ const Browse: React.FC = () => {
 
             {/* Genre Pills */}
             <div className="space-y-2">
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
+              <span className="text-[11px] font-black text-neutral-450 uppercase tracking-widest block">
                 Filter by Genre
               </span>
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                   onClick={() => setSelectedGenre(null)}
-                  className={`px-5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                  className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                     !selectedGenre 
                       ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                      : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
+                      : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
                   All Genres
@@ -180,10 +180,10 @@ const Browse: React.FC = () => {
                   <button
                     key={g.genre_id}
                     onClick={() => setSelectedGenre(g.name)}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                    className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
                       selectedGenre === g.name 
                         ? 'bg-brand-accent border-brand-accent text-white shadow-lg shadow-blue-500/10' 
-                        : 'bg-[#101C40] border-white/5 text-brand-textMuted hover:bg-[#182350] hover:text-white'
+                        : 'bg-black/30 border-white/5 text-brand-textMuted hover:bg-black/50 hover:text-white'
                     }`}
                   >
                     {g.name}
@@ -193,14 +193,14 @@ const Browse: React.FC = () => {
             </div>
 
             {/* Sub-Filters: Year & Sorting */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/5">
               {/* Year Selector */}
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <span className="text-xs font-semibold text-neutral-400">Release Era:</span>
                 <select 
                   value={selectedYearRange}
                   onChange={(e) => setSelectedYearRange(e.target.value)}
-                  className="bg-[#081225] border border-white/10 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-brand-accent font-medium"
+                  className="bg-black/40 border border-white/10 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium input-premium cursor-pointer"
                 >
                   <option value="all">All Release Years</option>
                   <option value="2020s">2020s & Newer</option>
@@ -210,12 +210,12 @@ const Browse: React.FC = () => {
               </div>
 
               {/* Sort Selector */}
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                 <span className="text-xs font-semibold text-neutral-400">Sort By:</span>
                 <select 
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-[#081225] border border-white/10 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-brand-accent font-medium"
+                  className="bg-black/40 border border-white/10 text-xs text-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium input-premium cursor-pointer"
                 >
                   <option value="relevance">Default Catalog Order</option>
                   <option value="title">Title (A-Z)</option>

@@ -23,7 +23,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
   return (
     <div 
       onClick={() => navigate(`/movies/${movie_id}`)}
-      className="group flex-shrink-0 w-44 md:w-56 bg-brand-cards/25 border border-white/5 hover:border-brand-accent/30 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-1.5 transition-all duration-350 ease-[var(--ease-out-premium)] shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:shadow-[0_15px_35px_rgba(59,130,246,0.15),_0_0_12px_rgba(59,130,246,0.08)] active:scale-[0.98] flex flex-col"
+      className="group flex-shrink-0 w-44 md:w-56 bg-brand-cards/25 border border-white/5 hover:border-brand-accent/30 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-1.5 hover:scale-[1.03] transition-all duration-350 ease-[var(--ease-out-premium)] shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:shadow-[0_15px_35px_rgba(59,130,246,0.15),_0_0_12px_rgba(59,130,246,0.08)] active:scale-[0.98] flex flex-col"
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-900">
         <img 

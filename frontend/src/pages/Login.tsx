@@ -64,94 +64,50 @@ const Login: React.FC = () => {
   };
 
   const inputStyle = {
-    background: 'rgba(16, 28, 64, 0.4)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'rgba(20, 20, 20, 0.65)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
     transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.7)';
-    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.7), 0 0 12px rgba(59, 130, 246, 0.25)';
-    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.6)';
+    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.8)';
+    e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.8), 0 0 16px rgba(59, 130, 246, 0.35)';
+    e.currentTarget.style.background = 'rgba(10, 10, 10, 0.85)';
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
     e.currentTarget.style.boxShadow = 'none';
-    e.currentTarget.style.background = 'rgba(16, 28, 64, 0.4)';
+    e.currentTarget.style.background = 'rgba(20, 20, 20, 0.65)';
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-brand-background text-white font-sans overflow-hidden relative select-none">
-
-      {/* Left Column: Cinematic Backdrop */}
-      <div
-        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-16 bg-cover bg-center"
-        style={{
-          backgroundImage: `linear-gradient(to right, rgba(6, 11, 24, 0.35) 0%, rgba(6, 11, 24, 0.97) 100%), url(https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=80)`
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-background/60 pointer-events-none" />
-
-        <div className="flex items-center gap-3 relative z-10">
-          <span className="text-2xl font-black text-brand-accent tracking-wider font-display drop-shadow-lg">
-            ZePlay
-          </span>
+    <div 
+      className="min-h-screen w-full flex flex-col justify-between bg-cover bg-center text-white font-sans relative select-none"
+      style={{
+        backgroundImage: `linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.85) 100%), url(/auth_collage_bg.png)`
+      }}
+    >
+      {/* Top Header bar */}
+      <header className="px-8 py-6 md:px-16 flex items-center justify-between relative z-10 w-full">
+        <Link to="/" className="text-3xl font-black text-brand-accent tracking-wider font-display drop-shadow-md">
+          ZePlay
+        </Link>
+        <div className="text-[10px] font-black tracking-widest uppercase bg-brand-accent/15 border border-brand-accent/30 px-3 py-1 rounded-full text-brand-accent shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+          Stream Center
         </div>
+      </header>
 
-        <div className="max-w-md space-y-5 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter font-display leading-tight">
-            Your next favorite story{' '}
-            <span
-              className="text-transparent bg-clip-text"
-              style={{ backgroundImage: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 50%, #93C5FD 100%)' }}
-            >
-              starts here.
-            </span>
-          </h2>
-          <p className="text-sm text-brand-textMuted leading-relaxed">
-            Experience premium streaming with personalized recommendations and seamless playback.
-          </p>
-
-          <div className="flex items-center gap-4 pt-2">
-            {['4K Ultra HD', 'Any Device', 'Cancel Anytime'].map(badge => (
-              <div key={badge} className="flex items-center gap-1.5 text-[11px] text-neutral-400 font-medium">
-                <svg className="w-3 h-3 text-brand-accent" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                {badge}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="text-xs text-neutral-500 font-medium relative z-10 space-y-1">
-          <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
-          <div>
-            <a
-              href="https://zeploy.tech"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-accent hover:underline font-bold tracking-wider"
-            >
-              POWERED BY ZEPLOY TECH
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Column: Authentication Card */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-600/6 rounded-full blur-[100px] pointer-events-none" />
-
+      {/* Centered Authentication Card */}
+      <div className="flex-grow flex items-center justify-center p-6 relative z-10">
         <div
-          className="w-full max-w-md relative z-10 rounded-2xl p-8 md:p-10 shadow-2xl overflow-hidden"
+          className="w-full max-w-[430px] relative z-10 rounded-3xl p-10 md:p-12 shadow-2xl overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgba(11,21,53,0.90) 0%, rgba(7,14,38,0.95) 100%)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+            background: 'rgba(0, 0, 0, 0.78)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(30px)',
+            WebkitBackdropFilter: 'blur(30px)',
+            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
           }}
         >
           {/* Top highlight line */}
@@ -181,7 +137,7 @@ const Login: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
+          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
             <div>
               <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-1.5 font-bold">
                 Email Address
@@ -216,7 +172,7 @@ const Login: React.FC = () => {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
               />
-              {/* Forgot Password — directly under password field */}
+              {/* Forgot Password */}
               <div className="flex justify-end mt-2">
                 <Link
                   to="/forgot-password"
@@ -246,7 +202,7 @@ const Login: React.FC = () => {
                   style={{
                     background: rememberMe
                       ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)'
-                      : 'rgba(16,28,64,0.8)',
+                      : 'rgba(20,20,20,0.8)',
                     border: rememberMe
                       ? '1px solid rgba(59,130,246,0.6)'
                       : '1px solid rgba(255,255,255,0.15)',
@@ -297,6 +253,20 @@ const Login: React.FC = () => {
         </div>
       </div>
 
+      {/* Footer bar */}
+      <footer className="px-8 py-6 text-center text-xs text-neutral-600 relative z-10 space-y-1">
+        <div>&copy; {new Date().getFullYear()} ZePlay. All rights reserved.</div>
+        <div>
+          <a
+            href="https://zeploy.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand-accent hover:underline font-bold tracking-wider text-[10px]"
+          >
+            POWERED BY ZEPLOY TECH
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

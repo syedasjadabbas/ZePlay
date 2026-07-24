@@ -652,24 +652,24 @@ const MovieDetails: React.FC = () => {
                 {/* Right Column: Metadata Detail Fields */}
                 <div className="w-full lg:w-2/5 p-8 md:p-12 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
-                    <div className="inline-flex px-2.5 py-0.5 bg-brand-accent/15 text-brand-accent text-[9px] font-bold uppercase rounded-md tracking-wider">
+                    <div className="inline-flex px-2.5 py-0.5 bg-brand-accent/15 text-brand-accent text-[9px] font-black uppercase rounded-full tracking-widest">
                       ZePlay Premium Stream
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight font-display text-white uppercase">
+                    <h2 className="text-3xl md:text-5xl font-black tracking-tighter font-display leading-tight text-white uppercase">
                       {movie.title}
                     </h2>
-                    <div className="flex items-center text-xs text-brand-textMuted gap-3">
-                      <span className="text-brand-accent font-semibold">{movie.release_year}</span>
+                    <div className="flex items-center text-xs text-brand-textMuted gap-3 font-semibold">
+                      <span className="text-brand-accent font-black">{movie.release_year}</span>
                       <span className="text-neutral-600">•</span>
                       <span>{movie.duration_minutes} minutes</span>
                       <span className="text-neutral-600">•</span>
-                      <span className="text-brand-accent font-semibold">
+                      <span className="text-brand-accent font-black">
                         ★ {ratingStats.average_rating > 0 ? ratingStats.average_rating.toFixed(1) : '0.0'}
-                        {ratingStats.total_ratings > 0 && <span className="text-[10px] font-normal text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
+                        {ratingStats.total_ratings > 0 && <span className="text-[10px] font-semibold text-neutral-400 ml-1">({ratingStats.total_ratings})</span>}
                       </span>
-                      <span className="ml-auto border border-white/5 px-1.5 py-0.5 rounded text-[8px] text-neutral-400">HLS / 4K</span>
+                      <span className="ml-auto border border-white/10 px-2 py-0.5 rounded-full text-[8px] text-neutral-400 font-bold">HLS / 4K</span>
                     </div>
-                    <p className="text-sm text-brand-textMuted leading-relaxed pt-2 font-sans">
+                    <p className="text-xs md:text-sm text-brand-textMuted leading-relaxed pt-2 font-sans max-w-[65ch]">
                       {movie.description}
                     </p>
 
