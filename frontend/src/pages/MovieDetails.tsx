@@ -368,7 +368,7 @@ const MovieDetails: React.FC = () => {
                 <div className="flex gap-6 overflow-hidden">
                   {[1, 2, 3, 4, 5].map((idx) => (
                     <div key={idx} className="flex-shrink-0 w-[180px] space-y-3">
-                      <div className="aspect-[2/3] w-full bg-white/5 rounded-2xl" />
+                      <div className="aspect-[2/3] w-full bg-white/5 rounded-md" />
                       <div className="h-4 w-3/4 bg-white/10 rounded" />
                       <div className="h-3 w-1/2 bg-white/5 rounded" />
                     </div>
@@ -377,11 +377,11 @@ const MovieDetails: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="text-center space-y-4 max-w-md mx-auto bg-brand-surface p-8 rounded-2xl">
+            <div className="text-center space-y-4 max-w-md mx-auto bg-brand-surface p-8 rounded-xl">
               <p className="text-red-500 font-semibold">{error}</p>
               <button 
                 onClick={() => navigate('/')}
-                className="px-5 py-2.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-xl transition-colors text-sm"
+                className="px-5 py-2.5 bg-brand-accent hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
               >
                 Return Home
               </button>
@@ -389,7 +389,7 @@ const MovieDetails: React.FC = () => {
           ) : movie ? (
             <>
               {/* Main Video & Details Card */}
-              <div className="w-full bg-brand-surface/40 rounded-3xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
+              <div className="w-full bg-[#181818] border border-white/5 rounded-xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
                 
                 {/* Left Column: Interactive Video Player */}
                 <div 
@@ -440,14 +440,14 @@ const MovieDetails: React.FC = () => {
                           onError={() => setImageError(true)}
                         />
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#060B18] via-[#060B18]/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/30 to-transparent" />
                       
                       <div className="z-10 text-center p-6 space-y-4 max-w-md">
                         {hasResumeOption ? (
                           <div className="space-y-3">
                             <button 
                               onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] btn-premium cursor-pointer"
+                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                             >
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
@@ -536,7 +536,7 @@ const MovieDetails: React.FC = () => {
                             className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-2 focus:ring-0"
                           >
                             {levels.map((lvl) => (
-                              <option key={lvl.index} value={lvl.index} className="bg-[#0b1225] text-white font-sans uppercase">
+                              <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
                                 {lvl.name === 'Auto' ? 'Auto (ABR)' : lvl.name}
                               </option>
                             ))}
@@ -562,7 +562,7 @@ const MovieDetails: React.FC = () => {
 
                       {/* Friendly Error State Card */}
                       {playerError && (
-                        <div className="absolute inset-0 bg-[#080d19]/95 flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300">
+                        <div className="absolute inset-0 bg-[#141414]/95 flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300">
                           <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
                             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -582,7 +582,7 @@ const MovieDetails: React.FC = () => {
                                   videoRef.current.play().catch(() => {});
                                 }
                               }}
-                              className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-white text-xs font-bold rounded-xl border border-blue-500/20 shadow-lg shadow-brand-accent/20 transition-all transform hover:scale-105 active:scale-95"
+                              className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-all transform hover:scale-105 active:scale-95"
                             >
                               Retry Playback
                             </button>
@@ -591,7 +591,7 @@ const MovieDetails: React.FC = () => {
                                 setIsPlaying(false);
                                 setPlayerError(null);
                               }}
-                              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-xl border border-white/10 transition-all"
+                              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-lg border border-white/10 transition-all"
                             >
                               Go Back
                             </button>
@@ -623,10 +623,10 @@ const MovieDetails: React.FC = () => {
                       <button
                         onClick={handleToggleWatchlist}
                         disabled={watchlistSubmitting}
-                        className={`w-full py-3.5 px-5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all btn-premium cursor-pointer ${
+                        className={`w-full py-3.5 px-5 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all cursor-pointer ${
                           isInWatchlist
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                            : 'bg-brand-accent/10 hover:bg-brand-accent/20 text-white border-brand-accent/35'
+                            : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
                         }`}
                       >
                         {isInWatchlist ? (
@@ -655,7 +655,7 @@ const MovieDetails: React.FC = () => {
                         {movie.genres.map(g => (
                           <span 
                             key={g.genre_id}
-                            className="px-3 py-1 bg-brand-cards/30 text-xs rounded-xl text-neutral-300"
+                            className="px-3 py-1 bg-white/[0.04] border border-white/5 text-xs rounded-lg text-neutral-300 font-medium"
                           >
                             {g.name}
                           </span>

@@ -34,6 +34,20 @@ const getAvatarClasses = (avatarUrl: string | null) => {
   return found ? found.classes : 'from-indigo-600 via-purple-600 to-pink-500';
 };
 
+const getAvatarIcon = (avatarUrl: string | null) => {
+  switch (avatarUrl) {
+    case 'grad-nebula': return '👩‍🚀';
+    case 'grad-sunfire': return '😎';
+    case 'grad-ocean': return '🐬';
+    case 'grad-cyberpunk': return '🤖';
+    case 'grad-jade': return '🐼';
+    case 'grad-gold': return '👑';
+    case 'grad-velvet': return '🎭';
+    case 'grad-aurora': return '🦄';
+    default: return '🍿';
+  }
+};
+
 
 const Profiles: React.FC = () => {
   const { showConfirm } = useModal();
@@ -436,16 +450,16 @@ const Profiles: React.FC = () => {
                   >
                     <div className="relative">
                       {/* Avatar container */}
-                      <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] transition-all duration-300 transform group-hover:scale-105 active:scale-98 overflow-hidden relative">
-                        <div className={`w-full h-full rounded-[30px] bg-gradient-to-br flex items-center justify-center text-4xl font-extrabold font-display uppercase tracking-wider text-white/95 ${avatarBg} shadow-inner relative`}>
-                          {profile.display_name.substring(0, 1)}
+                      <div className="w-28 h-28 md:w-32 md:h-32 rounded-md transition-all duration-300 transform group-hover:scale-105 active:scale-98 overflow-hidden relative">
+                        <div className={`w-full h-full rounded-md bg-gradient-to-br flex items-center justify-center text-5xl text-white/95 ${avatarBg} shadow-inner relative`}>
+                          {getAvatarIcon(profile.avatar_url)}
                         </div>
                       </div>
 
                       {/* Manage Overlay */}
                       {isManageMode && (
-                        <div className="absolute inset-0 bg-black/60 rounded-[32px] flex items-center justify-center transition-opacity duration-200">
-                          <div className="w-9 h-9 rounded-xl bg-brand-accent text-white flex items-center justify-center shadow-lg transform scale-110 active:scale-95 cursor-pointer">
+                        <div className="absolute inset-0 bg-black/65 rounded-md flex items-center justify-center transition-opacity duration-200">
+                          <div className="w-9 h-9 rounded-lg bg-[#E50914] text-white flex items-center justify-center shadow-lg transform scale-110 active:scale-95 cursor-pointer">
                             <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
@@ -476,7 +490,7 @@ const Profiles: React.FC = () => {
                   }}
                   className="group flex flex-col items-center cursor-pointer"
                 >
-                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] border border-dashed border-neutral-700 flex items-center justify-center text-4xl text-neutral-600 hover:text-brand-accent transition-all duration-300 transform hover:scale-105 active:scale-98">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-md border border-dashed border-neutral-700 flex items-center justify-center text-4xl text-neutral-600 hover:text-white transition-all duration-300 transform hover:scale-105 active:scale-98 bg-white/[0.02]">
                     +
                   </div>
                   <span className="mt-4 text-neutral-500 group-hover:text-white text-sm font-bold transition-colors duration-200">
@@ -486,7 +500,7 @@ const Profiles: React.FC = () => {
               ) : planName === 'free' ? (
                 /* Free limit upgrade CTA */
                 <div className="flex flex-col items-center gap-3">
-                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-[32px] border-2 border-dashed border-amber-400/30 bg-amber-500/5 flex items-center justify-center">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-md border-2 border-dashed border-amber-500/20 bg-amber-500/5 flex items-center justify-center">
                     <svg className="w-10 h-10 text-amber-400/60" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
@@ -510,7 +524,7 @@ const Profiles: React.FC = () => {
             <div className="pt-4">
               <button
                 onClick={() => setIsManageMode(!isManageMode)}
-                className="px-6 py-3.5 bg-brand-cards/30 hover:bg-brand-cards/50 text-brand-textMuted hover:text-white text-[10px] font-black tracking-widest uppercase rounded-2xl transition-all btn-premium cursor-pointer"
+                className="px-6 py-3.5 bg-neutral-900 border border-white/5 hover:bg-neutral-800 text-brand-textMuted hover:text-white text-[10px] font-black tracking-widest uppercase rounded-lg transition-all cursor-pointer"
               >
                 {isManageMode ? 'Exit Configuration' : 'Manage Profiles'}
               </button>
@@ -521,8 +535,8 @@ const Profiles: React.FC = () => {
 
       {/* Create Profile Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-brand-surface/75 w-full max-w-md p-8 rounded-3xl space-y-6 transform animate-scaleIn">
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#141414] border border-white/5 w-full max-w-md p-8 rounded-xl space-y-6 transform animate-scaleIn">
             <h3 className="text-2xl font-bold font-display text-white">Add Profile</h3>
 
             <form onSubmit={handleCreateProfile} className="space-y-5">
@@ -535,14 +549,14 @@ const Profiles: React.FC = () => {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   required
                   maxLength={20}
-                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none transition-all text-sm placeholder:text-white/50 caret-brand-accent animate-fadeIn"
+                  className="w-full px-4 py-3 bg-white/[0.04] text-white rounded-lg outline-none transition-all text-sm placeholder:text-white/50 caret-brand-accent animate-fadeIn"
                 />
               </div>
 
               {/* Avatar Selector Grid */}
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Profile Icon Color</label>
-                <div className="grid grid-cols-4 gap-3 bg-brand-background/40 p-4 rounded-2xl">
+                <div className="grid grid-cols-4 gap-3 bg-white/[0.02] p-4 rounded-lg">
                   {PRESET_AVATARS.map(avatar => (
                     <button
                       key={avatar.id}
@@ -623,7 +637,7 @@ const Profiles: React.FC = () => {
                 <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
-                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-white/[0.04] text-white rounded-lg outline-none text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
                 >
                   <option value="en">English</option>
                   <option value="es">Español</option>
@@ -635,14 +649,14 @@ const Profiles: React.FC = () => {
               <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-brand-accent text-white font-extrabold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                  className="px-5 py-2.5 bg-[#E50914] text-white font-bold rounded-lg hover:bg-red-600 transition-all text-xs uppercase tracking-wider cursor-pointer"
                 >
                   Create
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                  className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -654,8 +668,8 @@ const Profiles: React.FC = () => {
 
       {/* Edit Profile Modal */}
       {showEditModal && selectedProfile && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-brand-surface/75 w-full max-w-md p-8 rounded-3xl space-y-6 transform animate-scaleIn">
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#141414] border border-white/5 w-full max-w-md p-8 rounded-xl space-y-6 transform animate-scaleIn">
             <h3 className="text-2xl font-bold font-display text-white">Edit Profile</h3>
 
             <form onSubmit={handleUpdateProfile} className="space-y-5">
@@ -668,14 +682,14 @@ const Profiles: React.FC = () => {
                   onChange={(e) => setNewDisplayName(e.target.value)}
                   required
                   maxLength={20}
-                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none transition-all text-sm placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-white/[0.04] text-white rounded-lg outline-none transition-all text-sm placeholder:text-white/50 caret-brand-accent"
                 />
               </div>
 
               {/* Avatar Selector Grid */}
               <div>
                 <label className="block text-[10px] text-brand-textMuted uppercase tracking-widest mb-2 font-bold">Select Profile Icon Color</label>
-                <div className="grid grid-cols-4 gap-3 bg-brand-background/40 p-4 rounded-2xl">
+                <div className="grid grid-cols-4 gap-3 bg-white/[0.02] p-4 rounded-lg">
                   {PRESET_AVATARS.map(avatar => (
                     <button
                       key={avatar.id}
@@ -758,7 +772,7 @@ const Profiles: React.FC = () => {
                 <select
                   value={newLang}
                   onChange={(e) => setNewLang(e.target.value)}
-                  className="w-full px-4 py-3 bg-brand-background/40 text-white rounded-2xl outline-none text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
+                  className="w-full px-4 py-3 bg-white/[0.04] text-white rounded-lg outline-none text-sm cursor-pointer placeholder:text-white/50 caret-brand-accent"
                 >
                   <option value="en">English</option>
                   <option value="es">Español</option>
@@ -771,7 +785,7 @@ const Profiles: React.FC = () => {
                 <div className="flex gap-4">
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-brand-accent text-white font-extrabold rounded-xl hover:bg-blue-600 transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                    className="px-5 py-2.5 bg-[#E50914] text-white font-bold rounded-lg hover:bg-red-600 transition-all text-xs uppercase tracking-wider cursor-pointer"
                   >
                     Save
                   </button>
@@ -781,7 +795,7 @@ const Profiles: React.FC = () => {
                       setShowEditModal(false);
                       setSelectedProfile(null);
                     }}
-                    className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                    className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-bold rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -790,7 +804,7 @@ const Profiles: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => initiateDeleteProfile(selectedProfile)}
-                  className="px-5 py-2.5 bg-red-700/80 hover:bg-red-600 text-white font-extrabold rounded-xl transition-all text-xs uppercase tracking-wider btn-premium cursor-pointer"
+                  className="px-5 py-2.5 bg-neutral-900 border border-white/5 hover:bg-neutral-800 text-red-500 font-bold rounded-lg transition-all text-xs uppercase tracking-wider cursor-pointer"
                 >
                   Delete
                 </button>
@@ -802,12 +816,12 @@ const Profiles: React.FC = () => {
 
       {/* PIN Prompt — Netflix-style clean profile lock */}
       {showPinPrompt && profileToUnlock && (
-        <div className="fixed inset-0 bg-[#080c12] flex flex-col items-center justify-center z-[70] animate-fadeIn">
+        <div className="fixed inset-0 bg-[#000000] flex flex-col items-center justify-center z-[70] animate-fadeIn">
           <div className="w-full max-w-xs px-6 text-center space-y-10">
             {/* Profile avatar */}
             <div className="space-y-4">
-              <div className={`w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br ${getAvatarClasses(profileToUnlock.avatar_url)} flex items-center justify-center text-3xl font-bold text-white select-none`}>
-                {profileToUnlock.display_name.substring(0, 1)}
+              <div className={`w-20 h-20 mx-auto rounded-md bg-gradient-to-br ${getAvatarClasses(profileToUnlock.avatar_url)} flex items-center justify-center text-4xl text-white select-none`}>
+                {getAvatarIcon(profileToUnlock.avatar_url)}
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-white">{profileToUnlock.display_name}</h2>

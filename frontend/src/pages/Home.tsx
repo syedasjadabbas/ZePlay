@@ -137,14 +137,42 @@ const Home: React.FC = () => {
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 space-y-16 max-w-7xl mx-auto w-full">
           {loading ? (
-            <div className="h-[60vh] flex items-center justify-center">
-              <div className="text-sm font-medium text-neutral-400 animate-pulse">Loading personalized dashboard...</div>
+            <div className="space-y-12">
+              {/* Hero Banner Skeleton */}
+              <div className="w-full h-[65vh] min-h-[480px] rounded-lg bg-[#181818] animate-shimmer flex flex-col justify-end p-8 md:p-16 space-y-4">
+                <div className="h-10 bg-white/10 rounded w-1/3 animate-pulse" />
+                <div className="h-4 bg-white/10 rounded w-1/2 animate-pulse" />
+                <div className="h-12 bg-white/10 rounded w-28 animate-pulse" />
+              </div>
+              {/* Rows Skeletons */}
+              <div className="space-y-4">
+                <div className="h-4 bg-white/5 rounded w-48 animate-pulse" />
+                <div className="flex gap-6 overflow-hidden pb-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex-shrink-0 w-36 sm:w-44 space-y-3">
+                      <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
+                      <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-4 bg-white/5 rounded w-48 animate-pulse" />
+                <div className="flex gap-6 overflow-hidden pb-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex-shrink-0 w-36 sm:w-44 space-y-3">
+                      <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
+                      <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : (
             <>
               {/* Featured Hero Carousel */}
               {heroMovies.length > 0 && (
-                <div className="relative w-full h-[65vh] min-h-[480px] rounded-[32px] overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] bg-[#060B18]">
+                <div className="relative w-full h-[65vh] min-h-[480px] rounded-lg overflow-hidden shadow-[0_30px_70px_rgba(0,0,0,0.85)] bg-[#141414]">
                   {/* Preloaded Slides */}
                   {heroMovies.map((movie, index) => {
                     const isActive = index === currentSlideIndex;
@@ -155,7 +183,7 @@ const Home: React.FC = () => {
                           isActive ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'
                         } will-change-opacity transform-gpu`}
                         style={{
-                          backgroundImage: `linear-gradient(to top, rgba(6, 11, 24, 1) 0%, rgba(6, 11, 24, 0.75) 30%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, rgba(6, 11, 24, 0.95) 20%, rgba(6, 11, 24, 0.45) 65%, rgba(0, 0, 0, 0) 100%), url(${movie.thumbnail_url})`,
+                          backgroundImage: `linear-gradient(to top, rgba(20, 20, 20, 1) 0%, rgba(20, 20, 20, 0.75) 30%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, rgba(20, 20, 20, 0.95) 20%, rgba(20, 20, 20, 0.45) 65%, rgba(0, 0, 0, 0) 100%), url(${movie.thumbnail_url})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                         }}
@@ -163,7 +191,7 @@ const Home: React.FC = () => {
                         <div className={`max-w-2xl absolute bottom-0 left-0 p-8 md:p-16 space-y-5 transition-all duration-1000 ease-out transform ${
                           isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                         } will-change-[transform,opacity] transform-gpu`}>
-                          <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter font-display leading-none uppercase drop-shadow-2xl text-white">
+                          <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter leading-none uppercase drop-shadow-2xl text-white">
                             {movie.title}
                           </h2>
                           <p className="text-sm text-brand-textMuted leading-relaxed line-clamp-2 max-w-xl">
@@ -185,7 +213,7 @@ const Home: React.FC = () => {
                           <div className="flex items-center gap-4 pt-2">
                             <button 
                               onClick={() => navigate(`/movies/${movie.movie_id}`)}
-                              className="px-8 py-3.5 bg-white hover:bg-neutral-200 text-black font-extrabold rounded-2xl transition-all flex items-center gap-2 shadow-lg text-sm active:scale-95 btn-premium cursor-pointer"
+                              className="px-8 py-3.5 bg-white hover:bg-neutral-200 text-black font-extrabold rounded-lg transition-all flex items-center gap-2 shadow-lg text-sm active:scale-95 cursor-pointer"
                             >
                               <svg className="w-4 h-4 fill-current text-black" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
@@ -194,7 +222,7 @@ const Home: React.FC = () => {
                             </button>
                             <button 
                               onClick={() => navigate(`/movies/${movie.movie_id}`)}
-                              className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-extrabold rounded-2xl transition-all text-sm active:scale-95 backdrop-blur-md btn-premium cursor-pointer"
+                              className="px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white font-extrabold rounded-lg transition-all text-sm active:scale-95 backdrop-blur-md cursor-pointer"
                             >
                               More Info
                             </button>
