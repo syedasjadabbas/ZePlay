@@ -55,10 +55,17 @@ class JobQueueService:
                 if result:
                     _, payload = result
                     return json.loads(payload)
+                lpop_res = await client.lpop(QUEUE_KEY)
+                if lpop_res:
+                    return json.loads(lpop_res)
             except Exception as e:
                 logger.warning(f"[QUEUE] Redis BLPOP failed: {e}")
 
         # In-memory fallback check
+        if not self._in_memory_queue.empty():
+            payload = self._in_memory_queue.get_nowait()
+            return json.loads(payload)
+
         try:
             payload = await asyncio.wait_for(self._in_memory_queue.get(), timeout=0.1)
             return json.loads(payload)

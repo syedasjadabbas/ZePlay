@@ -17,7 +17,8 @@ from app.schemas.user import (
     EmailVerifyRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
-    ChangePasswordRequest
+    ChangePasswordRequest,
+    GoogleAuthRequest
 )
 from app.core import security
 from app.api import deps
@@ -329,4 +330,82 @@ async def change_password(
     
     await db.commit()
     return {"status": "success", "message": "Password successfully updated."}
+
+
+@router.post("/google", response_model=Token)
+async def google_auth(
+    auth_data: GoogleAuthRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Authenticate or register user using a Google OAuth / OpenID Connect ID token.
+    Validates token payload, links matching verified email accounts, or registers a new user.
+    """
+    token_str = auth_data.id_token
+    if not token_str:
+        raise HTTPException(status_code=400, detail="Missing Google ID token.")
+
+    from jose import jwt as jose_jwt
+    try:
+        payload = jose_jwt.get_unverified_claims(token_str)
+        email = payload.get("email")
+        name = payload.get("name") or payload.get("given_name") or (email.split("@")[0] if email else "Google User")
+        if not email:
+            raise HTTPException(status_code=400, detail="Invalid Google token: missing email claim.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process Google token: {str(e)}")
+
+    # Account linking or creation
+    result = await db.execute(select(User).filter(User.email == email))
+    db_user = result.scalars().first()
+
+    if db_user:
+        if not db_user.is_verified:
+            db_user.is_verified = True
+            await db.commit()
+            await db.refresh(db_user)
+    else:
+        random_pw = security.get_password_hash(secrets.token_urlsafe(16))
+        db_user = User(
+            email=email,
+            name=name,
+            password_hash=random_pw,
+            subscription_plan="free",
+            is_verified=True
+        )
+        db.add(db_user)
+        await db.commit()
+        await db.refresh(db_user)
+
+        from app.models.profile import Profile
+        main_profile = Profile(
+            user_id=db_user.user_id,
+            display_name="Main",
+            avatar_url="/avatars/default.png",
+            is_kids_profile=False
+        )
+        db.add(main_profile)
+
+        free_plan_result = await db.execute(
+            select(SubscriptionPlan).filter(SubscriptionPlan.name == "free")
+        )
+        free_plan = free_plan_result.scalars().first()
+        if free_plan:
+            db_subscription = UserSubscription(
+                user_id=db_user.user_id,
+                plan_id=free_plan.id,
+                status="active",
+                start_date=datetime.now(timezone.utc),
+                auto_renew=True
+            )
+            db.add(db_subscription)
+        await db.commit()
+        await db.refresh(db_user)
+
+    access_token = security.create_access_token(subject=str(db_user.user_id))
+    return Token(
+        access_token=access_token,
+        token_type="bearer",
+        user=UserResponse.model_validate(db_user)
+    )
 

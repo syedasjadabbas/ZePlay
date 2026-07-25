@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useModal } from '../components/ModalProvider';
+import { useToast } from '../components/Toast';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import PremiumPoster from '../components/PremiumPoster';
 
 interface MovieOption {
@@ -101,12 +103,13 @@ interface AuditLog {
 
 const AdminUpload: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('movies_manage');
 
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
-  const [movies, setMovies] = useState<MovieOption[]>([]);
+  const [movies] = useState<MovieOption[]>([]);
   const [videos, setVideos] = useState<VideoAsset[]>([]);
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -116,6 +119,7 @@ const AdminUpload: React.FC = () => {
 
   // States for Catalog Movie Management
   const [catalogMovies, setCatalogMovies] = useState<any[]>([]);
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
   const [editingMovie, setEditingMovie] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
@@ -174,7 +178,6 @@ const AdminUpload: React.FC = () => {
   const fetchMovies = async () => {
     try {
       const response = await api.get('/catalog/movies');
-      setMovies(response.data);
       setCatalogMovies(response.data);
     } catch (err) {
       console.error('Failed to load movies catalog', err);
@@ -194,6 +197,15 @@ const AdminUpload: React.FC = () => {
   const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        showToast('Please select a valid image file (JPEG, PNG, WebP, GIF)', 'error');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Poster file size must be less than 5MB', 'error');
+        return;
+      }
       setEditPosterFile(file);
       setEditPosterPreview(URL.createObjectURL(file));
     }
@@ -229,6 +241,11 @@ const AdminUpload: React.FC = () => {
       setSuccessMsg('Movie catalog entry successfully updated!');
       setEditingMovie(null);
       fetchMovies();
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movies });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trending });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.popular });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.recentlyAdded });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movie(editingMovie.movie_id) });
     } catch (err: any) {
       console.error('Failed to save movie', err);
       setError(err.response?.data?.detail || 'Failed to save movie metadata.');
@@ -1228,55 +1245,84 @@ const AdminUpload: React.FC = () => {
         {activeTab === 'movies_manage' && (
           <div className="space-y-8 animate-fadeIn">
             <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent font-display">Catalog Movies Directory</h2>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-textMuted bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">Total: {catalogMovies.length}</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {catalogMovies.map((m) => (
-                  <div key={m.movie_id} className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 hover:border-brand-accent/30 p-5 rounded-[24px] flex flex-col justify-between space-y-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.5)] group relative">
-                    <div className="flex gap-4">
-                      {/* Movie poster preview using PremiumPoster fallback if needed */}
-                      <div className="w-20 h-28 bg-[#040811] rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative flex items-center justify-center">
-                        <img 
-                          src={m.thumbnail_url} 
-                          className="absolute inset-0 w-full h-full object-cover z-10" 
-                          alt="" 
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center p-2">
-                          <PremiumPoster title={m.title} aspectRatio="portrait" />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1.5 flex-grow min-w-0">
-                        <h4 className="text-sm font-black text-white uppercase truncate font-display group-hover:text-brand-accent transition-colors">{m.title}</h4>
-                        <div className="flex items-center gap-1.5 text-[9px] text-neutral-450 font-bold uppercase font-sans">
-                          <span className="text-brand-accent">{m.release_year}</span>
-                          <span>•</span>
-                          <span>{m.duration_minutes}m</span>
-                          <span>•</span>
-                          <span className="bg-white/5 border border-white/10 px-1 rounded text-[7px] text-white">4K</span>
-                        </div>
-                        <p className="text-[10px] text-neutral-450 line-clamp-3 leading-relaxed mt-1">{m.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => handleStartEdit(m)}
-                        className="w-full py-2.5 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent hover:text-white border border-brand-accent/25 hover:border-brand-accent/50 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer select-none active:scale-[0.98] btn-premium"
-                      >
-                        Edit Metadata & Poster
-                      </button>
-                    </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wider text-brand-accent font-display">Catalog Movies Directory</h2>
+                  <p className="text-[10px] text-neutral-400 mt-0.5 font-medium">Filter and manage catalog entries & poster assets</p>
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <input
+                      type="text"
+                      placeholder="Search title..."
+                      value={catalogSearchQuery}
+                      onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-[#050913]/60 border border-white/10 rounded-full text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent transition-all input-premium"
+                    />
+                    <svg className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
-                ))}
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-textMuted bg-white/5 border border-white/10 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    Total: {catalogMovies.filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim())).length}
+                  </span>
+                </div>
               </div>
+
+              {catalogMovies.filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim())).length === 0 ? (
+                <div className="py-12 text-center bg-black/20 border border-dashed border-white/10 rounded-2xl">
+                  <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
+                    {catalogSearchQuery ? `No movies found matching "${catalogSearchQuery}"` : 'No movies found in catalog'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {catalogMovies
+                    .filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim()))
+                    .map((m) => (
+                      <div key={m.movie_id} className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 hover:border-brand-accent/30 p-5 rounded-[24px] flex flex-col justify-between space-y-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.5)] group relative">
+                        <div className="flex gap-4">
+                          {/* Movie poster preview using PremiumPoster fallback if needed */}
+                          <div className="w-20 h-28 bg-[#040811] rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative flex items-center justify-center">
+                            <img 
+                              src={m.thumbnail_url} 
+                              className="absolute inset-0 w-full h-full object-cover z-10" 
+                              alt="" 
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center p-2">
+                              <PremiumPoster title={m.title} aspectRatio="portrait" />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1.5 flex-grow min-w-0">
+                            <h4 className="text-sm font-black text-white uppercase truncate font-display group-hover:text-brand-accent transition-colors">{m.title}</h4>
+                            <div className="flex items-center gap-1.5 text-[9px] text-neutral-450 font-bold uppercase font-sans">
+                              <span className="text-brand-accent">{m.release_year}</span>
+                              <span>•</span>
+                              <span>{m.duration_minutes}m</span>
+                              <span>•</span>
+                              <span className="bg-white/5 border border-white/10 px-1 rounded text-[7px] text-white">4K</span>
+                            </div>
+                            <p className="text-[10px] text-neutral-450 line-clamp-3 leading-relaxed mt-1">{m.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-white/5">
+                          <button
+                            type="button"
+                            onClick={() => handleStartEdit(m)}
+                            className="w-full py-2.5 bg-brand-accent/15 hover:bg-brand-accent/25 text-brand-accent hover:text-white border border-brand-accent/25 hover:border-brand-accent/50 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer select-none active:scale-[0.98] btn-premium"
+                          >
+                            Edit Metadata & Poster
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
 
             {/* Movie Edit Modal */}

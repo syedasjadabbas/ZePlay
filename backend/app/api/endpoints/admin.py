@@ -634,6 +634,7 @@ async def update_movie(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Movie not found."
         )
+    await cache.clear_all()
     return updated
 
 @router.delete("/movies/{movie_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -649,6 +650,7 @@ async def delete_movie(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Movie not found."
         )
+    await cache.clear_all()
     return None
 
 @router.post("/genres", response_model=GenreResponse, status_code=status.HTTP_201_CREATED)
@@ -658,7 +660,9 @@ async def create_genre(
     current_user = Depends(deps.get_current_admin_user)
 ):
     """Admin endpoint to register a new genre category."""
-    return await movie_service.create_genre(db, genre_in)
+    res = await movie_service.create_genre(db, genre_in)
+    await cache.clear_all()
+    return res
 
 @router.get("/cache/stats")
 async def get_cache_stats(
@@ -691,10 +695,24 @@ async def upload_movie_poster(
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found.")
 
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Only image files are allowed for posters.")
+    allowed_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    ext = os.path.splitext(file.filename or "")[1].lower() or ".jpg"
+    if ext not in allowed_exts or not (file.content_type or "").startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported image format. Allowed formats: JPEG, PNG, WebP, GIF."
+        )
 
-    ext = os.path.splitext(file.filename)[1] or ".jpg"
+    # Validate poster image size limit (5MB)
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail="Poster image file size exceeds maximum allowed limit of 5MB."
+        )
+
     filename = f"poster_{movie_id}{ext}"
     
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "static", "posters")
@@ -725,6 +743,7 @@ async def upload_movie_poster(
     movie.thumbnail_url = poster_url
     await db.commit()
     await db.refresh(movie)
+    await cache.clear_all()
     
     await log_event(
         db,

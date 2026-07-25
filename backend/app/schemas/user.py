@@ -55,4 +55,7 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
     confirm_password: str
 
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+
 

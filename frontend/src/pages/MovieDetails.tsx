@@ -62,6 +62,27 @@ const MovieDetails: React.FC = () => {
   const [showControls, setShowControls] = useState(true);
   const [qualityToast, setQualityToast] = useState<string | null>(null);
   const [seekFeedback, setSeekFeedback] = useState<string | null>(null);
+  const [volume, setVolume] = useState<number>(1.0);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
+
+  const handleVolumeChange = (newVol: number) => {
+    setVolume(newVol);
+    if (newVol > 0 && isMuted) {
+      setIsMuted(false);
+    }
+    if (videoRef.current) {
+      videoRef.current.volume = newVol;
+      videoRef.current.muted = newVol === 0 ? true : (newVol > 0 && isMuted ? false : isMuted);
+    }
+  };
+
+  const toggleMute = () => {
+    const nextMute = !isMuted;
+    setIsMuted(nextMute);
+    if (videoRef.current) {
+      videoRef.current.muted = nextMute;
+    }
+  };
 
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -733,8 +754,44 @@ const MovieDetails: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Bottom-Right: Repositioned Settings & Fullscreen Controls */}
+                      {/* Bottom-Right: Repositioned Settings, Volume & Fullscreen Controls */}
                       <div className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {/* Volume Control */}
+                        <div className="flex items-center gap-2 bg-black/70 hover:bg-black/90 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 shadow-lg transition-all duration-300 min-h-[44px] group/vol">
+                          <button
+                            type="button"
+                            onClick={toggleMute}
+                            className="text-white hover:text-brand-accent transition-colors cursor-pointer"
+                            title={isMuted ? "Unmute (M)" : "Mute (M)"}
+                          >
+                            {isMuted || volume === 0 ? (
+                              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                              </svg>
+                            ) : volume < 0.5 ? (
+                              <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.95 6.05a8 8 0 010 11.314M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                              </svg>
+                            )}
+                          </button>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                            className="w-16 md:w-20 h-1 bg-white/20 accent-brand-accent rounded-lg cursor-pointer"
+                            title="Volume adjustment"
+                          />
+                        </div>
+
                         {streamType === 'HLS' && levels.length > 1 && (
                           <div className="flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 shadow-lg transition-all duration-300 min-h-[44px]">
                             <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

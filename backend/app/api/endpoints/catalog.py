@@ -26,7 +26,7 @@ async def list_movies(
 async def get_movie(
     movie_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(deps.verify_user_entitlement)
+    current_user = Depends(deps.get_current_user)
 ):
     """Retrieve detailed metadata records for a single movie entry."""
     db_movie = await movie_service.get_movie_by_id(db, movie_id)

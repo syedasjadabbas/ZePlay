@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
 
+    # Google OAuth/OpenID Settings
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     # Storage settings
     STORAGE_DIR: str = "storage/videos"
     STORAGE_BACKEND: str = "local"  # "local" or "s3"
