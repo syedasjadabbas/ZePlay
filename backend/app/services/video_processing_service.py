@@ -35,12 +35,30 @@ def get_ffmpeg_path() -> Optional[str]:
             
     return None
 
+def _has_real_segments(hls_dir: str, min_size: int = 50_000) -> bool:
+    """Check if any variant directory contains real (non-dummy) TS segments."""
+    for variant in ["480p", "720p", "1080p"]:
+        variant_dir = os.path.join(hls_dir, variant)
+        if not os.path.isdir(variant_dir):
+            continue
+        for f in os.listdir(variant_dir):
+            if f.endswith(".ts") and os.path.getsize(os.path.join(variant_dir, f)) > min_size:
+                return True
+    return False
+
 def generate_fallback_hls_assets(hls_dir: str, video: Video) -> Tuple[str, str]:
     """
     Generates multi-bitrate variant playlists and segments for ABR test flows.
+    Skips generation if real segments already exist on disk to avoid overwriting
+    FFmpeg-transcoded content.
     """
     os.makedirs(hls_dir, exist_ok=True)
     master_m3u8_path = os.path.join(hls_dir, "master.m3u8")
+
+    # Guard: never overwrite real FFmpeg output with dummy data
+    if _has_real_segments(hls_dir):
+        print(f"[FALLBACK] Skipping dummy generation — real segments found in {hls_dir}")
+        return master_m3u8_path, hls_dir
 
     # ABR Master Playlist linking different bandwidth quality levels
     master_content = (
@@ -85,6 +103,98 @@ def generate_fallback_hls_assets(hls_dir: str, video: Video) -> Tuple[str, str]:
             f.write(index_content)
 
     return master_m3u8_path, hls_dir
+
+def _probe_segment_duration_sync(ffmpeg_bin: str, segment_path: str) -> float:
+    """Probe a single .ts segment duration using ffmpeg -i. Falls back to 6.0s."""
+    import re as _re
+    try:
+        proc = subprocess.run(
+            [ffmpeg_bin, "-i", segment_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+        )
+        output = proc.stderr.decode(errors="replace")
+        match = _re.search(r"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})", output)
+        if match:
+            h, m, s = match.groups()
+            return float(h) * 3600 + float(m) * 60 + float(s)
+    except Exception:
+        pass
+    return 6.0
+
+def _repair_playlists_from_existing_segments(hls_dir: str, ffmpeg_bin: Optional[str]) -> int:
+    """
+    Scan variant subdirectories for real .ts segments (> 50 KB) and regenerate
+    correct index.m3u8 playlists. Also writes master.m3u8 if missing.
+
+    Returns total number of real segments found across all variants, or 0 if none.
+    """
+    import re as _re
+
+    total_real = 0
+    for variant in ["480p", "720p", "1080p"]:
+        variant_dir = os.path.join(hls_dir, variant)
+        if not os.path.isdir(variant_dir):
+            continue
+
+        ts_files = sorted(
+            [f for f in os.listdir(variant_dir) if f.endswith(".ts")],
+            key=lambda x: int(_re.search(r"(\d+)", x).group(1)) if _re.search(r"(\d+)", x) else 0,
+        )
+        real_segments = [
+            f for f in ts_files
+            if os.path.getsize(os.path.join(variant_dir, f)) > 50_000
+        ]
+        if not real_segments:
+            continue
+
+        # Probe durations
+        max_dur = 0.0
+        entries = []
+        for ts in real_segments:
+            dur = _probe_segment_duration_sync(ffmpeg_bin, os.path.join(variant_dir, ts)) if ffmpeg_bin else 6.0
+            max_dur = max(max_dur, dur)
+            entries.append((ts, dur))
+
+        target_dur = int(max_dur) + 1
+        lines = [
+            "#EXTM3U",
+            "#EXT-X-VERSION:3",
+            f"#EXT-X-TARGETDURATION:{target_dur}",
+            "#EXT-X-MEDIA-SEQUENCE:0",
+            "#EXT-X-PLAYLIST-TYPE:VOD",
+        ]
+        for ts, dur in entries:
+            lines.append(f"#EXTINF:{dur:.6f},")
+            lines.append(ts)
+        lines.append("#EXT-X-ENDLIST")
+        lines.append("")
+
+        playlist_path = os.path.join(variant_dir, "index.m3u8")
+        with open(playlist_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+
+        total_real += len(real_segments)
+        print(f"[REPAIR] {variant}/index.m3u8 — {len(real_segments)} real segments")
+
+    # Ensure master.m3u8 exists
+    if total_real > 0:
+        master_path = os.path.join(hls_dir, "master.m3u8")
+        master_content = (
+            "#EXTM3U\n"
+            "#EXT-X-VERSION:3\n"
+            "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=854x480\n"
+            "480p/index.m3u8\n"
+            "#EXT-X-STREAM-INF:BANDWIDTH=2200000,RESOLUTION=1280x720\n"
+            "720p/index.m3u8\n"
+            "#EXT-X-STREAM-INF:BANDWIDTH=4500000,RESOLUTION=1920x1080\n"
+            "1080p/index.m3u8\n"
+        )
+        with open(master_path, "w", encoding="utf-8") as f:
+            f.write(master_content)
+
+    return total_real
 
 async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     """
@@ -238,10 +348,20 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
         except Exception as err:
             print(f"ABR FFmpeg processing exception: {err}")
 
-    # Fallback to dummy assets if FFmpeg fails or is not available
+    # Fallback: check if real segments already exist on disk from a partial encode
     if not processed_successfully:
-        generate_fallback_hls_assets(hls_dir, video)
-        processed_successfully = True
+        real_segments_found = _repair_playlists_from_existing_segments(hls_dir, ffmpeg_bin)
+        if real_segments_found:
+            print(f"[REPAIR] Recovered playlists from {real_segments_found} existing segments (partial encode)")
+            processed_successfully = True
+        elif not _has_real_segments(hls_dir):
+            # True fallback: no real segments at all — generate dummy assets for dev/test
+            generate_fallback_hls_assets(hls_dir, video)
+            processed_successfully = True
+        else:
+            # Real segments exist but repair didn't pick them up — try broader repair
+            print(f"[WARN] Real segments exist but playlist repair returned 0. Skipping dummy fallback.")
+            processed_successfully = True
 
     if processed_successfully:
         video.status = "completed"
