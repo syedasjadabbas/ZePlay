@@ -67,6 +67,12 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY !== 0) {
+      e.currentTarget.scrollLeft += e.deltaY * 1.2;
+    }
+  };
+
   useEffect(() => {
     if (!activeProfileId) {
       navigate('/profiles');
@@ -292,7 +298,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={continueRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {continueWatchingItems.map((item: any) => {
                             const m = item.movie;
@@ -342,7 +349,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={recommendedRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {personalizedMovies.map(movie => (
                             <MovieCardVertical
@@ -387,7 +395,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={becauseRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {becauseYouWatched.recommendations.map(movie => (
                             <MovieCardVertical
@@ -432,7 +441,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={trendingRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {trendingMovies.map(movie => (
                             <MovieCardVertical
@@ -477,7 +487,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={recentlyAddedRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {recentlyAddedMovies.map(movie => (
                             <MovieCardVertical
@@ -522,7 +533,8 @@ const Home: React.FC = () => {
 
                         <div 
                           ref={popularRef} 
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
+                          onWheel={handleWheelScroll}
+                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
                         >
                           {popularMovies.map(movie => (
                             <MovieCardVertical
