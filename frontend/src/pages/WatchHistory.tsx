@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useToast } from '../components/Toast';
@@ -50,8 +51,12 @@ const WatchHistoryPage: React.FC = () => {
     if (!activeProfileId) return;
     try {
       setLoading(true);
-      const res = await api.get(`/watch-history/?profile_id=${activeProfileId}`);
-      setHistory(res.data);
+      const data = await queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.watchHistory(activeProfileId),
+        queryFn: () => api.get(`/watch-history/?profile_id=${activeProfileId}`).then(r => r.data),
+        staleTime: 60 * 1000, // 1min — history changes after playback
+      });
+      setHistory(data || []);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to load watch history.");
     } finally {
@@ -70,6 +75,11 @@ const WatchHistoryPage: React.FC = () => {
     try {
       await api.delete(`/watch-history/${historyId}`);
       showToast('Removed from watch history', 'info');
+      // Invalidate cache so continueWatching on Home refreshes
+      if (activeProfileId) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.watchHistory(activeProfileId) });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.continueWatching(activeProfileId) });
+      }
     } catch (err) {
       setHistory(prev);
       showToast('Failed to remove from history', 'error');

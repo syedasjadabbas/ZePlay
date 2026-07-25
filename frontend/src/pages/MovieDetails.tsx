@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Hls from 'hls.js';
 import api, { API_ORIGIN, getToken } from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -250,6 +251,9 @@ const MovieDetails: React.FC = () => {
         setIsInWatchlist(true);
         showToast('Added to My List', 'success');
       }
+      // Invalidate cache so My List page fetches fresh data on next visit
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.watchlist(activeProfileId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.watchlistCheck(id, activeProfileId) });
     } catch (err) {
       setIsInWatchlist(wasInList);
       showToast('Could not update My List. Please try again.', 'error');
@@ -323,45 +327,52 @@ const MovieDetails: React.FC = () => {
     const fetchMovieDetails = async () => {
       try {
         setLoading(true);
-        const [response, simRes] = await Promise.all([
-          api.get(`/catalog/movies/${id}`),
-          api.get(`/recommendations/similar/${id}`).catch(() => ({ data: [] }))
+
+        // Fire all 4 requests in a single parallel wave using React Query cache
+        const [movieData, simData, progData, wlData] = await Promise.all([
+          // Movie detail — cached for 5min, skips network if already loaded
+          queryClient.fetchQuery({
+            queryKey: QUERY_KEYS.movie(id!),
+            queryFn: () => api.get(`/catalog/movies/${id}`).then(r => r.data),
+            staleTime: 5 * 60 * 1000,
+          }),
+          // Similar movies — cached
+          queryClient.fetchQuery({
+            queryKey: QUERY_KEYS.similar(id!),
+            queryFn: () => api.get(`/recommendations/similar/${id}`).then(r => r.data),
+            staleTime: 5 * 60 * 1000,
+          }).catch(() => []),
+          // Watch progress — short TTL (user-specific, changes during playback)
+          activeProfileId ? queryClient.fetchQuery({
+            queryKey: QUERY_KEYS.watchProgress(id!, activeProfileId),
+            queryFn: () => api.get(`/watch-history/progress/${id}?profile_id=${activeProfileId}`).then(r => r.data),
+            staleTime: 30 * 1000,
+          }).catch(() => null) : Promise.resolve(null),
+          // Watchlist check
+          activeProfileId ? queryClient.fetchQuery({
+            queryKey: QUERY_KEYS.watchlistCheck(id!, activeProfileId),
+            queryFn: () => api.get(`/watchlist/check/${id}?profile_id=${activeProfileId}`).then(r => r.data),
+            staleTime: 2 * 60 * 1000,
+          }).catch(() => null) : Promise.resolve(null),
         ]);
 
-        setMovie(response.data);
-        setSimilarMovies(simRes.data);
+        setMovie(movieData);
+        setSimilarMovies(simData || []);
+        if (progData) {
+          setSavedProgress({
+            current_position: progData.current_position,
+            duration: progData.duration,
+            percentage_watched: progData.percentage_watched
+          });
+        }
+        if (wlData) setIsInWatchlist(wlData.is_in_watchlist === true);
 
-        // Track movie view analytics
+        // Fire analytics view tracking async — no await, non-blocking
         api.post(`/recommendations/track-view/${id}`).catch(() => {});
 
-        // Fetch saved progress for profile & movie
-        if (activeProfileId) {
-          try {
-            const progRes = await api.get(`/watch-history/progress/${id}?profile_id=${activeProfileId}`);
-            if (progRes.data) {
-              setSavedProgress({
-                current_position: progRes.data.current_position,
-                duration: progRes.data.duration,
-                percentage_watched: progRes.data.percentage_watched
-              });
-            }
-          } catch (e) {
-            console.log("No saved progress record.", e);
-          }
-
-          try {
-            const wlRes = await api.get(`/watchlist/check/${id}?profile_id=${activeProfileId}`);
-            if (wlRes.data) {
-              setIsInWatchlist(wlRes.data.is_in_watchlist);
-            }
-          } catch (e) {
-            console.log("Failed to check watchlist status.", e);
-          }
-
-          }
       } catch (err: any) {
         setError(
-          err.response?.data?.detail || 
+          err.response?.data?.detail ||
           "Failed to load movie details from catalog."
         );
       } finally {

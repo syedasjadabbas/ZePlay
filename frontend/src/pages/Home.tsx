@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -113,20 +114,27 @@ const Home: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [moviesRes, trendingRes, popularRes, recAddedRes] = await Promise.all([
-        api.get('/catalog/movies').catch(() => ({ data: [] })),
-        api.get('/recommendations/trending').catch(() => ({ data: [] })),
-        api.get('/recommendations/popular').catch(() => ({ data: [] })),
-        api.get('/recommendations/recently-added').catch(() => ({ data: [] }))
+      // Fire ALL requests concurrently — catalog + profile-specific in one wave
+      const [moviesRes, trendingRes, popularRes, recAddedRes, cwRes, persRes, bywRes] = await Promise.all([
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.movies,         queryFn: () => api.get('/catalog/movies').then(r => r.data),                                                                       staleTime: 5 * 60 * 1000 }).catch(() => []),
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.trending,       queryFn: () => api.get('/recommendations/trending').then(r => r.data),                                                            staleTime: 5 * 60 * 1000 }).catch(() => []),
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.popular,        queryFn: () => api.get('/recommendations/popular').then(r => r.data),                                                             staleTime: 5 * 60 * 1000 }).catch(() => []),
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.recentlyAdded,  queryFn: () => api.get('/recommendations/recently-added').then(r => r.data),                                                      staleTime: 5 * 60 * 1000 }).catch(() => []),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.continueWatching(activeProfileId),  queryFn: () => api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).then(r => r.data),  staleTime: 60 * 1000 }).catch(() => []) : Promise.resolve([]),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.personalized(activeProfileId),      queryFn: () => api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).then(r => r.data),      staleTime: 3 * 60 * 1000 }).catch(() => []) : Promise.resolve([]),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.becauseYouWatched(activeProfileId), queryFn: () => api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).then(r => r.data), staleTime: 3 * 60 * 1000 }).catch(() => ({ because_movie: null, recommendations: [] })) : Promise.resolve({ because_movie: null, recommendations: [] }),
       ]);
 
-      const moviesData = moviesRes.data || [];
+      const moviesData: Movie[] = moviesRes || [];
       setMovies(moviesData);
-      setTrendingMovies(trendingRes.data || []);
-      setPopularMovies(popularRes.data || []);
-      setRecentlyAddedMovies(recAddedRes.data || []);
+      setTrendingMovies(trendingRes || []);
+      setPopularMovies(popularRes || []);
+      setRecentlyAddedMovies(recAddedRes || []);
+      setContinueWatchingItems(cwRes || []);
+      setPersonalizedMovies(persRes || []);
+      setBecauseYouWatched(bywRes || { because_movie: null, recommendations: [] });
 
-      // Build hero carousel: Interstellar first if available, up to 5
+      // Build hero carousel
       let carouselMovies: Movie[] = [];
       const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
       if (interstellar) carouselMovies.push(interstellar);
@@ -134,7 +142,7 @@ const Home: React.FC = () => {
       carouselMovies = [...carouselMovies, ...others].slice(0, 5);
       setHeroMovies(carouselMovies);
 
-      // Preload first two hero images immediately
+      // Preload first two hero images
       if (carouselMovies.length > 0) {
         preloadImage(carouselMovies[0].thumbnail_url);
         preloadedHero.current.add(carouselMovies[0].thumbnail_url);
@@ -142,23 +150,9 @@ const Home: React.FC = () => {
           preloadImage(carouselMovies[1].thumbnail_url);
           preloadedHero.current.add(carouselMovies[1].thumbnail_url);
         }
-        api.get(`/catalog/movies/${carouselMovies[0].movie_id}`).catch(() => {});
-      }
-
-      if (activeProfileId) {
-        const [cwRes, persRes, bywRes] = await Promise.all([
-          api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).catch(() => ({ data: [] })),
-          api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).catch(() => ({ data: [] })),
-          api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).catch(() => ({ data: { because_movie: null, recommendations: [] } }))
-        ]);
-
-        setContinueWatchingItems(cwRes.data);
-        setPersonalizedMovies(persRes.data);
-        setBecauseYouWatched(bywRes.data);
       }
     } catch (err: any) {
-      console.error("Failed to load catalog & recommendation data.", err);
-      setError("Failed to load dashboard recommendations. Please try again.");
+      setError("Failed to load dashboard. Please try again.");
     } finally {
       setLoading(false);
     }

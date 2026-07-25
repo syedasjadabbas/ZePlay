@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import PremiumPoster from './PremiumPoster';
 import ProgressiveImage from './ProgressiveImage';
 
@@ -33,9 +34,13 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   const handleMouseEnter = useCallback(() => {
     hoverTimer.current = setTimeout(() => {
       setHovered(true);
-      // Prefetch movie details on hover
+      // Prefetch movie details into React Query cache (deduplicated)
       if (movie_id) {
-        api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+        queryClient.prefetchQuery({
+          queryKey: QUERY_KEYS.movie(movie_id),
+          queryFn: () => api.get(`/catalog/movies/${movie_id}`).then(r => r.data),
+          staleTime: 5 * 60 * 1000,
+        });
       }
     }, 150);
   }, [movie_id]);

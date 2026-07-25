@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useToast } from '../components/Toast';
@@ -53,8 +54,12 @@ const MyList: React.FC = () => {
     if (!activeProfileId) return;
     try {
       setLoading(true);
-      const res = await api.get(`/watchlist/?profile_id=${activeProfileId}`);
-      setWatchlist(res.data);
+      const data = await queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.watchlist(activeProfileId),
+        queryFn: () => api.get(`/watchlist/?profile_id=${activeProfileId}`).then(r => r.data),
+        staleTime: 2 * 60 * 1000,
+      });
+      setWatchlist(data || []);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to load watchlist.");
     } finally {
@@ -75,6 +80,9 @@ const MyList: React.FC = () => {
     try {
       await api.delete(`/watchlist/${movieId}?profile_id=${activeProfileId}`);
       showToast('Removed from My List', 'info');
+      // Invalidate so watchlistCheck on MovieDetails refreshes
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.watchlist(activeProfileId) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.watchlistCheck(movieId, activeProfileId) });
     } catch (err) {
       setWatchlist(prev); // rollback
       showToast('Failed to remove from My List', 'error');

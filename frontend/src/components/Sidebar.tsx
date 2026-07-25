@@ -1,34 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api, { getToken } from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
+
+// Cache /auth/me for this session — avoid refetching on every route
+let adminChecked = false;
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    // Synchronous read from localStorage — no API round-trip on paint
+    try {
+      const u = localStorage.getItem('user');
+      if (u) return JSON.parse(u).is_admin === true;
+    } catch {}
+    return false;
+  });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        if (parsed.is_admin) setIsAdmin(true);
-      } catch (e) {}
+    // Only hit /auth/me once per session (not on every route change)
+    if (adminChecked) return;
+    const token = getToken();
+    if (!token) return;
+    adminChecked = true;
+
+    // Reuse React Query cache if already populated
+    const cached = queryClient.getQueryData<{ is_admin: boolean }>(QUERY_KEYS.me);
+    if (cached !== undefined) {
+      setIsAdmin(cached.is_admin === true);
+      return;
     }
 
-    const token = getToken();
-    if (token) {
-      api.get('/auth/me')
-        .then((res) => {
-          if (res.data?.is_admin) {
-            setIsAdmin(true);
-            localStorage.setItem('user', JSON.stringify(res.data));
-          } else {
-            setIsAdmin(false);
-          }
-        })
-        .catch(() => {});
-    }
+    // Background fetch — doesn't block render
+    queryClient
+      .fetchQuery({
+        queryKey: QUERY_KEYS.me,
+        queryFn: () => api.get('/auth/me').then(r => r.data),
+        staleTime: 5 * 60 * 1000,
+      })
+      .then((data) => {
+        setIsAdmin(data?.is_admin === true);
+        localStorage.setItem('user', JSON.stringify(data));
+      })
+      .catch(() => {});
   }, []);
 
   const isActive = (path: string) => location.pathname === path;

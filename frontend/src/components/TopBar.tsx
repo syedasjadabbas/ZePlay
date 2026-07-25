@@ -81,20 +81,9 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
     if (profileAvatar) setLocalProfileAvatar(profileAvatar);
   }, [profileAvatar]);
 
-  useEffect(() => {
-    if (activeProfileId === 'default') return;
-    api.get('/profiles/')
-      .then((response) => {
-        const activeProfile = response.data.find((p: any) => p.profile_id === activeProfileId);
-        if (activeProfile) {
-          setLocalProfileName(activeProfile.display_name);
-          setLocalProfileAvatar(activeProfile.avatar_url || 'grad-nebula');
-          localStorage.setItem('selectedProfileName', activeProfile.display_name);
-          localStorage.setItem('selectedProfileAvatar', activeProfile.avatar_url || 'grad-nebula');
-        }
-      })
-      .catch(() => {});
-  }, [activeProfileId]);
+  // Profile name/avatar are already cached in localStorage during profile selection.
+  // No API call needed here — this avoids a redundant round-trip on every page render.
+
 
   useEffect(() => {
     try {

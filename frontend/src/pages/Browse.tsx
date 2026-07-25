@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -51,13 +52,20 @@ const Browse: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const [genresRes, moviesRes] = await Promise.all([
-        api.get('/catalog/genres').catch(() => ({ data: [] })),
-        api.get('/catalog/movies')
+      const [genres, movies] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.genres,
+          queryFn: () => api.get('/catalog/genres').then(r => r.data),
+          staleTime: 10 * 60 * 1000,
+        }).catch(() => []),
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.movies,
+          queryFn: () => api.get('/catalog/movies').then(r => r.data),
+          staleTime: 5 * 60 * 1000,
+        }),
       ]);
-
-      setGenres(genresRes.data || []);
-      setMovies(moviesRes.data || []);
+      setGenres(genres || []);
+      setMovies(movies || []);
     } catch (err: any) {
       setError("Failed to load catalog. Please check your connection.");
     } finally {
