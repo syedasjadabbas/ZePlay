@@ -42,7 +42,6 @@ const MovieDetails: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [streamType, setStreamType] = useState<'HLS' | 'MP4'>('HLS');
   const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
-  const [shouldResume, setShouldResume] = useState(false);
   const [isInWatchlist, setIsInWatchlist] = useState<boolean>(false);
   const [watchlistSubmitting, setWatchlistSubmitting] = useState<boolean>(false);
   const [imageError, setImageError] = useState(false);
@@ -57,14 +56,139 @@ const MovieDetails: React.FC = () => {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentAutoResolution, setCurrentAutoResolution] = useState<string>('');
+  const [showControls, setShowControls] = useState(true);
+  const [qualityToast, setQualityToast] = useState<string | null>(null);
+  const [seekFeedback, setSeekFeedback] = useState<string | null>(null);
 
   const playerContainerRef = useRef<HTMLDivElement>(null);
-
   const videoRef = useRef<HTMLVideoElement>(null);
   const similarRef = useRef<HTMLDivElement>(null);
+  const hideControlsTimeoutRef = useRef<any>(null);
+  const toastTimeoutRef = useRef<any>(null);
+  const seekFeedbackTimeoutRef = useRef<any>(null);
+  const clickTimerRef = useRef<any>(null);
 
   const navigate = useNavigate();
   const activeProfileId = localStorage.getItem('selectedProfileId');
+
+  const triggerQualityToast = (msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setQualityToast(msg);
+    toastTimeoutRef.current = setTimeout(() => {
+      setQualityToast(null);
+    }, 2500);
+  };
+
+  const triggerSeekFeedback = (msg: string) => {
+    if (seekFeedbackTimeoutRef.current) clearTimeout(seekFeedbackTimeoutRef.current);
+    setSeekFeedback(msg);
+    seekFeedbackTimeoutRef.current = setTimeout(() => {
+      setSeekFeedback(null);
+    }, 1000);
+  };
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (hideControlsTimeoutRef.current) clearTimeout(hideControlsTimeoutRef.current);
+    if (isPlaying && videoRef.current && !videoRef.current.paused) {
+      hideControlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    }
+  };
+
+  const handleQualityChange = (val: number) => {
+    setSelectedLevel(val);
+    if (hlsInstance) {
+      hlsInstance.currentLevel = val;
+      if (val === -1) {
+        triggerQualityToast(`Quality: Auto (${currentAutoResolution || '1080p'})`);
+      } else {
+        const lvl = levels.find((l) => l.index === val);
+        if (lvl) triggerQualityToast(`Quality: ${lvl.name}`);
+      }
+    }
+  };
+
+  const handlePlayerContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // If click was on controls overlay elements, ignore
+    if ((e.target as HTMLElement).closest('button, select, option')) return;
+    if (!videoRef.current || !isPlaying) return;
+
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+
+      if (!playerContainerRef.current) return;
+      const rect = playerContainerRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const relativeX = clickX / rect.width;
+
+      if (relativeX < 0.35) {
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+        triggerSeekFeedback('-10s');
+      } else if (relativeX > 0.65) {
+        videoRef.current.currentTime = Math.min(videoRef.current.duration || Infinity, videoRef.current.currentTime + 10);
+        triggerSeekFeedback('+10s');
+      } else {
+        toggleContainerFullscreen();
+      }
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        if (videoRef.current) {
+          videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+        }
+      }, 250);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (!isPlaying || !videoRef.current) return;
+
+      const v = videoRef.current;
+      switch (e.code) {
+        case 'Space':
+        case 'KeyK':
+          e.preventDefault();
+          v.paused ? v.play() : v.pause();
+          break;
+        case 'ArrowLeft':
+        case 'KeyJ':
+          e.preventDefault();
+          v.currentTime = Math.max(0, v.currentTime - 10);
+          triggerSeekFeedback('-10s');
+          break;
+        case 'ArrowRight':
+        case 'KeyL':
+          e.preventDefault();
+          v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10);
+          triggerSeekFeedback('+10s');
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          v.volume = Math.min(1, v.volume + 0.1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          v.volume = Math.max(0, v.volume - 0.1);
+          break;
+        case 'KeyM':
+          e.preventDefault();
+          v.muted = !v.muted;
+          break;
+        case 'KeyF':
+          e.preventDefault();
+          toggleContainerFullscreen();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying]);
 
   const handleToggleWatchlist = async () => {
     if (!activeProfileId || !id || watchlistSubmitting) return;
@@ -348,7 +472,6 @@ const MovieDetails: React.FC = () => {
   const hasResumeOption = Boolean(savedProgress && currentPos > 5 && percentWatched < 95);
 
   const handleStartPlay = (resume: boolean) => {
-    setShouldResume(resume);
     setIsPlaying(true);
     const targetTime = (resume && savedProgress && savedProgress.current_position > 0)
       ? savedProgress.current_position
@@ -461,11 +584,13 @@ const MovieDetails: React.FC = () => {
                 {/* Left Column: Interactive Video Player */}
                 <div 
                   ref={playerContainerRef}
-                  className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden ${
+                  onMouseMove={handleMouseMove}
+                  onClick={handlePlayerContainerClick}
+                  className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden transition-all duration-300 ${
                     isFullscreen 
                       ? 'w-full h-full' 
                       : 'w-full lg:w-3/5 aspect-video lg:aspect-auto min-h-[300px] lg:min-h-[450px]'
-                  }`}
+                  } ${!showControls && isPlaying ? 'cursor-none' : ''}`}
                 >
                   <video
                     ref={videoRef}
@@ -513,17 +638,17 @@ const MovieDetails: React.FC = () => {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/30 to-transparent" />
                       
-                      <div className="z-10 text-center p-6 space-y-4 max-w-md">
+                      <div className="z-10 text-center p-6 space-y-4 max-w-md animate-fadeIn">
                         {hasResumeOption ? (
                           <div className="space-y-3">
                             <button 
                               onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-accent/25"
                             >
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
-                              <span>Resume Watching ({formatTime(currentPos)})</span>
+                              <span>Resume Watching (Continue from {formatTime(currentPos)})</span>
                             </button>
  
                             <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
@@ -535,7 +660,7 @@ const MovieDetails: React.FC = () => {
 
                             <button 
                               onClick={() => handleStartPlay(false)}
-                              className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline"
+                              className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline cursor-pointer"
                             >
                               Start From Beginning
                             </button>
@@ -543,7 +668,7 @@ const MovieDetails: React.FC = () => {
                         ) : (
                           <button 
                             onClick={() => handleStartPlay(false)}
-                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium"
+                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium shadow-xl shadow-brand-accent/30"
                           >
                             <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
                               <path d="M8 5v14l11-7z" />
@@ -560,11 +685,12 @@ const MovieDetails: React.FC = () => {
                       </div>
                     </>
                   )}
+
+                  {/* Player Top Bar (Close Button Left, Settings + Fullscreen Right) */}
                   {isPlaying && (
-                    <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase text-brand-accent">
-                          {streamType} Mode
-                        </span>
+                    <>
+                      {/* Left: Close Player Button */}
+                      <div className={`absolute top-4 left-4 z-20 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <button
                           onClick={() => {
                             if (videoRef.current) {
@@ -573,107 +699,124 @@ const MovieDetails: React.FC = () => {
                             }
                             setIsPlaying(false);
                           }}
-                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded transition-colors"
+                          className="text-xs bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-white font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-lg"
                         >
-                          Close Player
-                        </button>
-                        <button
-                          onClick={toggleContainerFullscreen}
-                          className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded transition-colors flex items-center gap-1.5"
-                          title="Toggle Fullscreen"
-                        >
-                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                          <span>Fullscreen</span>
+                          <span>Close</span>
                         </button>
                       </div>
+
+                      {/* Right: Combined Settings & Fullscreen Controls */}
+                      <div className={`absolute top-4 right-4 z-20 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {streamType === 'HLS' && levels.length > 1 && (
+                          <div className="flex items-center gap-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg transition-all duration-300">
+                            <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <select
+                              id="quality-select"
+                              value={selectedLevel}
+                              onChange={(e) => handleQualityChange(parseInt(e.target.value))}
+                              className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-1 focus:ring-0"
+                            >
+                              {levels.map((lvl) => (
+                                <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
+                                  {lvl.name === 'Auto'
+                                    ? (selectedLevel === -1 && currentAutoResolution ? `Auto (${currentAutoResolution})` : 'Auto')
+                                    : lvl.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={toggleContainerFullscreen}
+                          className="bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/10 text-white font-bold p-2 rounded-full transition-all flex items-center justify-center cursor-pointer shadow-lg"
+                          title="Toggle Fullscreen (F)"
+                        >
+                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                          </svg>
+                        </button>
+                      </div>
+                    </>
                   )}
 
-                      {streamType === 'HLS' && levels.length > 1 && (
-                        <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 bg-black/50 hover:bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg transition-all duration-300">
-                          <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <select
-                             id="quality-select"
-                             value={selectedLevel}
-                             onChange={(e) => {
-                               const val = parseInt(e.target.value);
-                               setSelectedLevel(val);
-                               if (hlsInstance) {
-                                 hlsInstance.currentLevel = val;
-                                 console.log(`Switched quality to level: ${val}`);
-                               }
-                             }}
-                             className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-2 focus:ring-0"
-                           >
-                             {levels.map((lvl) => (
-                               <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
-                                 {lvl.name === 'Auto'
-                                   ? (selectedLevel === -1 && currentAutoResolution ? `Auto (${currentAutoResolution})` : 'Auto')
-                                   : lvl.name}
-                               </option>
-                             ))}
-                          </select>
-                        </div>
-                      )}
+                  {/* Quality Toast Notification */}
+                  {qualityToast && (
+                    <div className="absolute top-16 z-30 bg-black/80 backdrop-blur-md border border-brand-accent/30 text-white text-xs font-bold px-4 py-2 rounded-full shadow-2xl animate-fadeIn pointer-events-none">
+                      {qualityToast}
+                    </div>
+                  )}
 
-                      {/* Loading State Overlay */}
-                      {isPlaying && isPlayerLoading && !playerError && (
-                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 pointer-events-none transition-opacity duration-300">
-                          <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
-                          <p className="mt-3 text-xs text-neutral-400 font-medium tracking-wider uppercase animate-pulse">Loading Stream...</p>
-                        </div>
-                      )}
+                  {/* Seek Feedback Indicator */}
+                  {seekFeedback && (
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="bg-black/75 backdrop-blur-md border border-white/20 text-white text-base font-black px-6 py-3 rounded-2xl shadow-2xl animate-scaleIn">
+                        {seekFeedback}
+                      </div>
+                    </div>
+                  )}
 
-                      {/* Buffering State Overlay */}
-                      {isBuffering && !isPlayerLoading && !playerError && (
-                        <div className="absolute inset-0 bg-black/45 flex flex-col items-center justify-center z-10 pointer-events-none transition-opacity duration-300">
-                          <div className="w-10 h-10 border-4 border-brand-accent/30 border-t-brand-accent rounded-full animate-spin"></div>
-                          <p className="mt-2.5 text-[10px] text-neutral-300 font-bold uppercase tracking-wider">Buffering...</p>
-                        </div>
-                      )}
+                  {/* Cinematic Netflix-style Loading Overlay */}
+                  {isPlaying && isPlayerLoading && !playerError && (
+                    <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-20 pointer-events-none transition-opacity duration-300">
+                      <div className="relative flex items-center justify-center mb-4">
+                        <div className="w-14 h-14 border-4 border-brand-accent/20 border-t-brand-accent rounded-full animate-spin"></div>
+                        <div className="absolute w-8 h-8 border-2 border-white/20 border-b-white rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
+                      </div>
+                      <h4 className="text-sm font-bold text-white tracking-wider uppercase">{movie.title}</h4>
+                      <p className="mt-2 text-xs text-neutral-400 font-medium tracking-wider uppercase animate-pulse">Loading stream...</p>
+                    </div>
+                  )}
 
-                      {/* Friendly Error State Card */}
-                      {playerError && (
-                        <div className="absolute inset-0 bg-[#141414]/95 flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300">
-                          <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                          </div>
-                          <h5 className="text-base font-extrabold text-white uppercase tracking-wide">Playback Interrupted</h5>
-                          <p className="text-xs text-neutral-400 max-w-sm mt-2 leading-relaxed">
-                            {playerError}
-                          </p>
-                          <div className="flex gap-3 mt-6">
-                            <button
-                              onClick={() => {
-                                setPlayerError(null);
-                                setIsPlayerLoading(true);
-                                if (videoRef.current) {
-                                  videoRef.current.load();
-                                  videoRef.current.play().catch(() => {});
-                                }
-                              }}
-                              className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-all transform hover:scale-105 active:scale-95"
-                            >
-                              Retry Playback
-                            </button>
-                            <button
-                              onClick={() => {
-                                setIsPlaying(false);
-                                setPlayerError(null);
-                              }}
-                              className="px-4 py-2 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-lg border border-white/10 transition-all"
-                            >
-                              Go Back
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                  {/* Buffering Overlay */}
+                  {isBuffering && !isPlayerLoading && !playerError && (
+                    <div className="absolute inset-0 bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center z-20 pointer-events-none transition-opacity duration-300">
+                      <div className="w-10 h-10 border-4 border-brand-accent/30 border-t-brand-accent rounded-full animate-spin mb-2"></div>
+                      <p className="text-[11px] text-white font-bold uppercase tracking-wider">Buffering...</p>
+                    </div>
+                  )}
+
+                  {/* Premium Error State Card */}
+                  {playerError && (
+                    <div className="absolute inset-0 bg-[#141414]/95 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center z-30 transition-all duration-300">
+                      <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
+                        <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <h5 className="text-base font-black text-white uppercase tracking-wide">Playback Unavailable</h5>
+                      <p className="text-xs text-neutral-400 max-w-sm mt-2 leading-relaxed">
+                        {playerError}
+                      </p>
+                      <div className="flex gap-3 mt-6">
+                        <button
+                          onClick={() => {
+                            setPlayerError(null);
+                            setIsPlayerLoading(true);
+                            if (videoRef.current) {
+                              videoRef.current.load();
+                              videoRef.current.play().catch(() => {});
+                            }
+                          }}
+                          className="px-5 py-2.5 bg-brand-accent hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+                        >
+                          Retry Playback
+                        </button>
+                        <button
+                          onClick={() => navigate('/')}
+                          className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold rounded-lg border border-white/10 transition-all cursor-pointer"
+                        >
+                          Back to Browse
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Column: Metadata Detail Fields */}
