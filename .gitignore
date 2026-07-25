@@ -31,6 +31,7 @@ backend/local_emails.log
 backend/*.db
 backend/*.bak
 backend/storage/
+dump.rdb
 
 # Node / Frontend
 node_modules/

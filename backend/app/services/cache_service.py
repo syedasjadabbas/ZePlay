@@ -17,20 +17,53 @@ class CacheService:
         self._misses = 0
         self._locks: Dict[str, asyncio.Lock] = {}
 
+    async def get_client(self):
+        """Returns active Redis client, re-initializing pool if current event loop changed."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if self._redis_pool is not None and getattr(self, "_loop", None) != loop:
+            try:
+                await self._redis_pool.disconnect()
+            except Exception:
+                pass
+            self._redis_pool = None
+            self._redis_client = None
+
+        if self._redis_client is None and settings.REDIS_ENABLED:
+            await self.initialize()
+            self._loop = loop
+        return self._redis_client
+
     async def initialize(self):
         """Initialize Redis connection pool if enabled."""
         if not settings.REDIS_ENABLED:
             logger.info("Redis cache is explicitly disabled in settings.")
             return
 
+        if self._redis_pool is not None:
+            try:
+                await self._redis_pool.disconnect()
+            except Exception:
+                pass
+            self._redis_pool = None
+            self._redis_client = None
+
         try:
             import redis.asyncio as aioredis
+            try:
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self._loop = None
             self._redis_pool = aioredis.ConnectionPool.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
                 max_connections=50,
                 socket_timeout=2.0,
                 socket_connect_timeout=2.0,
+                protocol=2,
             )
             self._redis_client = aioredis.Redis(connection_pool=self._redis_pool)
 

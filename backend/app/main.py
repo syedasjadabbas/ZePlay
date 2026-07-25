@@ -75,6 +75,9 @@ async def health_check():
         db_connected = False
 
     cache_stats = await cache.get_stats()
+    from app.services.job_queue_service import job_queue
+    queue_stats = await job_queue.get_queue_stats()
+
     return {
         "status": "online" if db_connected else "degraded",
         "service": settings.PROJECT_NAME,
@@ -86,5 +89,9 @@ async def health_check():
         "cache": {
             "engine": cache_stats["cache_engine"],
             "redis_connected": cache_stats["redis_connected"],
+        },
+        "queue": {
+            "queued_jobs": queue_stats["queue_length"],
+            "backend": queue_stats["backend"],
         }
     }

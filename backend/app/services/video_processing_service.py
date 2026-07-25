@@ -423,21 +423,27 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     await db.refresh(video)
     return video
 
-# Active background job lock set to prevent duplicate concurrent transcoding runs
+# Active background job lock set for in-memory fallback
 _active_job_ids = set()
 
 async def process_video_in_background(video_id: UUID) -> None:
     """
-    Entrypoint for FastAPI BackgroundTasks.
-    Creates a fresh database session context and executes HLS transcoding.
-    Prevents duplicate concurrent runs for the same video asset.
+    Entrypoint for background processing triggers.
+    Enqueues the job into Redis JobQueueService and executes transcoding.
+    Uses distributed Redis locking for cross-process deduplication.
     """
     vid_str = str(video_id)
-    if vid_str in _active_job_ids:
-        print(f"[JOB_QUEUE] Skipping duplicate background task trigger for video {vid_str}")
+    from app.services.job_queue_service import job_queue
+
+    # Enqueue to durable Redis queue
+    await job_queue.enqueue_job(video_id)
+
+    # Acquire distributed lock to prevent duplicate concurrent processing
+    locked = await job_queue.acquire_lock(vid_str, worker_id="fastapi_background_task", ttl_seconds=600)
+    if not locked:
+        print(f"[JOB_QUEUE] Video {vid_str} is already locked by another worker. Skipping duplicate trigger.")
         return
 
-    _active_job_ids.add(vid_str)
     try:
         from app.database import SessionLocal
         async with SessionLocal() as db:
@@ -456,6 +462,7 @@ async def process_video_in_background(video_id: UUID) -> None:
         except Exception as db_err:
             print(f"[JOB_QUEUE] Failed to record error status in DB: {db_err}")
     finally:
+        await job_queue.release_lock(vid_str)
         _active_job_ids.discard(vid_str)
 
 
