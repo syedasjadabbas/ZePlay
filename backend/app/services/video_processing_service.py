@@ -416,22 +416,40 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
     await db.refresh(video)
     return video
 
+# Active background job lock set to prevent duplicate concurrent transcoding runs
+_active_job_ids = set()
+
 async def process_video_in_background(video_id: UUID) -> None:
     """
     Entrypoint for FastAPI BackgroundTasks.
     Creates a fresh database session context and executes HLS transcoding.
+    Prevents duplicate concurrent runs for the same video asset.
     """
-    from app.database import SessionLocal
-    async with SessionLocal() as db:
-        try:
+    vid_str = str(video_id)
+    if vid_str in _active_job_ids:
+        print(f"[JOB_QUEUE] Skipping duplicate background task trigger for video {vid_str}")
+        return
+
+    _active_job_ids.add(vid_str)
+    try:
+        from app.database import SessionLocal
+        async with SessionLocal() as db:
             await process_video_to_hls(db, video_id)
-        except Exception as e:
-            from app.models.video import Video
-            result = await db.execute(select(Video).filter(Video.video_id == video_id))
-            video = result.scalars().first()
-            if video:
-                video.status = "failed"
-                video.error_message = str(e)
-                await db.commit()
+    except Exception as e:
+        print(f"[JOB_QUEUE] Background task failed for video {vid_str}: {e}")
+        try:
+            from app.database import SessionLocal
+            async with SessionLocal() as db:
+                result = await db.execute(select(Video).filter(Video.video_id == video_id))
+                video = result.scalars().first()
+                if video:
+                    video.status = "failed"
+                    video.error_message = str(e)
+                    await db.commit()
+        except Exception as db_err:
+            print(f"[JOB_QUEUE] Failed to record error status in DB: {db_err}")
+    finally:
+        _active_job_ids.discard(vid_str)
+
 
 
