@@ -30,11 +30,15 @@ class Settings(BaseSettings):
 
     # Storage settings
     STORAGE_DIR: str = "storage/videos"
-    S3_BUCKET_NAME: str = ""
+    STORAGE_BACKEND: str = "local"  # "local" or "s3"
+    S3_BUCKET: str = ""
+    S3_BUCKET_NAME: str = ""        # Alias for backward compatibility
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "us-east-1"
-    CLOUDFRONT_URL: str = ""
+    S3_ENDPOINT_URL: str = ""       # For MinIO / S3-compatible endpoints
+    CDN_BASE_URL: str = ""          # CDN URL prefix for public asset distribution
+    CLOUDFRONT_URL: str = ""        # Alias for CloudFront
     MOCK_S3: bool = False
 
     # Redis cache settings
@@ -51,6 +55,25 @@ class Settings(BaseSettings):
 
     def __init__(self, **values):
         super().__init__(**values)
+        # Synchronize bucket & CDN aliases
+        if not self.S3_BUCKET and self.S3_BUCKET_NAME:
+            self.S3_BUCKET = self.S3_BUCKET_NAME
+        elif self.S3_BUCKET and not self.S3_BUCKET_NAME:
+            self.S3_BUCKET_NAME = self.S3_BUCKET
+
+        if not self.CDN_BASE_URL and self.CLOUDFRONT_URL:
+            self.CDN_BASE_URL = self.CLOUDFRONT_URL
+        elif self.CDN_BASE_URL and not self.CLOUDFRONT_URL:
+            self.CLOUDFRONT_URL = self.CDN_BASE_URL
+
+        # Validate S3 backend configuration in production mode
+        if self.STORAGE_BACKEND.lower() == "s3" and not self.MOCK_S3:
+            if not self.S3_BUCKET or not self.AWS_ACCESS_KEY_ID or not self.AWS_SECRET_ACCESS_KEY:
+                raise ValueError(
+                    "STORAGE_BACKEND is set to 's3' but required S3 configuration "
+                    "(S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) is missing."
+                )
+
         # Parse and resolve relative SQLite database URLs to absolute paths
         if self.DATABASE_URL.startswith("sqlite"):
             # Find backend folder (parent of app folder where this config.py resides)

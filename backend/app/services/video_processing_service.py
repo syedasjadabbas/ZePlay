@@ -359,50 +359,57 @@ async def process_video_to_hls(db: AsyncSession, video_id: UUID) -> Video:
             generate_fallback_hls_assets(hls_dir, video)
             processed_successfully = True
         else:
-            # Real segments exist but repair didn't pick them up — try broader repair
+            # Real segments exist but playlist repair returned 0. Skipping dummy fallback.
             print(f"[WARN] Real segments exist but playlist repair returned 0. Skipping dummy fallback.")
             processed_successfully = True
 
     if processed_successfully:
-        video.status = "completed"
-        video.format = "hls"
-        video.hls_path = hls_dir
-        
-        # Upload directory to S3 if configured
         from app.services.s3_storage_service import s3_storage
         from app.config import settings
-        
-        is_s3_enabled = (s3_storage.s3_client and s3_storage.bucket_name) or settings.MOCK_S3
-        
+
+        is_s3_enabled = (settings.STORAGE_BACKEND.lower() == "s3" and s3_storage.s3_client and s3_storage.bucket_name) or settings.MOCK_S3
+
         if is_s3_enabled:
-            s3_prefix = f"hls/{video.video_id}_hls"
+            # Deterministic object key structure
+            movie_key_part = f"movies/{video.movie_id}" if video.movie_id else f"videos/{video.video_id}"
+            s3_prefix = f"{movie_key_part}/hls"
+
             s3_uploaded = True
             if not settings.MOCK_S3:
                 s3_uploaded = await s3_storage.upload_directory(hls_dir, s3_prefix)
-                
+                # Validation: verify master.m3u8 exists in S3 before marking completed
+                if s3_uploaded:
+                    master_key = f"{s3_prefix}/master.m3u8"
+                    s3_uploaded = await s3_storage.exists(master_key)
+
             if s3_uploaded:
-                cdn_url = getattr(settings, "CLOUDFRONT_URL", None)
-                if cdn_url:
-                    video.master_playlist_url = f"{cdn_url.rstrip('/')}/{s3_prefix}/master.m3u8"
-                else:
-                    video.master_playlist_url = f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{s3_prefix}/master.m3u8"
-                
-                # Cleanup local files - REPLACING LOCAL STORAGE DEPENDENCY
+                video.status = "completed"
+                video.format = "hls"
+                video.hls_path = hls_dir
+                video.master_playlist_url = s3_storage.get_url(f"{s3_prefix}/master.m3u8")
+                video.error_message = None
+
+                # Cleanup local temp files after successful upload validation
                 try:
+                    if os.path.exists(hls_dir):
+                        import shutil
+                        shutil.rmtree(hls_dir)
                     if os.path.exists(video.storage_path):
                         os.remove(video.storage_path)
-                    if os.path.exists(hls_dir):
-                        shutil.rmtree(hls_dir)
                 except Exception as cleanup_err:
-                    print(f"Failed to clean up local files after S3 upload: {cleanup_err}")
+                    print(f"Failed to clean up local temp files after S3 upload: {cleanup_err}")
             else:
-                video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
+                video.status = "failed"
+                video.error_message = "Object storage upload or validation failed."
         else:
+            # Local storage backend
+            video.status = "completed"
+            video.format = "hls"
+            video.hls_path = hls_dir
             video.master_playlist_url = f"/api/videos/{video.video_id}/hls/master.m3u8"
-            
-        video.error_message = None
-        
-        if video.movie_id:
+            video.error_message = None
+
+        if video.status == "completed" and video.movie_id:
             from app.models.movie import Movie
             movie_res = await db.execute(select(Movie).filter(Movie.movie_id == video.movie_id))
             movie = movie_res.scalars().first()

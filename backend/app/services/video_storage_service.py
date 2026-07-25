@@ -64,7 +64,7 @@ async def save_uploaded_video(
         existing_vid = await db.execute(
             select(Video).filter(
                 Video.movie_id == movie_id,
-                Video.status.in_(["completed", "processing", "READY"])
+                Video.status.in_(["completed", "processing", "READY", "queued", "uploaded"])
             )
         )
         if existing_vid.scalars().first():
@@ -78,7 +78,7 @@ async def save_uploaded_video(
         dup_check = await db.execute(
             select(Video).filter(
                 Video.original_filename == file.filename,
-                Video.status.in_(["completed", "processing", "READY"])
+                Video.status.in_(["completed", "processing", "READY", "queued", "uploaded"])
             )
         )
         if dup_check.scalars().first():
