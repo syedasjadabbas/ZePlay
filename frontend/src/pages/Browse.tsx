@@ -59,8 +59,7 @@ const Browse: React.FC = () => {
       setGenres(genresRes.data || []);
       setMovies(moviesRes.data || []);
     } catch (err: any) {
-      console.error("Failed to fetch catalog data.", err);
-      setError("Failed to load catalog movies. Please check your network connection.");
+      setError("Failed to load catalog. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -130,11 +129,14 @@ const Browse: React.FC = () => {
           <div className="bg-neutral-900/50 backdrop-blur-md p-6 rounded-xl space-y-6">
             {/* Search Input */}
             <div className="relative">
-              <input 
-                type="text" 
+              <input
+                id="browse-search"
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search catalog titles, descriptions, or genres..."
+                aria-label="Search the catalog"
+                autoComplete="off"
                 className="w-full bg-black/40 border border-white/10 rounded-lg px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all"
               />
               <svg className="w-5 h-5 text-neutral-400 absolute left-4 top-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

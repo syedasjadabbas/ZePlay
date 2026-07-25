@@ -127,7 +127,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounced search with loading state
+  // Debounced search with loading state and abort controller to prevent stale results
   useEffect(() => {
     if (!query.trim()) {
       setSuggestions([]);
@@ -137,20 +137,27 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
     }
     setIsSearchLoading(true);
     setHasSearched(false);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const response = await api.get(`/catalog/search/suggestions?q=${encodeURIComponent(query.trim())}`);
+        const response = await api.get(`/catalog/search/suggestions?q=${encodeURIComponent(query.trim())}`, {
+          signal: controller.signal,
+        });
         setSuggestions(response.data || []);
         setShowDropdown(true);
         setHasSearched(true);
-      } catch {
+      } catch (err: any) {
+        if (err.name === 'CanceledError' || err.name === 'AbortError') return;
         setSuggestions([]);
         setHasSearched(true);
       } finally {
-        setIsSearchLoading(false);
+        if (!controller.signal.aborted) setIsSearchLoading(false);
       }
     }, 180);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query]);
 
   useEffect(() => {

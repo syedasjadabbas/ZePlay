@@ -54,25 +54,26 @@ const SearchResults: React.FC = () => {
         const res = await api.get('/catalog/genres');
         setGenres(res.data);
       } catch (e) {
-        console.error('Failed to fetch genres', e);
+        // genres are non-critical, silently fail
       }
     };
     fetchGenres();
   }, []);
 
-  const fetchSearchResults = async () => {
+  const fetchSearchResults = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams();
       if (queryTerm) params.append('q', queryTerm);
       if (selectedGenre) params.append('genre', selectedGenre);
       if (sortBy) params.append('sort_by', sortBy);
 
-      const response = await api.get(`/catalog/search?${params.toString()}`);
+      const response = await api.get(`/catalog/search?${params.toString()}`, { signal });
       setMovies(response.data);
     } catch (err: any) {
+      if (err.name === 'CanceledError' || err.name === 'AbortError') return;
       setError(err.response?.data?.detail || "Failed to load search results.");
     } finally {
       setLoading(false);
@@ -80,7 +81,9 @@ const SearchResults: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSearchResults();
+    const controller = new AbortController();
+    fetchSearchResults(controller.signal);
+    return () => controller.abort();
   }, [queryTerm, selectedGenre, sortBy]);
 
   const handleGenreSelect = (genreName: string | null) => {
@@ -176,7 +179,7 @@ const SearchResults: React.FC = () => {
             <ErrorState
               title="Search Unavailable"
               message={error}
-              onRetry={fetchSearchResults}
+              onRetry={() => fetchSearchResults()}
             />
           ) : movies.length === 0 ? (
             <EmptyState

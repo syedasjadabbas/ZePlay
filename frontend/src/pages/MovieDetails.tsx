@@ -5,7 +5,7 @@ import api, { API_ORIGIN, getToken } from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
-import { useModal } from '../components/ModalProvider';
+import { useToast } from '../components/Toast';
 import PremiumPoster from '../components/PremiumPoster';
 import Footer from '../components/Footer';
 import { MovieDetailsSkeleton, MovieCardSkeleton } from '../components/Skeleton';
@@ -34,7 +34,7 @@ interface SavedProgress {
 }
 
 const MovieDetails: React.FC = () => {
-  const { showAlert } = useModal();
+  const { showToast } = useToast();
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
@@ -235,21 +235,24 @@ const MovieDetails: React.FC = () => {
 
   const handleToggleWatchlist = async () => {
     if (!activeProfileId || !id || watchlistSubmitting) return;
+    const wasInList = isInWatchlist;
     try {
       setWatchlistSubmitting(true);
       if (isInWatchlist) {
         await api.delete(`/watchlist/${id}?profile_id=${activeProfileId}`);
         setIsInWatchlist(false);
+        showToast('Removed from My List', 'info');
       } else {
         await api.post('/watchlist/', {
           profile_id: activeProfileId,
           movie_id: id
         });
         setIsInWatchlist(true);
+        showToast('Added to My List', 'success');
       }
     } catch (err) {
-      console.error("Failed to toggle watchlist status.", err);
-      showAlert("Error", "Could not update My List.", "danger");
+      setIsInWatchlist(wasInList);
+      showToast('Could not update My List. Please try again.', 'error');
     } finally {
       setWatchlistSubmitting(false);
     }

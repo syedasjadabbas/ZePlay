@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
-import { useModal } from '../components/ModalProvider';
+import { useToast } from '../components/Toast';
 import Footer from '../components/Footer';
 import { MovieCardSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
@@ -30,7 +30,7 @@ interface WatchHistoryItem {
 }
 
 const WatchHistoryPage: React.FC = () => {
-  const { showAlert } = useModal();
+  const { showToast } = useToast();
   const [history, setHistory] = useState<WatchHistoryItem[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
@@ -63,13 +63,16 @@ const WatchHistoryPage: React.FC = () => {
     fetchHistory();
   }, [activeProfileId]);
 
-  const handleDeleteItem = async (historyId: string, e: React.MouseEvent) => {
+  const handleDeleteItem = async (historyId: string, _movieTitle: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const prev = history;
+    setHistory(h => h.filter(item => item.history_id !== historyId));
     try {
       await api.delete(`/watch-history/${historyId}`);
-      setHistory(prev => prev.filter(item => item.history_id !== historyId));
+      showToast('Removed from watch history', 'info');
     } catch (err) {
-      showAlert("Error", "Failed to remove item from history.", "danger");
+      setHistory(prev);
+      showToast('Failed to remove from history', 'error');
     }
   };
 
@@ -200,9 +203,9 @@ const WatchHistoryPage: React.FC = () => {
                       </span>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={(e) => handleDeleteItem(item.history_id, e)}
-                          className="p-1.5 text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                          title="Remove from Watch History"
+                          onClick={(e) => handleDeleteItem(item.history_id, movie?.title || 'this item', e)}
+                          className="p-1.5 text-neutral-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                          aria-label={`Remove ${movie?.title || 'this item'} from watch history`}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

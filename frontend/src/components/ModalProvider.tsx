@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 
 interface ModalConfig {
   title: string;
@@ -27,6 +27,24 @@ export const useModal = () => {
 
 export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [modal, setModal] = useState<ModalConfig | null>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement>(null);
+
+  // ESC key cancels modal; auto-focus confirm button on open
+  useEffect(() => {
+    if (!modal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        modal.resolve(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    const t = setTimeout(() => confirmBtnRef.current?.focus(), 50);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(t);
+    };
+  }, [modal]);
 
   const showAlert = (
     title: string,
@@ -76,12 +94,16 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
 
       {modal && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fadeIn"
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby="modal-desc"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-backdropFadeIn"
           onClick={() => modal.resolve(false)}
         >
           <div
-            className="w-full max-w-md bg-[#0B1535] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85)] space-y-6 text-left transform animate-scaleIn"
+            className="w-full max-w-md bg-[#0B1535] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85)] space-y-6 text-left transform animate-modalPopIn"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -92,7 +114,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                   : modal.type === 'success'
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                   : 'bg-brand-accent/10 border-brand-accent/20 text-brand-accent'
-              }`}>
+              }`} aria-hidden="true">
                 {modal.type === 'danger' ? (
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -108,10 +130,10 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 )}
               </div>
               <div className="space-y-1.5 flex-1 min-w-0">
-                <h3 className="text-xl font-extrabold font-display text-white tracking-wide leading-snug">
+                <h3 id="modal-title" className="text-xl font-extrabold font-display text-white tracking-wide leading-snug">
                   {modal.title}
                 </h3>
-                <p className="text-xs text-brand-textMuted leading-relaxed">
+                <p id="modal-desc" className="text-xs text-brand-textMuted leading-relaxed">
                   {modal.message}
                 </p>
               </div>
@@ -129,6 +151,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 </button>
               )}
               <button
+                ref={confirmBtnRef}
                 type="button"
                 onClick={() => modal.resolve(true)}
                 className={`px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg transition-all btn-premium select-none cursor-pointer ${

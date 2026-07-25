@@ -220,6 +220,7 @@ const Settings: React.FC = () => {
                   onBlur={handleBlur}
                   style={inputStyle}
                   required
+                  autoComplete="current-password"
                   className="w-full px-4 py-3 text-white rounded-xl outline-none transition-all text-xs placeholder:text-white/30"
                 />
               </div>
@@ -235,6 +236,7 @@ const Settings: React.FC = () => {
                   onBlur={handleBlur}
                   style={inputStyle}
                   required
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 text-white rounded-xl outline-none transition-all text-xs placeholder:text-white/30"
                 />
               </div>
@@ -250,6 +252,7 @@ const Settings: React.FC = () => {
                   onBlur={handleBlur}
                   style={inputStyle}
                   required
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 text-white rounded-xl outline-none transition-all text-xs placeholder:text-white/30"
                 />
               </div>

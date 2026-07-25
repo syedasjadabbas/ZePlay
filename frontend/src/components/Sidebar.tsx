@@ -52,7 +52,7 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-56 bg-[#000000] flex flex-col justify-between z-30 py-8 px-6">
+    <aside role="navigation" aria-label="Main navigation" className="fixed left-0 top-0 bottom-0 w-56 bg-[#000000] flex flex-col justify-between z-30 py-8 px-6">
       {/* Brand */}
       <div className="space-y-8">
         <div className="px-4 cursor-pointer select-none" onClick={() => navigate('/')}>

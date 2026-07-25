@@ -31,12 +31,17 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration = 4000) => {
-    const id = `toast-${++toastIdCounter}`;
-    setToasts(prev => [...prev.slice(-4), { id, type, message, visible: true }]);
-    timers.current[id] = setTimeout(() => {
-      removeToast(id);
-      delete timers.current[id];
-    }, duration);
+    // Prevent duplicate toasts for the same message within 2s
+    setToasts(prev => {
+      const recent = prev.find(t => t.message === message && t.type === type && t.visible);
+      if (recent) return prev;
+      const id = `toast-${++toastIdCounter}`;
+      timers.current[id] = setTimeout(() => {
+        removeToast(id);
+        delete timers.current[id];
+      }, duration);
+      return [...prev.slice(-4), { id, type, message, visible: true }];
+    });
   }, [removeToast]);
 
   const handleDismiss = (id: string) => {

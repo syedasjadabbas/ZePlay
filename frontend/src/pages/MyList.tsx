@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
-import { useModal } from '../components/ModalProvider';
+import { useToast } from '../components/Toast';
 import Footer from '../components/Footer';
 import { MovieCardSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
@@ -33,7 +33,7 @@ interface WatchlistItem {
 }
 
 const MyList: React.FC = () => {
-  const { showAlert } = useModal();
+  const { showToast } = useToast();
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
@@ -69,11 +69,15 @@ const MyList: React.FC = () => {
   const handleRemoveFromList = async (movieId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!activeProfileId) return;
+    // Optimistic removal
+    const prev = watchlist;
+    setWatchlist(w => w.filter(item => item.movie_id !== movieId));
     try {
       await api.delete(`/watchlist/${movieId}?profile_id=${activeProfileId}`);
-      setWatchlist(prev => prev.filter(item => item.movie_id !== movieId));
+      showToast('Removed from My List', 'info');
     } catch (err) {
-      showAlert("Error", "Failed to remove item from My List.", "danger");
+      setWatchlist(prev); // rollback
+      showToast('Failed to remove from My List', 'error');
     }
   };
 
@@ -162,7 +166,8 @@ const MyList: React.FC = () => {
                     <div className="px-4 py-2.5 bg-black/30 flex items-center justify-between text-xs">
                       <button
                         onClick={(e) => handleRemoveFromList(movie.movie_id, e)}
-                        className="w-full flex items-center justify-center gap-1.5 py-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors font-bold text-[11px]"
+                        aria-label={`Remove ${movie.title} from My List`}
+                        className="w-full flex items-center justify-center gap-1.5 py-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors font-bold text-[11px] cursor-pointer"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

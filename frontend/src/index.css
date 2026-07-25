@@ -291,3 +291,61 @@ video::--webkit-media-controls-fullscreen-button {
   animation: cwItemIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* ============================================================
+   Sprint 4 – Accessibility & Reduced Motion
+   ============================================================ */
+
+/* Visible focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.8) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px !important;
+}
+
+/* Honor prefers-reduced-motion — disable non-essential animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-fadeIn,
+  .animate-scaleIn,
+  .animate-shimmer,
+  .animate-shake,
+  .animate-modalPopIn,
+  .animate-backdropFadeIn,
+  .animate-dropdownIn,
+  .animate-drawerSlideIn,
+  .animate-cwItemIn {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Min touch-target sizing for interactive elements */
+button,
+[role="button"],
+a,
+select {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Exempt small inline chips/pills from min touch size */
+.touch-exempt,
+.touch-exempt button {
+  min-height: unset;
+  min-width: unset;
+}
+
+/* Horizontal overflow prevention */
+html, body {
+  overflow-x: hidden;
+}
+

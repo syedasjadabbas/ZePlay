@@ -212,12 +212,16 @@ const VerifyEmail: React.FC = () => {
                   <input
                     id="otp-input"
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
                     maxLength={6}
                     placeholder="123456"
                     value={otp}
                     onChange={handleOtpChange}
                     required
                     autoFocus
+                    aria-label="6-digit OTP verification code"
                     className="w-full px-4 py-4 text-center text-3xl tracking-[12px] font-extrabold text-white rounded-xl placeholder:text-white/20 outline-none transition-all duration-200 animate-pulse-slow"
                     style={inputStyle}
                     onFocus={handleFocus}

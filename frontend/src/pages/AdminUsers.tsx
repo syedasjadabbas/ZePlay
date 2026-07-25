@@ -4,6 +4,7 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useModal } from '../components/ModalProvider';
+import { useToast } from '../components/Toast';
 import { TableSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 
@@ -19,12 +20,12 @@ interface UserData {
 
 const AdminUsers: React.FC = () => {
   const { showConfirm } = useModal();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -32,10 +33,7 @@ const AdminUsers: React.FC = () => {
       const response = await api.get('/admin/users');
       setUsers(response.data);
     } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.detail || 'Failed to fetch platform users list.'
-      });
+      showToast(err.response?.data?.detail || 'Failed to load users', 'error');
     } finally {
       setLoading(false);
     }
@@ -57,18 +55,14 @@ const AdminUsers: React.FC = () => {
 
     try {
       setUpdatingUserId(user.user_id);
-      setMessage(null);
       await api.put(`/admin/users/${user.user_id}/role`, { is_admin: !user.is_admin });
-      setMessage({
-        type: 'success',
-        text: `User ${user.email} ${user.is_admin ? 'demoted to regular user' : 'promoted to admin'} successfully.`
-      });
+      showToast(
+        `${user.email} ${user.is_admin ? 'demoted to user' : 'promoted to admin'}`,
+        user.is_admin ? 'info' : 'success'
+      );
       await fetchUsers();
     } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.detail || 'Failed to update user role.'
-      });
+      showToast(err.response?.data?.detail || 'Failed to update user role', 'error');
     } finally {
       setUpdatingUserId(null);
     }
@@ -116,16 +110,7 @@ const AdminUsers: React.FC = () => {
              </div>
            </div>
  
-           {message && (
-             <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-3 border animate-scaleIn ${
-               message.type === 'success' 
-                 ? 'bg-emerald-950/40 border-emerald-800/30 text-emerald-300' 
-                 : 'bg-red-950/40 border-red-800/30 text-rose-300'
-             }`}>
-               <span>{message.text}</span>
-             </div>
-           )}
- 
+
             <div className="animate-scaleIn">
               {loading ? (
                 <TableSkeleton rows={6} />
@@ -197,6 +182,7 @@ const AdminUsers: React.FC = () => {
 
                       <div className="pt-2">
                         <button
+                          aria-label={u.is_admin ? `Revoke admin from ${u.name}` : `Promote ${u.name} to admin`}
                           onClick={() => handleToggleAdmin(u)}
                           disabled={updatingUserId === u.user_id}
                           className={`w-full py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all select-none cursor-pointer ${
