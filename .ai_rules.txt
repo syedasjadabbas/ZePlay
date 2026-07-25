@@ -5,13 +5,12 @@ Always read:
 2. .ai_rules.txt
 
 Rules:
+- UI IS FROZEN. Do not modify, redesign, or restyle any UI components unless explicitly requested.
+- Focus strictly on Backend, UX Refinements, Performance, Scalability, Security, and Production Deployment.
 - Minimize output.
-- No long reports.
-- No architecture essays.
-- No documentation unless requested.
+- No long essays.
 - Implement directly.
 - Reuse existing code.
-- Do not create duplicate services.
 - Validate after implementation.
 - Commit only after validation passes.
 
@@ -22,8 +21,5 @@ Show only:
 4. Validation results
 
 Investigate before asking questions.
-
 Prefer implementation over discussion.
 Prefer code changes over explanations.
-
-Keep responses under 200 words unless requested.

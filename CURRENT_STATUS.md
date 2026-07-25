@@ -1,91 +1,130 @@
-# ZePlay Current Status
+# ZePlay Project Current Status
 
-Last Updated: 23 July 2026
+==========================
+PROJECT STATUS
+==========================
 
-## Current Sprint
-Frontend Optimization & Production Readiness
+Current Project:
+ZePlay
+Production-grade Netflix-style streaming platform.
 
-## Completed
+Current Status:
+UI Freeze Complete
+Playback Phase Complete
 
-- Authentication
-- Profiles
-- Search
-- Recommendations
-- Watch History
-- Continue Watching
-- Redis Integration
-- HLS Streaming
-- Adaptive Bitrate Streaming
-- 1080p / 720p / 480p
-- Quality Selector
-- Seeking Validation
-- Chunk Delivery Validation
-- LAN Playback
-- Import Video Tool
-- Background Transcoding
-- Processing Progress Tracking
+==========================
+COMPLETED FEATURES
+==========================
 
-## Recently Completed
+Authentication
+- JWT authentication
+- OTP verification
+- OTP password reset
+- Profile PIN support
 
-- Integrated `@tanstack/react-query` with custom caching hooks (`useCatalog`, `useMovieDetails`, `useRecommendations`, `useWatchHistory`, `useWatchlist`)
-- Added query parameter token support (`?token=...`) in `get_current_user` dependency for secure HLS chunk/manifest requests
-- Configured HLS.js player in `MovieDetails.tsx` to forward Bearer tokens in `xhrSetup` and media URLs
-- Fixed FastAPI `Request`/`Response` parameters in [videos.py](file:///e:/WEBS%20&%20APPS/ZePlay/backend/app/api/endpoints/videos.py) for master/variant `.m3u8` and `.ts` chunk requests
-- Implemented Rollup `manualChunks` vendor code-splitting in [vite.config.ts](file:///e:/WEBS%20&%20APPS/ZePlay/frontend/vite.config.ts), reducing main bundle payload from 1,004 kB to 286 kB
-- Shaidai.mp4 imported & 386 HLS segments generated per quality (1080p/720p/480p)
-- All 40 backend test cases passing (`pytest`) & clean frontend build (`npm run build`)
+Profiles
+- Multi-profile support
+- PIN protected profiles
+- PIN required before profile edits/deletion (if enabled)
 
+Streaming
+- HLS playback
+- Adaptive bitrate streaming
+- 480p
+- 720p
+- 1080p
+- Resume watching
+- Continue watching
+- Watch history
+- Quality selector
+- Auto quality
+- Smooth seeking
 
-## Current Focus
+Player
+- Netflix-style controls
+- Auto-hide controls
+- Keyboard shortcuts
+- Touch gestures
+- Loading overlay
+- Error overlay
+- Resume overlay
+- Fullscreen support
+- Quality switching without restarting playback
 
-1. Frontend performance & API caching
-2. Local HLS playback & ABR streaming validation in browser
-3. Login speed optimization
-4. PostgreSQL migration
-5. Production Redis setup
+Backend
+- Background transcoding
+- Import video pipeline
+- FFmpeg processing
+- Poster generation
+- HLS generation
+- Playlist repair
+- Dummy fallback protection
+- Real segment detection
 
-## Known Issues
+Admin
+- Catalog ingestion
+- User management
+- Premium UI
 
-- PostgreSQL migration incomplete
-- Redis production setup incomplete
-- AWS / S3 / CloudFront not started
+Performance
+- Login optimized
+- Removed unnecessary auth requests
+- Faster dashboard loading
 
-## Next Tasks
+UI
+- Frozen
+- Netflix-inspired
+- Minimal
+- Production styling
+- Navigation finalized
+- Playback finalized
 
-- Validate HLS playback in browser
-- Verify .m3u8 requests
-- Verify .ts chunk requests
-- Verify seeking
-- Verify quality switching
-- Optimize frontend API calls
-- Complete PostgreSQL migration
+==========================
+KNOWN DECISIONS
+==========================
 
-## Do Not Work On Yet
+UI is frozen.
 
-- AWS
-- S3
-- CloudFront
-- Production deployment
+Do not redesign UI again.
 
-Only start after all local streaming validation passes.
+Future prompts should focus on:
+- UX improvements
+- Performance
+- Backend
+- Scalability
+- Security
+- Deployment
+- Production readiness
 
-## Current Upload Method
+Avoid changing visual design unless explicitly requested.
 
-Preferred:
-import_video.py
+==========================
+VIDEO IMPORT
+==========================
 
-Development:
-python import_video.py "D:\Movies\<movie>.mp4"
+Current workflow:
+Import Script only.
 
-Admin Dashboard upload is secondary.
+Imported videos currently include:
+- Shaidai.mp4
+- Bulbulay
+- Akshay Kumar in The Great Kapil Sharma Show
 
-## Success Criteria
+These videos are the validation dataset for playback.
 
-Supervisor can:
+==========================
+NEXT PHASE
+==========================
 
-- Play video
-- Seek instantly
-- Switch quality
-- View chunked streaming
-- Test on another device via LAN
-- Verify HLS architecture
+Phase 1:
+Production UX refinement.
+
+After that:
+Phase 2:
+Performance optimization.
+
+Phase 3:
+Cloud architecture.
+
+Phase 4:
+Production deployment.
