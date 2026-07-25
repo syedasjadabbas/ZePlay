@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
+import api, { setAuthSession } from '../services/api';
 import PasswordInput from '../components/PasswordInput';
 
 const Register: React.FC = () => {
@@ -76,6 +76,41 @@ const Register: React.FC = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleCredentialResponse = async (googleResponse: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.post('/auth/google', { id_token: googleResponse.credential });
+      const { access_token, user } = res.data;
+      setAuthSession(access_token, true);
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      navigate('/profiles');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Google registration failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleClick = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError('Google Sign-In API is active. To enable Google login dialog, configure VITE_GOOGLE_CLIENT_ID in your .env file.');
+      return;
+    }
+    if ((window as any).google?.accounts?.id) {
+      (window as any).google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredentialResponse,
+      });
+      (window as any).google.accounts.id.prompt();
+    } else {
+      setError('Google Sign-In SDK initializing. Please try again.');
     }
   };
 
@@ -319,12 +354,7 @@ const Register: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => {
-                const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-                if (!googleClientId) {
-                  setError('Google Sign-In endpoint /api/auth/google is active. To enable Google popup login, set VITE_GOOGLE_CLIENT_ID in your .env file.');
-                }
-              }}
+              onClick={handleGoogleClick}
               className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white text-xs font-bold rounded-2xl flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-[0.98]"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
