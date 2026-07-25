@@ -167,4 +167,40 @@
   z-index: 0;
 }
 
+/* Fullscreen player container styling */
+div:fullscreen,
+div:-webkit-full-screen,
+div:-moz-full-screen,
+div:-ms-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  background-color: black !important;
+}
+
+div:fullscreen video,
+div:-webkit-full-screen video,
+div:-moz-full-screen video,
+div:-ms-fullscreen video {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100vh !important;
+}
+
+/* Hide native video controls fullscreen button to prevent bypassing custom overlays */
+video::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+video::-moz-media-controls-fullscreen-button {
+  display: none !important;
+}
+video::-ms-media-controls-fullscreen-button {
+  display: none !important;
+}
+video::--webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+
+
 

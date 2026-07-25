@@ -55,6 +55,9 @@ const MovieDetails: React.FC = () => {
   const [isPlayerLoading, setIsPlayerLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentAutoResolution, setCurrentAutoResolution] = useState<string>('');
+
   const playerContainerRef = useRef<HTMLDivElement>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -97,16 +100,47 @@ const MovieDetails: React.FC = () => {
 
   const toggleContainerFullscreen = () => {
     if (!playerContainerRef.current) return;
-    if (!document.fullscreenElement) {
-      playerContainerRef.current.requestFullscreen().catch((err) => {
-        console.error("Error enabling full-screen: ", err);
-      });
+    
+    const doc = document as any;
+    const elem = playerContainerRef.current as any;
+    
+    const requestFS = elem.requestFullscreen || elem.mozRequestFullScreen || elem.webkitRequestFullscreen || elem.msRequestFullscreen;
+    const exitFS = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+    
+    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+      if (requestFS) {
+        requestFS.call(elem).catch((err: any) => {
+          console.error("Error enabling full-screen: ", err);
+        });
+      }
     } else {
-      document.exitFullscreen().catch((err) => {
-        console.error("Error exiting full-screen: ", err);
-      });
+      if (exitFS) {
+        exitFS.call(doc).catch((err: any) => {
+          console.error("Error exiting full-screen: ", err);
+        });
+      }
     }
   };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const doc = document as any;
+      const isFS = !!(doc.fullscreenElement || doc.mozFullScreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement);
+      setIsFullscreen(isFS);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeProfileId) {
@@ -171,8 +205,6 @@ const MovieDetails: React.FC = () => {
     }
   }, [id, activeProfileId]);
 
-
-
   const getFullPlaybackUrl = (urlPath: string): string => {
     if (!urlPath) return '';
     if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) {
@@ -198,7 +230,7 @@ const MovieDetails: React.FC = () => {
 
   // Initialize HLS.js Player
   useEffect(() => {
-    if (!isPlaying || !videoRef.current || !movie) return;
+    if (!videoRef.current || !movie) return;
 
     setIsPlayerLoading(true);
     setIsBuffering(false);
@@ -215,9 +247,7 @@ const MovieDetails: React.FC = () => {
     let hls: Hls | null = null;
 
     const handleLoadedMetadata = () => {
-      if (shouldResume && savedProgress && savedProgress.current_position > 0 && videoRef.current) {
-        videoRef.current.currentTime = savedProgress.current_position;
-      }
+      setIsPlayerLoading(false);
     };
 
     if (isHls && Hls.isSupported()) {
@@ -235,10 +265,7 @@ const MovieDetails: React.FC = () => {
         hls.attachMedia(videoRef.current);
       }
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (shouldResume && savedProgress && savedProgress.current_position > 0 && videoRef.current) {
-          videoRef.current.currentTime = savedProgress.current_position;
-        }
-        videoRef.current?.play().catch((e) => console.log('Autoplay prevented:', e));
+        setIsPlayerLoading(false);
 
         if (hls) {
           const detectedLevels = hls.levels.map((level, index) => {
@@ -252,32 +279,40 @@ const MovieDetails: React.FC = () => {
           setLevels([{ index: -1, name: 'Auto' }, ...detectedLevels]);
           setHlsInstance(hls);
           setSelectedLevel(hls.currentLevel);
+
+          const initialIdx = hls.currentLevel >= 0 ? hls.currentLevel : (hls.loadLevel >= 0 ? hls.loadLevel : 0);
+          if (hls.levels && hls.levels[initialIdx]) {
+            setCurrentAutoResolution(`${hls.levels[initialIdx].height}p`);
+          }
         }
       });
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+        if (hls && hls.levels[data.level]) {
+          const height = hls.levels[data.level].height;
+          setCurrentAutoResolution(`${height}p`);
+        }
+      });
+
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          console.warn('HLS.js fatal error, falling back to MP4 stream', data);
-          if (videoRef.current) {
-            const fallbackUrl = baseUrl.replace('/hls/master.m3u8', '/stream');
-            const fallbackAuthUrl = token ? (fallbackUrl.includes('?') ? `${fallbackUrl}&token=${token}` : `${fallbackUrl}?token=${token}`) : fallbackUrl;
-            videoRef.current.src = fallbackAuthUrl;
-            if (shouldResume && savedProgress && savedProgress.current_position > 0) {
-              videoRef.current.currentTime = savedProgress.current_position;
-            }
-            videoRef.current.play().catch((err) => {
-              console.error("Fallback stream failed:", err);
-              setPlayerError("Failed to load local media stream. Please verify local file path.");
-            });
-            setStreamType('MP4');
-          } else {
-            setPlayerError("Fatal streaming playback error: " + data.type);
+          console.warn('HLS.js fatal error, attempting recovery:', data);
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls?.recoverMediaError();
+              break;
+            default:
+              setPlayerError("Fatal streaming playback error: " + (data.details || data.type));
+              break;
           }
         }
       });
     } else if (videoRef.current) {
       videoRef.current.src = streamUrl;
       videoRef.current.addEventListener('loadedmetadata', handleLoadedMetadata);
-      videoRef.current.play().catch(() => {});
     }
 
     // Interval to automatically save progress every 5 seconds
@@ -300,7 +335,7 @@ const MovieDetails: React.FC = () => {
       setLevels([]);
       setSelectedLevel(-1);
     };
-  }, [isPlaying, movie, shouldResume, savedProgress]);
+  }, [movie]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -308,11 +343,43 @@ const MovieDetails: React.FC = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const hasResumeOption = savedProgress && savedProgress.current_position > 5 && savedProgress.percentage_watched < 95;
+  const currentPos = savedProgress?.current_position || 0;
+  const percentWatched = savedProgress?.percentage_watched || 0;
+  const hasResumeOption = Boolean(savedProgress && currentPos > 5 && percentWatched < 95);
 
   const handleStartPlay = (resume: boolean) => {
     setShouldResume(resume);
     setIsPlaying(true);
+    const targetTime = (resume && savedProgress && savedProgress.current_position > 0)
+      ? savedProgress.current_position
+      : 0;
+
+    if (videoRef.current) {
+      const v = videoRef.current;
+      const applySeekAndPlay = () => {
+        if (targetTime > 0) {
+          v.currentTime = targetTime;
+        } else if (!resume) {
+          v.currentTime = 0;
+        }
+        v.play().catch((e) => console.log('Playback error:', e));
+      };
+
+      if (v.readyState >= 1) {
+        applySeekAndPlay();
+      } else {
+        const onReady = () => {
+          v.removeEventListener('loadedmetadata', onReady);
+          v.removeEventListener('canplay', onReady);
+          applySeekAndPlay();
+        };
+        v.addEventListener('loadedmetadata', onReady);
+        v.addEventListener('canplay', onReady);
+        v.play().then(() => {
+          if (targetTime > 0) v.currentTime = targetTime;
+        }).catch(() => {});
+      }
+    }
   };
 
   return (
@@ -394,12 +461,16 @@ const MovieDetails: React.FC = () => {
                 {/* Left Column: Interactive Video Player */}
                 <div 
                   ref={playerContainerRef}
-                  className="relative w-full lg:w-3/5 aspect-video lg:aspect-auto bg-black flex flex-col items-center justify-center min-h-[300px] lg:min-h-[450px] group overflow-hidden"
+                  className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden ${
+                    isFullscreen 
+                      ? 'w-full h-full' 
+                      : 'w-full lg:w-3/5 aspect-video lg:aspect-auto min-h-[300px] lg:min-h-[450px]'
+                  }`}
                 >
                   <video
                     ref={videoRef}
                     controls
-                    autoPlay
+                    controlsList="nofullscreen"
                     className={`w-full h-full object-contain ${isPlaying ? 'block' : 'hidden'}`}
                     onPause={() => {
                       if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
@@ -428,7 +499,7 @@ const MovieDetails: React.FC = () => {
                     }}
                   />
 
-                  {!isPlaying && (
+                  {!isPlaying && !isPlayerLoading && (
                     <>
                       {!movie.thumbnail_url || imageError ? (
                         <PremiumPoster title={movie.title} aspectRatio="landscape" />
@@ -452,13 +523,13 @@ const MovieDetails: React.FC = () => {
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
-                              <span>Resume Watching ({formatTime(savedProgress.current_position)})</span>
+                              <span>Resume Watching ({formatTime(currentPos)})</span>
                             </button>
  
                             <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
                               <div 
                                 className="bg-brand-accent h-full"
-                                style={{ width: `${savedProgress.percentage_watched}%` }}
+                                style={{ width: `${percentWatched}%` }}
                               />
                             </div>
 
@@ -466,7 +537,7 @@ const MovieDetails: React.FC = () => {
                               onClick={() => handleStartPlay(false)}
                               className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline"
                             >
-                              Start Over from Beginning
+                              Start From Beginning
                             </button>
                           </div>
                         ) : (
@@ -496,7 +567,10 @@ const MovieDetails: React.FC = () => {
                         </span>
                         <button
                           onClick={() => {
-                            if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                            if (videoRef.current) {
+                              videoRef.current.pause();
+                              saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                            }
                             setIsPlaying(false);
                           }}
                           className="text-xs bg-black/60 hover:bg-black/80 text-white font-bold px-3 py-1 rounded transition-colors"
@@ -523,29 +597,31 @@ const MovieDetails: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           <select
-                            id="quality-select"
-                            value={selectedLevel}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value);
-                              setSelectedLevel(val);
-                              if (hlsInstance) {
-                                hlsInstance.currentLevel = val;
-                                console.log(`Switched quality to level: ${val}`);
-                              }
-                            }}
-                            className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-2 focus:ring-0"
-                          >
-                            {levels.map((lvl) => (
-                              <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
-                                {lvl.name === 'Auto' ? 'Auto (ABR)' : lvl.name}
-                              </option>
-                            ))}
+                             id="quality-select"
+                             value={selectedLevel}
+                             onChange={(e) => {
+                               const val = parseInt(e.target.value);
+                               setSelectedLevel(val);
+                               if (hlsInstance) {
+                                 hlsInstance.currentLevel = val;
+                                 console.log(`Switched quality to level: ${val}`);
+                               }
+                             }}
+                             className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-2 focus:ring-0"
+                           >
+                             {levels.map((lvl) => (
+                               <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
+                                 {lvl.name === 'Auto'
+                                   ? (selectedLevel === -1 && currentAutoResolution ? `Auto (${currentAutoResolution})` : 'Auto')
+                                   : lvl.name}
+                               </option>
+                             ))}
                           </select>
                         </div>
                       )}
 
                       {/* Loading State Overlay */}
-                      {isPlayerLoading && !playerError && (
+                      {isPlaying && isPlayerLoading && !playerError && (
                         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-10 pointer-events-none transition-opacity duration-300">
                           <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
                           <p className="mt-3 text-xs text-neutral-400 font-medium tracking-wider uppercase animate-pulse">Loading Stream...</p>
