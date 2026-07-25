@@ -230,7 +230,7 @@ const MovieDetails: React.FC = () => {
 
   // Initialize HLS.js Player
   useEffect(() => {
-    if (!videoRef.current || !movie) return;
+    if (!videoRef.current || !movie || loading) return;
 
     setIsPlayerLoading(true);
     setIsBuffering(false);
@@ -335,7 +335,7 @@ const MovieDetails: React.FC = () => {
       setLevels([]);
       setSelectedLevel(-1);
     };
-  }, [movie]);
+  }, [movie, loading]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
