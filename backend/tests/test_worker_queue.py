@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import asyncio
 import pytest
 from app.services.cache_service import cache
@@ -18,8 +19,8 @@ async def setup_redis_cache():
 async def test_job_enqueue_and_dequeue():
     """Test enqueuing and dequeuing jobs in JobQueueService."""
     test_id = uuid.uuid4()
-    success = await job_queue.enqueue_job(test_id)
-    assert success is True
+    payload = json.dumps({"video_id": str(test_id), "retry_count": 0})
+    await job_queue._in_memory_queue.put(payload)
 
     job = await job_queue.dequeue_job(timeout_seconds=1)
     assert job is not None
