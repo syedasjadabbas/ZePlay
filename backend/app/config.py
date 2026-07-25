@@ -7,7 +7,13 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
-    
+
+    # Production Database Connection Pooling Settings
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
+
     # Resend email and frontend settings
     EMAIL_PROVIDER: str = "resend"
     EMAIL_FROM: str = "noreply@zeploy.tech"

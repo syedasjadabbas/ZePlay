@@ -3,11 +3,19 @@ import sys
 import sqlite3
 import uuid
 import psycopg2
+from urllib.parse import urlparse
 from datetime import datetime
 
-# Connection URLs
-SQLITE_DB_PATH = "local_zeplay.db"
-POSTGRES_DSN = "host=localhost dbname=zeplay user=postgres password=postgres port=5432"
+# Connection resolution from environment or defaults
+SQLITE_DB_PATH = os.getenv("SQLITE_DB_PATH", os.path.join(os.path.dirname(__file__), "local_zeplay.db"))
+
+def get_postgres_dsn():
+    url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
+    if url and url.startswith("postgresql"):
+        # Convert asyncpg scheme to standard psycopg2 URL
+        url = url.replace("postgresql+asyncpg://", "postgresql://")
+        return url
+    return os.getenv("POSTGRES_DSN", "host=localhost dbname=zeplay user=postgres password=postgres port=5432")
 
 def clean_uuid(val):
     if val is None:
@@ -68,13 +76,18 @@ def clean_datetime(val):
     return val
 
 def migrate():
-    print("Connecting to source SQLite...")
+    if not os.path.exists(SQLITE_DB_PATH):
+        print(f"Source SQLite database not found at {SQLITE_DB_PATH}. Migration skipped.")
+        return
+
+    print(f"Connecting to source SQLite at {SQLITE_DB_PATH}...")
     sqlite_conn = sqlite3.connect(SQLITE_DB_PATH)
     sqlite_conn.row_factory = sqlite3.Row
     sqlite_cursor = sqlite_conn.cursor()
 
+    dsn = get_postgres_dsn()
     print("Connecting to target PostgreSQL...")
-    pg_conn = psycopg2.connect(POSTGRES_DSN)
+    pg_conn = psycopg2.connect(dsn)
     pg_conn.set_client_encoding('utf8')
     pg_cursor = pg_conn.cursor()
 
@@ -98,7 +111,7 @@ def migrate():
     ]
 
     try:
-        # Disable all constraints/triggers for data load
+        # Disable constraints for atomic bulk load
         print("Disabling PostgreSQL constraints (replica mode)...")
         pg_cursor.execute("SET session_replication_role = 'replica';")
         
@@ -109,9 +122,13 @@ def migrate():
         pg_conn.commit()
         print("Truncation complete.")
 
+        total_migrated = 0
         for table_name in table_names:
-            print(f"Analyzing columns for table '{table_name}'...")
-            
+            # Check table existence in SQLite
+            sqlite_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+            if not sqlite_cursor.fetchone():
+                continue
+
             # Fetch SQLite columns
             sqlite_cursor.execute(f"PRAGMA table_info({table_name})")
             sqlite_cols = [row["name"] for row in sqlite_cursor.fetchall()]
@@ -122,17 +139,15 @@ def migrate():
             
             # Find common columns to migrate
             common_cols = [col for col in sqlite_cols if col in pg_cols]
-            print(f"Common columns to migrate: {common_cols}")
 
             # Fetch SQLite rows
             sqlite_cursor.execute(f"SELECT * FROM {table_name}")
             rows = sqlite_cursor.fetchall()
             
             if not rows:
-                print(f"No records found in table '{table_name}'. Skipping.")
+                print(f"Table '{table_name}': 0 records.")
                 continue
 
-            # Build insert query
             col_list_str = ", ".join(common_cols)
             placeholders = ", ".join(["%s"] * len(common_cols))
             insert_query = f"INSERT INTO {table_name} ({col_list_str}) VALUES ({placeholders})"
@@ -142,8 +157,6 @@ def migrate():
                 cleaned_values = []
                 for col in common_cols:
                     val = row[col]
-                    
-                    # Determine column cleaning logic by name patterns
                     col_lower = col.lower()
                     if col_lower == "id" or col_lower.endswith("_id") or col_lower == "performed_by":
                         val = clean_uuid(val)
@@ -154,14 +167,14 @@ def migrate():
                     
                     cleaned_values.append(val)
                 
-                # Execute insert
                 pg_cursor.execute(insert_query, cleaned_values)
                 insert_count += 1
             
             pg_conn.commit()
-            print(f"Successfully migrated {insert_count} records to '{table_name}'.")
+            total_migrated += insert_count
+            print(f"Table '{table_name}': {insert_count} records migrated.")
 
-        print("SUCCESS: Data migration completed successfully!")
+        print(f"SUCCESS: Data migration completed! Total records: {total_migrated}")
 
     except Exception as e:
         pg_conn.rollback()

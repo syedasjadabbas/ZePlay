@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 from app.services.cache_service import cache
-from app.database import engine
+from app.database import engine, _is_sqlite
 from sqlalchemy import text
 import logging
 
@@ -63,13 +63,26 @@ async def startup_event():
 
 
 @app.get("/health", tags=["System Health"])
+@app.get("/api/health", tags=["System Health"])
 async def health_check():
-    """Simple service checking endpoint including cache status."""
+    """Lightweight database and cache health check for production readiness."""
+    db_connected = False
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_connected = True
+    except Exception:
+        db_connected = False
+
     cache_stats = await cache.get_stats()
     return {
-        "status": "online",
+        "status": "online" if db_connected else "degraded",
         "service": settings.PROJECT_NAME,
         "version": "1.0.0",
+        "database": {
+            "connected": db_connected,
+            "engine": "postgresql" if not _is_sqlite else "sqlite"
+        },
         "cache": {
             "engine": cache_stats["cache_engine"],
             "redis_connected": cache_stats["redis_connected"],
