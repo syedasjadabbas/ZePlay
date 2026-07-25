@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PremiumPoster from './PremiumPoster';
+import ProgressiveImage from './ProgressiveImage';
 
 interface MovieCardVerticalProps {
   movie_id: string;
@@ -10,30 +11,48 @@ interface MovieCardVerticalProps {
   release_year: number;
   duration_minutes: number;
   genres: Array<{ name: string }>;
-  progressPercent?: number; // Optional watch progress percentage
-  isInWatchlist?: boolean; // Optional watchlist saved status
+  progressPercent?: number;
+  isInWatchlist?: boolean;
 }
 
 const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   movie_id,
   title,
   thumbnail_url,
+  release_year,
+  duration_minutes,
+  genres,
   progressPercent,
   isInWatchlist,
 }) => {
   const navigate = useNavigate();
-  const [imageError, setImageError] = React.useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseEnter = () => {
-    if (movie_id) {
-      api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+  const handleMouseEnter = useCallback(() => {
+    hoverTimer.current = setTimeout(() => {
+      setHovered(true);
+      // Prefetch movie details on hover
+      if (movie_id) {
+        api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+      }
+    }, 150);
+  }, [movie_id]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
     }
-  };
+    setHovered(false);
+  }, []);
 
   return (
-    <div 
+    <div
       onClick={() => navigate(`/movies/${movie_id}`)}
       onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       role="button"
       tabIndex={0}
       aria-label={`View details for ${title}`}
@@ -43,20 +62,39 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
           navigate(`/movies/${movie_id}`);
         }
       }}
-      className="flex-shrink-0 w-36 sm:w-44 bg-[#181818] rounded-md overflow-hidden cursor-pointer transform hover:scale-[1.05] hover:shadow-[0_12px_24px_rgba(0,0,0,0.65)] transition-all duration-300 ease-out active:scale-[0.98] group flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
+      className="flex-shrink-0 w-36 sm:w-44 bg-[#181818] rounded-md overflow-hidden cursor-pointer active:scale-[0.97] group flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
+      style={{
+        transform: hovered ? 'scale(1.06) translateY(-4px)' : 'scale(1) translateY(0)',
+        boxShadow: hovered
+          ? '0 20px 40px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06)'
+          : '0 4px 16px rgba(0,0,0,0.4)',
+        transition: 'transform 0.28s cubic-bezier(0.16,1,0.3,1), box-shadow 0.28s cubic-bezier(0.16,1,0.3,1)',
+        willChange: 'transform, box-shadow',
+        zIndex: hovered ? 10 : 'auto',
+      }}
     >
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
         {!thumbnail_url || imageError ? (
           <PremiumPoster title={title} aspectRatio="portrait" />
         ) : (
-          <img 
-            src={thumbnail_url} 
-            alt={title} 
-            className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          <ProgressiveImage
+            src={thumbnail_url}
+            alt={title}
+            className="w-full h-full object-cover"
             onError={() => setImageError(true)}
+            lazy
           />
         )}
+
+        {/* Overlay zoom on hover */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+            transform: hovered ? 'scale(1.04)' : 'scale(1)',
+          }}
+        />
 
         {/* Saved Watchlist Badge Indicator */}
         {isInWatchlist && (
@@ -72,35 +110,79 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
         {progressPercent !== undefined && (
           <>
             {/* Centered Play Button on Hover */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-              <div className="w-10 h-10 rounded-full bg-brand-accent text-white flex items-center justify-center transform scale-90 group-hover:scale-100 transition-all duration-300 ease-out">
+            <div
+              className="absolute inset-0 bg-black/50 flex items-center justify-center"
+              style={{
+                opacity: hovered ? 1 : 0,
+                transition: 'opacity 0.25s cubic-bezier(0.16,1,0.3,1)',
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full bg-brand-accent text-white flex items-center justify-center"
+                style={{
+                  transform: hovered ? 'scale(1)' : 'scale(0.75)',
+                  transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+                }}
+              >
                 <svg className="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </div>
             </div>
 
-            {/* Progress Indicator Bar */}
+            {/* Animated Progress Bar */}
             <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-neutral-950/60">
-              <div 
+              <div
                 className="h-full bg-brand-accent rounded-r-sm"
-                style={{ width: `${progressPercent}%` }}
+                style={{
+                  width: `${progressPercent}%`,
+                  transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
+                }}
               />
             </div>
           </>
         )}
       </div>
 
-      {/* Details (Title and score/progress) below card */}
+      {/* Details below card */}
       <div className="p-3 flex flex-col gap-0.5 bg-[#181818]">
-        <h4 
-          className="font-bold text-white text-[11px] sm:text-xs tracking-wide truncate group-hover:text-brand-accent transition-colors duration-200"
+        <h4
+          className="font-bold text-white text-[11px] sm:text-xs tracking-wide truncate transition-colors duration-200"
+          style={{ color: hovered ? 'var(--color-brand-accent, #3B82F6)' : 'white' }}
           title={title}
         >
           {title}
         </h4>
+
+        {/* Metadata reveal on hover */}
+        <div
+          style={{
+            maxHeight: hovered ? '40px' : '0px',
+            opacity: hovered ? 1 : 0,
+            overflow: 'hidden',
+            transition: 'max-height 0.3s cubic-bezier(0.16,1,0.3,1), opacity 0.25s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        >
+          <div className="flex items-center gap-1 text-[9px] text-neutral-500 mt-0.5">
+            <span className="text-brand-accent font-bold">{release_year}</span>
+            <span>·</span>
+            <span>{duration_minutes}m</span>
+            {genres && genres.length > 0 && (
+              <>
+                <span>·</span>
+                <span className="truncate">{genres[0]?.name}</span>
+              </>
+            )}
+          </div>
+        </div>
+
         {progressPercent !== undefined && (
-          <span className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-extrabold mt-0.5">
+          <span
+            className="text-[8px] sm:text-[9px] text-brand-textMuted uppercase tracking-widest font-extrabold mt-0.5"
+            style={{
+              animation: hovered ? 'resumePulse 1.8s ease-in-out infinite' : 'none',
+            }}
+          >
             Resume Playing
           </span>
         )}

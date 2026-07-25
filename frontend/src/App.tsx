@@ -20,10 +20,12 @@ import Browse from './pages/Browse';
 import MyList from './pages/MyList';
 import Settings from './pages/Settings';
 import { ModalProvider } from './components/ModalProvider';
+import { ToastProvider } from './components/Toast';
 
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <ModalProvider>
         <Routes>
           {/* Public Routes */}
@@ -138,6 +140,7 @@ const App: React.FC = () => {
           />
         </Routes>
       </ModalProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 };

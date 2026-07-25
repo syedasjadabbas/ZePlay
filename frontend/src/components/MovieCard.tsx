@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PremiumPoster from './PremiumPoster';
+import ProgressiveImage from './ProgressiveImage';
 
 interface MovieCardProps {
   movie_id: string;
@@ -21,18 +22,32 @@ const MovieCard: React.FC<MovieCardProps> = ({
   genres,
 }) => {
   const navigate = useNavigate();
-  const [imageError, setImageError] = React.useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseEnter = () => {
-    if (movie_id) {
-      api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+  const handleMouseEnter = useCallback(() => {
+    hoverTimer.current = setTimeout(() => {
+      setHovered(true);
+      if (movie_id) {
+        api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+      }
+    }, 150);
+  }, [movie_id]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
     }
-  };
+    setHovered(false);
+  }, []);
 
   return (
-    <div 
+    <div
       onClick={() => navigate(`/movies/${movie_id}`)}
       onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       role="button"
       tabIndex={0}
       aria-label={`View details for ${title}`}
@@ -42,25 +57,57 @@ const MovieCard: React.FC<MovieCardProps> = ({
           navigate(`/movies/${movie_id}`);
         }
       }}
-      className="group flex-shrink-0 w-44 md:w-56 bg-brand-cards/25 rounded-2xl overflow-hidden cursor-pointer transform hover:-translate-y-1.5 hover:scale-[1.03] transition-all duration-350 ease-[var(--ease-out-premium)] shadow-[0_8px_30px_rgba(0,0,0,0.4)] active:scale-[0.98] flex flex-col focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
+      className="group flex-shrink-0 w-44 md:w-56 bg-brand-cards/25 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] flex flex-col focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
+      style={{
+        transform: hovered ? 'translateY(-6px) scale(1.03)' : 'translateY(0) scale(1)',
+        boxShadow: hovered
+          ? '0 20px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05)'
+          : '0 8px 30px rgba(0,0,0,0.4)',
+        transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s cubic-bezier(0.16,1,0.3,1)',
+        willChange: 'transform, box-shadow',
+      }}
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
         {!thumbnail_url || imageError ? (
           <PremiumPoster title={title} aspectRatio="landscape" />
         ) : (
-          <img 
-            src={thumbnail_url} 
-            alt={title} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-[var(--ease-out-premium)]"
+          <ProgressiveImage
+            src={thumbnail_url}
+            alt={title}
+            className="w-full h-full object-cover"
             onError={() => setImageError(true)}
+            lazy
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#060B18]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-350 ease-[var(--ease-out-premium)]" />
+
+        {/* Image zoom inner layer */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: thumbnail_url && !imageError ? `url(${thumbnail_url})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+            transform: hovered ? 'scale(1.05)' : 'scale(1)',
+            opacity: 0,
+          }}
+        />
+
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-[#060B18]/70 to-transparent"
+          style={{
+            opacity: hovered ? 1 : 0,
+            transition: 'opacity 0.3s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        />
       </div>
-      
+
       <div className="p-3.5 flex flex-col justify-between flex-grow">
         <div>
-          <h4 className="font-bold text-white truncate text-xs md:text-sm mb-1.5 tracking-wide font-display group-hover:text-brand-accent transition-colors duration-200">
+          <h4
+            className="font-bold text-white truncate text-xs md:text-sm mb-1.5 tracking-wide font-display transition-colors duration-200"
+            style={{ color: hovered ? 'var(--color-brand-accent, #3B82F6)' : 'white' }}
+          >
             {title}
           </h4>
           <div className="flex items-center text-[10px] md:text-xs text-brand-textMuted gap-2 mb-2">

@@ -30,9 +30,9 @@ export const Modal: React.FC<ModalProps> = ({
   const isDanger = type === 'danger';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-backdropFadeIn">
       <div 
-        className="relative w-full max-w-md bg-[#0b1329]/95 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-left transform transition-all duration-300 scale-100"
+        className="relative w-full max-w-md bg-[#0b1329]/95 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-left animate-modalPopIn"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
