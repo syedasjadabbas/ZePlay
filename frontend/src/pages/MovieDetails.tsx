@@ -143,14 +143,28 @@ const MovieDetails: React.FC = () => {
     }
   };
 
+  const touchStartRef = useRef<{ time: number; x: number } | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore typing inside form input fields
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
-      if (!isPlaying || !videoRef.current) return;
 
+      if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
+        e.preventDefault();
+        if (!isPlaying) {
+          const canResume = Boolean(savedProgress && savedProgress.current_position > 5 && savedProgress.percentage_watched < 95);
+          handleStartPlay(canResume);
+        } else if (videoRef.current) {
+          videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+        }
+        return;
+      }
+
+      if (!isPlaying || !videoRef.current) return;
       const v = videoRef.current;
+
       switch (e.code) {
-        case 'Space':
         case 'KeyK':
           e.preventDefault();
           v.paused ? v.play() : v.pause();
@@ -188,7 +202,34 @@ const MovieDetails: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying]);
+  }, [isPlaying, savedProgress]);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button, select, option')) return;
+    const now = Date.now();
+    const touchX = e.touches[0].clientX;
+
+    if (touchStartRef.current && now - touchStartRef.current.time < 300) {
+      // Double tap gesture detected on mobile!
+      if (!playerContainerRef.current || !videoRef.current) return;
+      const rect = playerContainerRef.current.getBoundingClientRect();
+      const relativeX = (touchX - rect.left) / rect.width;
+
+      if (relativeX < 0.35) {
+        videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+        triggerSeekFeedback('-10s');
+      } else if (relativeX > 0.65) {
+        videoRef.current.currentTime = Math.min(videoRef.current.duration || Infinity, videoRef.current.currentTime + 10);
+        triggerSeekFeedback('+10s');
+      } else {
+        toggleContainerFullscreen();
+      }
+      touchStartRef.current = null;
+    } else {
+      touchStartRef.current = { time: now, x: touchX };
+      handleMouseMove();
+    }
+  };
 
   const handleToggleWatchlist = async () => {
     if (!activeProfileId || !id || watchlistSubmitting) return;
@@ -585,6 +626,7 @@ const MovieDetails: React.FC = () => {
                 <div 
                   ref={playerContainerRef}
                   onMouseMove={handleMouseMove}
+                  onTouchStart={handleTouchStart}
                   onClick={handlePlayerContainerClick}
                   className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden transition-all duration-300 ${
                     isFullscreen 
@@ -643,7 +685,7 @@ const MovieDetails: React.FC = () => {
                           <div className="space-y-3">
                             <button 
                               onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-accent/25"
+                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-accent/25 min-h-[44px]"
                             >
                               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
@@ -660,7 +702,7 @@ const MovieDetails: React.FC = () => {
 
                             <button 
                               onClick={() => handleStartPlay(false)}
-                              className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline cursor-pointer"
+                              className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline cursor-pointer p-2 min-h-[44px]"
                             >
                               Start From Beginning
                             </button>
@@ -668,7 +710,7 @@ const MovieDetails: React.FC = () => {
                         ) : (
                           <button 
                             onClick={() => handleStartPlay(false)}
-                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium shadow-xl shadow-brand-accent/30"
+                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium shadow-xl shadow-brand-accent/30 min-h-[44px] min-w-[44px]"
                           >
                             <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
                               <path d="M8 5v14l11-7z" />
@@ -686,10 +728,10 @@ const MovieDetails: React.FC = () => {
                     </>
                   )}
 
-                  {/* Player Top Bar (Close Button Left, Settings + Fullscreen Right) */}
+                  {/* Player Overlays when Playing */}
                   {isPlaying && (
                     <>
-                      {/* Left: Close Player Button */}
+                      {/* Top-Left: Close Player Button */}
                       <div className={`absolute top-4 left-4 z-20 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         <button
                           onClick={() => {
@@ -699,20 +741,20 @@ const MovieDetails: React.FC = () => {
                             }
                             setIsPlaying(false);
                           }}
-                          className="text-xs bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 text-white font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-lg"
+                          className="text-xs bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/10 text-white font-bold px-3 py-2 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-lg min-h-[44px]"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                           <span>Close</span>
                         </button>
                       </div>
 
-                      {/* Right: Combined Settings & Fullscreen Controls */}
-                      <div className={`absolute top-4 right-4 z-20 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      {/* Bottom-Right: Repositioned Settings & Fullscreen Controls */}
+                      <div className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                         {streamType === 'HLS' && levels.length > 1 && (
-                          <div className="flex items-center gap-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg transition-all duration-300">
-                            <svg className="w-3.5 h-3.5 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 shadow-lg transition-all duration-300 min-h-[44px]">
+                            <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
@@ -720,7 +762,7 @@ const MovieDetails: React.FC = () => {
                               id="quality-select"
                               value={selectedLevel}
                               onChange={(e) => handleQualityChange(parseInt(e.target.value))}
-                              className="text-[11px] bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-0.5 pr-1 focus:ring-0"
+                              className="text-xs bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-1 pr-1 focus:ring-0"
                             >
                               {levels.map((lvl) => (
                                 <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
@@ -735,7 +777,7 @@ const MovieDetails: React.FC = () => {
 
                         <button
                           onClick={toggleContainerFullscreen}
-                          className="bg-black/60 hover:bg-black/85 backdrop-blur-md border border-white/10 text-white font-bold p-2 rounded-full transition-all flex items-center justify-center cursor-pointer shadow-lg"
+                          className="bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/10 text-white font-bold p-2.5 rounded-full transition-all flex items-center justify-center cursor-pointer shadow-lg min-h-[44px] min-w-[44px]"
                           title="Toggle Fullscreen (F)"
                         >
                           <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -770,7 +812,7 @@ const MovieDetails: React.FC = () => {
                         <div className="absolute w-8 h-8 border-2 border-white/20 border-b-white rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}></div>
                       </div>
                       <h4 className="text-sm font-bold text-white tracking-wider uppercase">{movie.title}</h4>
-                      <p className="mt-2 text-xs text-neutral-400 font-medium tracking-wider uppercase animate-pulse">Loading stream...</p>
+                      <p className="mt-2 text-xs text-neutral-400 font-medium tracking-wider uppercase animate-pulse">Loading...</p>
                     </div>
                   )}
 
@@ -778,7 +820,7 @@ const MovieDetails: React.FC = () => {
                   {isBuffering && !isPlayerLoading && !playerError && (
                     <div className="absolute inset-0 bg-black/45 backdrop-blur-sm flex flex-col items-center justify-center z-20 pointer-events-none transition-opacity duration-300">
                       <div className="w-10 h-10 border-4 border-brand-accent/30 border-t-brand-accent rounded-full animate-spin mb-2"></div>
-                      <p className="text-[11px] text-white font-bold uppercase tracking-wider">Buffering...</p>
+                      <p className="text-[11px] text-white font-bold uppercase tracking-wider">Loading...</p>
                     </div>
                   )}
 
