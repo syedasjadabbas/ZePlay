@@ -8,6 +8,8 @@ import MovieCardVertical from '../components/MovieCardVertical';
 import { useModal } from '../components/ModalProvider';
 import PremiumPoster from '../components/PremiumPoster';
 import Footer from '../components/Footer';
+import { MovieDetailsSkeleton, MovieCardSkeleton } from '../components/Skeleton';
+import { ErrorState } from '../components/ErrorState';
 
 interface Genre {
   genre_id: string;
@@ -567,56 +569,23 @@ const MovieDetails: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="w-full space-y-12 animate-pulse">
-              {/* Main Card Skeleton */}
-              <div className="w-full bg-brand-surface border border-white/5 rounded-3xl overflow-hidden flex flex-col lg:flex-row min-h-[450px]">
-                {/* Left Column (Video aspect placeholder) */}
-                <div className="w-full lg:w-3/5 aspect-video lg:aspect-auto bg-white/5 min-h-[300px] lg:min-h-[450px]" />
-                {/* Right Column (Meta detail placeholder) */}
-                <div className="w-full lg:w-2/5 p-8 md:p-12 flex flex-col justify-between space-y-6">
-                  <div className="space-y-4">
-                    <div className="h-4 w-28 bg-white/5 rounded-md" />
-                    <div className="h-10 w-3/4 bg-white/10 rounded-lg" />
-                    <div className="flex gap-3 pt-2">
-                      <div className="h-4 w-12 bg-white/5 rounded" />
-                      <div className="h-4 w-20 bg-white/5 rounded" />
-                      <div className="h-4 w-14 bg-white/5 rounded" />
-                    </div>
-                    <div className="space-y-2 pt-4">
-                      <div className="h-4 w-full bg-white/5 rounded" />
-                      <div className="h-4 w-full bg-white/5 rounded" />
-                      <div className="h-4 w-5/6 bg-white/5 rounded" />
-                    </div>
-                    <div className="h-14 w-full bg-white/5 rounded-2xl" />
-                    <div className="h-12 w-full bg-white/5 rounded-xl" />
-                  </div>
-                  <div className="h-20 w-full bg-white/5 rounded-xl" />
-                </div>
-              </div>
-              {/* Similar Movies Row Skeleton */}
+            <div className="w-full space-y-12 animate-fadeIn">
+              <MovieDetailsSkeleton />
               <div className="space-y-4">
-                <div className="h-7 w-48 bg-white/10 rounded-md" />
+                <div className="h-6 w-48 bg-[#1c1c1c] animate-shimmer rounded" />
                 <div className="flex gap-6 overflow-hidden">
                   {[1, 2, 3, 4, 5].map((idx) => (
-                    <div key={idx} className="flex-shrink-0 w-[180px] space-y-3">
-                      <div className="aspect-[2/3] w-full bg-white/5 rounded-md" />
-                      <div className="h-4 w-3/4 bg-white/10 rounded" />
-                      <div className="h-3 w-1/2 bg-white/5 rounded" />
-                    </div>
+                    <MovieCardSkeleton key={idx} aspect="vertical" />
                   ))}
                 </div>
               </div>
             </div>
           ) : error ? (
-            <div className="text-center space-y-4 max-w-md mx-auto bg-brand-surface p-8 rounded-xl">
-              <p className="text-red-500 font-semibold">{error}</p>
-              <button 
-                onClick={() => navigate('/')}
-                className="px-5 py-2.5 bg-brand-accent hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-              >
-                Return Home
-              </button>
-            </div>
+            <ErrorState
+              title="Movie Unavailable"
+              message={error}
+              onRetry={() => window.location.reload()}
+            />
           ) : movie ? (
             <>
               {/* Main Video & Details Card */}

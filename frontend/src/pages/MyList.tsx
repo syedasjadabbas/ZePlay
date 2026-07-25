@@ -5,6 +5,9 @@ import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useModal } from '../components/ModalProvider';
 import Footer from '../components/Footer';
+import { MovieCardSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 
 interface Genre {
   genre_id: string;
@@ -97,40 +100,29 @@ const MyList: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 animate-fadeIn">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="space-y-3 animate-pulse">
-                  <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
-                  <div className="h-3 bg-white/5 rounded w-3/4" />
-                </div>
+                <MovieCardSkeleton key={i} aspect="vertical" />
               ))}
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface rounded-xl">
-              <p className="text-rose-400 font-semibold mb-2">{error}</p>
-              <button 
-                onClick={fetchWatchlist}
-                className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-lg"
-              >
-                Retry
-              </button>
-            </div>
+            <ErrorState
+              title="Watchlist Unavailable"
+              message={error}
+              onRetry={fetchWatchlist}
+            />
           ) : watchlist.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface rounded-xl p-12 space-y-4">
-              <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <h3 className="text-xl font-bold text-white">Your Watchlist is Empty</h3>
-              <p className="text-xs text-brand-textMuted max-w-md mx-auto">
-                Explore our catalog and click "+ Add to My List" on any movie to save it here for quick access later.
-              </p>
-              <button 
-                onClick={() => navigate('/browse')}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-lg transition-all"
-              >
-                Explore Catalog
-              </button>
-            </div>
+            <EmptyState
+              icon={
+                <svg className="w-8 h-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              }
+              title="Your Watchlist is Empty"
+              description="Explore our catalog and save your favorite movies here for quick access anytime."
+              actionText="Explore Catalog"
+              actionPath="/browse"
+            />
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {watchlist.map((item) => {

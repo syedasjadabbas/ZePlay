@@ -5,6 +5,9 @@ import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useModal } from '../components/ModalProvider';
 import Footer from '../components/Footer';
+import { MovieCardSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 
 interface Movie {
   movie_id: string;
@@ -114,37 +117,29 @@ const WatchHistoryPage: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="h-[50vh] flex items-center justify-center">
-              <div className="text-sm text-neutral-400 animate-pulse font-medium">
-                Loading watch history...
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <MovieCardSkeleton key={i} aspect="horizontal" />
+              ))}
             </div>
           ) : error ? (
-            <div className="text-center py-12 bg-brand-surface rounded-2xl">
-              <p className="text-rose-400 font-semibold mb-2">{error}</p>
-              <button 
-                onClick={fetchHistory}
-                className="px-4 py-2 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl"
-              >
-                Retry
-              </button>
-            </div>
+            <ErrorState
+              title="Watch History Unavailable"
+              message={error}
+              onRetry={fetchHistory}
+            />
           ) : history.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface rounded-3xl p-12 space-y-4">
-              <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-xl font-bold text-white">No Watch History Recorded</h3>
-              <p className="text-xs text-brand-textMuted max-w-md mx-auto">
-                Videos and movies watched on this profile will automatically appear here with exact playback progress tracking.
-              </p>
-              <button 
-                onClick={() => navigate('/')}
-                className="px-6 py-2.5 bg-brand-accent hover:bg-blue-600 text-xs font-bold rounded-xl transition-all"
-              >
-                Start Browsing
-              </button>
-            </div>
+            <EmptyState
+              icon={
+                <svg className="w-8 h-8 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              title="No Watch History Recorded"
+              description="Movies you watch on this profile will automatically appear here with exact progress tracking."
+              actionText="Start Browsing"
+              actionPath="/"
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {history.map((item) => {

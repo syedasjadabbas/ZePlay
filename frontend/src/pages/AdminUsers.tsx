@@ -4,6 +4,8 @@ import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { useModal } from '../components/ModalProvider';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 
 interface UserData {
   user_id: string;
@@ -126,13 +128,14 @@ const AdminUsers: React.FC = () => {
  
             <div className="animate-scaleIn">
               {loading ? (
-                <div className="p-12 text-center text-brand-textMuted text-sm animate-pulse bg-neutral-900/40 rounded-3xl">
-                  Loading platform users...
-                </div>
+                <TableSkeleton rows={6} />
               ) : filteredUsers.length === 0 ? (
-                <div className="p-12 text-center text-brand-textMuted text-sm bg-neutral-900/40 rounded-3xl">
-                  No matching users found.
-                </div>
+                <EmptyState
+                  title="No Matching Users Found"
+                  description="No platform user accounts match your search query."
+                  actionText="Clear Search"
+                  onAction={() => setSearch('')}
+                />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredUsers.map((u) => (

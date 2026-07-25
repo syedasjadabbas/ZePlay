@@ -6,6 +6,9 @@ import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
 import Footer from '../components/Footer';
 
+import { HeroSkeleton, MovieCardSkeleton } from '../components/Skeleton';
+import { ErrorState } from '../components/ErrorState';
+
 interface Genre {
   genre_id: string;
   name: string;
@@ -71,9 +74,12 @@ const Home: React.FC = () => {
     }
   }, [activeProfileId, navigate]);
 
+  const [error, setError] = useState<string | null>(null);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       const [moviesRes, trendingRes, popularRes, recAddedRes] = await Promise.all([
         api.get('/catalog/movies').catch(() => ({ data: [] })),
@@ -98,6 +104,11 @@ const Home: React.FC = () => {
       carouselMovies = [...carouselMovies, ...others].slice(0, 5);
       setHeroMovies(carouselMovies);
 
+      // Prefetch hero movie details instantly
+      if (carouselMovies.length > 0) {
+        api.get(`/catalog/movies/${carouselMovies[0].movie_id}`).catch(() => {});
+      }
+
       if (activeProfileId) {
         const [cwRes, persRes, bywRes] = await Promise.all([
           api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).catch(() => ({ data: [] })),
@@ -111,6 +122,7 @@ const Home: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Failed to load catalog & recommendation data.", err);
+      setError("Failed to load dashboard recommendations. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -137,37 +149,31 @@ const Home: React.FC = () => {
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 space-y-16 max-w-7xl mx-auto w-full">
           {loading ? (
-            <div className="space-y-12">
-              {/* Hero Banner Skeleton */}
-              <div className="w-full h-[65vh] min-h-[480px] rounded-lg bg-[#181818] animate-shimmer flex flex-col justify-end p-8 md:p-16 space-y-4">
-                <div className="h-10 bg-white/10 rounded w-1/3 animate-pulse" />
-                <div className="h-4 bg-white/10 rounded w-1/2 animate-pulse" />
-                <div className="h-12 bg-white/10 rounded w-28 animate-pulse" />
-              </div>
-              {/* Rows Skeletons */}
+            <div className="space-y-12 animate-fadeIn">
+              <HeroSkeleton />
               <div className="space-y-4">
-                <div className="h-4 bg-white/5 rounded w-48 animate-pulse" />
-                <div className="flex gap-6 overflow-hidden pb-4">
+                <div className="h-5 w-44 bg-[#1c1c1c] animate-shimmer rounded" />
+                <div className="flex gap-5 overflow-hidden pb-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="flex-shrink-0 w-36 sm:w-44 space-y-3">
-                      <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
-                      <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
-                    </div>
+                    <MovieCardSkeleton key={i} aspect="vertical" />
                   ))}
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="h-4 bg-white/5 rounded w-48 animate-pulse" />
-                <div className="flex gap-6 overflow-hidden pb-4">
+                <div className="h-5 w-44 bg-[#1c1c1c] animate-shimmer rounded" />
+                <div className="flex gap-5 overflow-hidden pb-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="flex-shrink-0 w-36 sm:w-44 space-y-3">
-                      <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
-                      <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
-                    </div>
+                    <MovieCardSkeleton key={i} aspect="vertical" />
                   ))}
                 </div>
               </div>
             </div>
+          ) : error ? (
+            <ErrorState
+              title="Dashboard Unavailable"
+              message={error}
+              onRetry={fetchDashboardData}
+            />
           ) : (
             <>
               {/* Featured Hero Carousel */}

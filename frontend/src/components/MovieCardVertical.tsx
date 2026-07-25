@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import PremiumPoster from './PremiumPoster';
 
 interface MovieCardVerticalProps {
@@ -23,10 +24,26 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
   const navigate = useNavigate();
   const [imageError, setImageError] = React.useState(false);
 
+  const handleMouseEnter = () => {
+    if (movie_id) {
+      api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+    }
+  };
+
   return (
     <div 
       onClick={() => navigate(`/movies/${movie_id}`)}
-      className="flex-shrink-0 w-36 sm:w-44 bg-[#181818] rounded-md overflow-hidden cursor-pointer transform hover:scale-[1.05] hover:shadow-[0_12px_24px_rgba(0,0,0,0.65)] transition-all duration-300 ease-out active:scale-[0.98] group flex flex-col justify-between"
+      onMouseEnter={handleMouseEnter}
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${title}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/movies/${movie_id}`);
+        }
+      }}
+      className="flex-shrink-0 w-36 sm:w-44 bg-[#181818] rounded-md overflow-hidden cursor-pointer transform hover:scale-[1.05] hover:shadow-[0_12px_24px_rgba(0,0,0,0.65)] transition-all duration-300 ease-out active:scale-[0.98] group flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
     >
       {/* Poster Image Container */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">

@@ -5,6 +5,9 @@ import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
 import Footer from '../components/Footer';
+import { MovieCardSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 
 interface Genre {
   genre_id: string;
@@ -32,6 +35,7 @@ const Browse: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const activeProfileId = localStorage.getItem('selectedProfileId');
@@ -46,15 +50,17 @@ const Browse: React.FC = () => {
   const fetchCatalogData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const [genresRes, moviesRes] = await Promise.all([
         api.get('/catalog/genres').catch(() => ({ data: [] })),
-        api.get('/catalog/movies').catch(() => ({ data: [] }))
+        api.get('/catalog/movies')
       ]);
 
       setGenres(genresRes.data || []);
       setMovies(moviesRes.data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch catalog data.", err);
+      setError("Failed to load catalog movies. Please check your network connection.");
     } finally {
       setLoading(false);
     }
@@ -212,35 +218,29 @@ const Browse: React.FC = () => {
 
           {/* Full Catalog Grid */}
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 animate-fadeIn">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
-                <div key={i} className="space-y-3">
-                  <div className="aspect-[2/3] w-full bg-[#181818] rounded-md animate-shimmer" />
-                  <div className="h-3 bg-white/5 rounded w-3/4 animate-pulse" />
-                </div>
+                <MovieCardSkeleton key={i} aspect="vertical" />
               ))}
             </div>
+          ) : error ? (
+            <ErrorState
+              title="Catalog Unavailable"
+              message={error}
+              onRetry={fetchCatalogData}
+            />
           ) : filteredMovies.length === 0 ? (
-            <div className="text-center py-20 bg-brand-surface rounded-xl p-12 space-y-4">
-              <svg className="w-16 h-16 text-neutral-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <h3 className="text-xl font-bold text-white">No Movies Match Your Criteria</h3>
-              <p className="text-xs text-brand-textMuted max-w-md mx-auto">
-                Try adjusting your search query, clearing genre filters, or choosing a different release era option.
-              </p>
-              <button 
-                onClick={() => {
-                  setSelectedGenre(null);
-                  setSelectedYearRange('all');
-                  setSearchQuery('');
-                  setSortBy('relevance');
-                }}
-                className="px-6 py-2.5 bg-[#E50914] text-white text-xs font-bold rounded-lg transition-all"
-              >
-                Reset All Filters
-              </button>
-            </div>
+            <EmptyState
+              title="No Movies Match Your Criteria"
+              description="Try adjusting your search query, clearing genre filters, or choosing a different release era option."
+              actionText="Reset All Filters"
+              onAction={() => {
+                setSelectedGenre(null);
+                setSelectedYearRange('all');
+                setSearchQuery('');
+                setSortBy('relevance');
+              }}
+            />
           ) : (
             <div className="space-y-4">
               <div className="flex justify-between items-center text-xs text-brand-textMuted font-semibold px-1">
