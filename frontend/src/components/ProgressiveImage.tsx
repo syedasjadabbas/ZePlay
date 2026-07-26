@@ -24,10 +24,13 @@ const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  // Detect already-cached images (naturalWidth > 0 before onLoad fires)
+  // Detect already-cached images and reset states when src updates
   useEffect(() => {
+    setError(false);
     if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
       setLoaded(true);
+    } else {
+      setLoaded(false);
     }
   }, [src]);
 

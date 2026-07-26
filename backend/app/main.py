@@ -61,6 +61,15 @@ async def startup_event():
         
     await cache.initialize()
 
+    # Safe Google OAuth Configuration Diagnostic
+    client_id = (settings.GOOGLE_CLIENT_ID or "").strip()
+    if client_id:
+        has_valid_format = client_id.endswith(".apps.googleusercontent.com")
+        masked_id = client_id[:6] + "..." + client_id[-20:] if len(client_id) > 26 else "***"
+        logger.info(f"[Google OAuth Diagnostic] GOOGLE_CLIENT_ID configured: {masked_id} (Valid format: {has_valid_format})")
+    else:
+        logger.warning("[Google OAuth Diagnostic] GOOGLE_CLIENT_ID is NOT configured in backend environment.")
+
 
 @app.get("/health", tags=["System Health"])
 @app.get("/api/health", tags=["System Health"])

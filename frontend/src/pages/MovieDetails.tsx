@@ -754,55 +754,61 @@ const MovieDetails: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Bottom-Right: Repositioned Settings, Volume & Fullscreen Controls */}
-                      <div className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex items-center gap-2 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        {/* Volume Control */}
-                        <div className="flex items-center gap-2 bg-black/70 hover:bg-black/90 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 shadow-lg transition-all duration-300 min-h-[44px] group/vol">
+                      {/* Bottom-Right: Refined Netflix-Style Unified Control Bar */}
+                      <div className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1.5 rounded-2xl border border-white/10 shadow-2xl transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {/* Volume Control with Smooth Expand on Hover/Focus */}
+                        <div className="relative flex items-center group/vol">
                           <button
                             type="button"
                             onClick={toggleMute}
-                            className="text-white hover:text-brand-accent transition-colors cursor-pointer"
+                            className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
                             title={isMuted ? "Unmute (M)" : "Mute (M)"}
                           >
                             {isMuted || volume === 0 ? (
-                              <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
                               </svg>
                             ) : volume < 0.5 ? (
-                              <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072" />
                               </svg>
                             ) : (
-                              <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.95 6.05a8 8 0 010 11.314M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                               </svg>
                             )}
                           </button>
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={isMuted ? 0 : volume}
-                            onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                            className="w-16 md:w-20 h-1 bg-white/20 accent-brand-accent rounded-lg cursor-pointer"
-                            title="Volume adjustment"
-                          />
+                          <div className="w-0 group-hover/vol:w-20 group-focus-within/vol:w-20 overflow-hidden transition-all duration-300 ease-out flex items-center pr-1">
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.05"
+                              value={isMuted ? 0 : volume}
+                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                              className="w-16 h-1 bg-white/30 accent-brand-accent rounded-lg cursor-pointer"
+                              title="Volume adjustment"
+                            />
+                          </div>
                         </div>
 
+                        {/* Quality / Settings Control */}
                         {streamType === 'HLS' && levels.length > 1 && (
-                          <div className="flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 shadow-lg transition-all duration-300 min-h-[44px]">
-                            <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
+                          <div className="relative flex items-center p-1 rounded-xl hover:bg-white/10 transition-colors">
+                            <label htmlFor="quality-select" className="p-1.5 text-white/80 cursor-pointer flex items-center gap-1.5 min-h-[44px] min-w-[44px] justify-center" title="Quality / Settings">
+                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                            </label>
                             <select
                               id="quality-select"
                               value={selectedLevel}
                               onChange={(e) => handleQualityChange(parseInt(e.target.value))}
-                              className="text-xs bg-transparent text-white font-black uppercase cursor-pointer outline-none border-none py-1 pr-1 focus:ring-0"
+                              className="text-xs bg-transparent text-white font-extrabold uppercase cursor-pointer outline-none border-none py-1 pr-1.5 focus:ring-0 appearance-none"
+                              title="Video Quality Menu"
                             >
                               {levels.map((lvl) => (
                                 <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
@@ -815,14 +821,21 @@ const MovieDetails: React.FC = () => {
                           </div>
                         )}
 
+                        {/* Fullscreen Button */}
                         <button
                           onClick={toggleContainerFullscreen}
-                          className="bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/10 text-white font-bold p-2.5 rounded-full transition-all flex items-center justify-center cursor-pointer shadow-lg min-h-[44px] min-w-[44px]"
+                          className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
                           title="Toggle Fullscreen (F)"
                         >
-                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                          </svg>
+                          {isFullscreen ? (
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m7 5l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4m7-5l5 5m0 0v-4m0 4h-4" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                          )}
                         </button>
                       </div>
                     </>

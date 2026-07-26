@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import PremiumPoster from './PremiumPoster';
 import ProgressiveImage from './ProgressiveImage';
 
@@ -22,17 +23,44 @@ const MovieCard: React.FC<MovieCardProps> = ({
   genres,
 }) => {
   const navigate = useNavigate();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [imageError, setImageError] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [transformOrigin, setTransformOrigin] = useState<string>('center center');
 
   const handleMouseEnter = useCallback(() => {
+    // Disable hover expansion on touch devices
+    if (typeof window !== 'undefined' && !window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      return;
+    }
+
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+
     hoverTimer.current = setTimeout(() => {
-      setHovered(true);
-      if (movie_id) {
-        api.get(`/catalog/movies/${movie_id}`).catch(() => {});
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        if (rect.left < 100) {
+          setTransformOrigin('left center');
+        } else if (viewportWidth - rect.right < 100) {
+          setTransformOrigin('right center');
+        } else {
+          setTransformOrigin('center center');
+        }
       }
-    }, 150);
+
+      setHovered(true);
+
+      if (movie_id) {
+        queryClient.prefetchQuery({
+          queryKey: QUERY_KEYS.movie(movie_id),
+          queryFn: () => api.get(`/catalog/movies/${movie_id}`).then((r) => r.data),
+          staleTime: 5 * 60 * 1000,
+        });
+      }
+    }, 250);
   }, [movie_id]);
 
   const handleMouseLeave = useCallback(() => {
@@ -45,6 +73,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
 
   return (
     <div
+      ref={cardRef}
       onClick={() => navigate(`/movies/${movie_id}`)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -57,14 +86,16 @@ const MovieCard: React.FC<MovieCardProps> = ({
           navigate(`/movies/${movie_id}`);
         }
       }}
-      className="group flex-shrink-0 w-44 md:w-56 bg-brand-cards/25 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] flex flex-col focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none"
+      className="group flex-shrink-0 w-44 md:w-56 bg-[#181818] rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none transition-all"
       style={{
-        transform: hovered ? 'translateY(-6px) scale(1.03)' : 'translateY(0) scale(1)',
+        transform: hovered ? 'scale(1.12) translateY(-6px)' : 'scale(1) translateY(0)',
+        transformOrigin: transformOrigin,
         boxShadow: hovered
-          ? '0 20px 50px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05)'
-          : '0 8px 30px rgba(0,0,0,0.4)',
-        transition: 'transform 0.3s cubic-bezier(0.16,1,0.3,1), box-shadow 0.3s cubic-bezier(0.16,1,0.3,1)',
+          ? '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.15)'
+          : '0 4px 16px rgba(0, 0, 0, 0.4)',
+        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), z-index 0.3s',
         willChange: 'transform, box-shadow',
+        zIndex: hovered ? 50 : 1,
       }}
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">
@@ -80,44 +111,42 @@ const MovieCard: React.FC<MovieCardProps> = ({
           />
         )}
 
-        {/* Image zoom inner layer */}
         <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: thumbnail_url && !imageError ? `url(${thumbnail_url})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
-            transform: hovered ? 'scale(1.05)' : 'scale(1)',
-            opacity: 0,
-          }}
+          className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent transition-opacity duration-300 ${
+            hovered ? 'opacity-100' : 'opacity-0'
+          }`}
         />
 
+        {/* Quick Play overlay action */}
         <div
-          className="absolute inset-0 bg-gradient-to-t from-[#060B18]/70 to-transparent"
-          style={{
-            opacity: hovered ? 1 : 0,
-            transition: 'opacity 0.3s cubic-bezier(0.16,1,0.3,1)',
-          }}
-        />
+          className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
+            hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
+          }`}
+        >
+          <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl">
+            <svg className="w-5 h-5 fill-current translate-x-0.5" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
       </div>
 
-      <div className="p-3.5 flex flex-col justify-between flex-grow">
+      <div className="p-3.5 flex flex-col justify-between flex-grow bg-[#181818]">
         <div>
           <h4
-            className="font-bold text-white truncate text-xs md:text-sm mb-1.5 tracking-wide font-display transition-colors duration-200"
+            className="font-bold text-white truncate text-xs md:text-sm mb-1 tracking-wide font-display transition-colors duration-200"
             style={{ color: hovered ? 'var(--color-brand-accent, #3B82F6)' : 'white' }}
           >
             {title}
           </h4>
-          <div className="flex items-center text-[10px] md:text-xs text-brand-textMuted gap-2 mb-2">
+          <div className="flex items-center text-[10px] md:text-xs text-brand-textMuted gap-2 mb-1 font-semibold">
             <span className="font-bold text-brand-accent">{release_year}</span>
             <span className="text-neutral-700">•</span>
-            <span className="font-semibold text-neutral-300">{duration_minutes}m</span>
+            <span className="text-neutral-300">{duration_minutes}m</span>
           </div>
         </div>
         <div className="text-[9px] text-brand-textMuted truncate uppercase tracking-widest font-extrabold mt-0.5">
-          {genres.map(g => g.name).join(' / ')}
+          {genres.map((g) => g.name).join(' / ')}
         </div>
       </div>
     </div>

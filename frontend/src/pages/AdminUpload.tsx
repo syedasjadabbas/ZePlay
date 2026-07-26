@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import { useToast } from '../components/Toast';
-import { queryClient, QUERY_KEYS } from '../services/queryClient';
+import { queryClient } from '../services/queryClient';
 import PremiumPoster from '../components/PremiumPoster';
 
 interface MovieOption {
@@ -219,7 +219,7 @@ const AdminUpload: React.FC = () => {
       setError(null);
       setSuccessMsg(null);
 
-      let currentThumbnail = editPosterPreview;
+      let currentThumbnail = editingMovie.thumbnail_url;
       if (editPosterFile) {
         const formData = new FormData();
         formData.append('file', editPosterFile);
@@ -240,12 +240,10 @@ const AdminUpload: React.FC = () => {
 
       setSuccessMsg('Movie catalog entry successfully updated!');
       setEditingMovie(null);
+      setEditPosterFile(null);
       fetchMovies();
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movies });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.trending });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.popular });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.recentlyAdded });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movie(editingMovie.movie_id) });
+      // Invalidate all React Query caches across the product
+      queryClient.invalidateQueries();
     } catch (err: any) {
       console.error('Failed to save movie', err);
       setError(err.response?.data?.detail || 'Failed to save movie metadata.');

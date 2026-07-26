@@ -713,10 +713,19 @@ async def upload_movie_poster(
             detail="Poster image file size exceeds maximum allowed limit of 5MB."
         )
 
-    filename = f"poster_{movie_id}{ext}"
+    ts = int(datetime.now(timezone.utc).timestamp())
+    filename = f"poster_{movie_id}_{ts}{ext}"
     
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "static", "posters")
     os.makedirs(static_dir, exist_ok=True)
+
+    # Clean up previous poster images for this movie
+    for existing_file in os.listdir(static_dir):
+        if existing_file.startswith(f"poster_{movie_id}"):
+            try:
+                os.remove(os.path.join(static_dir, existing_file))
+            except Exception:
+                pass
     
     dest_path = os.path.join(static_dir, filename)
     with open(dest_path, "wb") as buffer:

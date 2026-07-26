@@ -229,7 +229,7 @@ const Home: React.FC = () => {
         <div
           ref={scrollRef}
           onWheel={handleWheelScroll}
-          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
+          className="flex gap-6 overflow-x-auto py-6 -my-4 px-2 scrollbar-hide scroll-smooth select-none"
         >
           {rowMovies.map((movie: any) => (
             <MovieCardVertical

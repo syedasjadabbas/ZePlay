@@ -98,9 +98,14 @@ const Register: React.FC = () => {
   };
 
   const handleGoogleClick = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const rawClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = (rawClientId || '').trim();
     if (!clientId) {
       setError('Google Sign-In API is active. To enable Google login dialog, configure VITE_GOOGLE_CLIENT_ID in your .env file.');
+      return;
+    }
+    if (!clientId.endsWith('.apps.googleusercontent.com')) {
+      setError('Invalid Google Client ID format. Google OAuth requires a Client ID ending with ".apps.googleusercontent.com". Please check frontend/.env.');
       return;
     }
     if ((window as any).google?.accounts?.id) {
@@ -110,7 +115,7 @@ const Register: React.FC = () => {
       });
       (window as any).google.accounts.id.prompt();
     } else {
-      setError('Google Sign-In SDK initializing. Please try again.');
+      setError('Google Sign-In SDK initializing. Please try again in a moment.');
     }
   };
 
