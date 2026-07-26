@@ -76,10 +76,10 @@ const AdminUsers: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
         <TopBar profileName="Admin" />
 
-        <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-8">
+        <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-black font-display tracking-tighter text-white uppercase mt-2">

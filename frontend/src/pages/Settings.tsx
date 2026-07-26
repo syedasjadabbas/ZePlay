@@ -121,10 +121,10 @@ const Settings: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
         <TopBar profileName={profileName} profileAvatar={profileAvatar} />
 
-        <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-2xl mx-auto w-full space-y-8">
+        <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 max-w-2xl mx-auto w-full space-y-8">
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
               Account Control

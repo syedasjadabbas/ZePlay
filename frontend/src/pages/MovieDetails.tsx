@@ -159,9 +159,9 @@ const MovieDetails: React.FC = () => {
   };
 
   const handlePlayerContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // If click was on controls overlay elements, ignore
-    if ((e.target as HTMLElement).closest('button, select, option')) return;
-    if (!videoRef.current || !isPlaying) return;
+    // If click was on controls overlay elements or interactive controls, ignore
+    if ((e.target as HTMLElement).closest('button, select, option, input, label, a, [role="button"], .interactive-control')) return;
+    if (!videoRef.current || !isPlaying || accessState === 'FREE') return;
 
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
@@ -457,6 +457,7 @@ const MovieDetails: React.FC = () => {
         );
       } finally {
         setLoading(false);
+        setIsPlayerLoading(false);
       }
     };
 
@@ -654,10 +655,10 @@ const MovieDetails: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
         <TopBar profileName={profileName} />
 
-        <main className="flex-grow pt-24 px-8 md:px-12 pb-20 flex flex-col justify-center max-w-7xl mx-auto w-full space-y-12">
+        <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 flex flex-col justify-center max-w-7xl mx-auto w-full space-y-12">
           <div className="self-start">
             <button 
               onClick={() => navigate('/')}
@@ -745,8 +746,8 @@ const MovieDetails: React.FC = () => {
                   />
 
                   {/* Polished ZePlay Upgrade State Overlay */}
-                  {showUpgradeState && (
-                    <div className="absolute inset-0 bg-[#0c0f1d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 animate-fadeIn">
+                  {(showUpgradeState || accessState === 'FREE') && (
+                    <div className="absolute inset-0 bg-[#0c0f1d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
                       <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6">
                         <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -754,7 +755,7 @@ const MovieDetails: React.FC = () => {
                       </div>
                       <h3 className="text-xl font-black text-white tracking-wide uppercase font-display">Premium Required</h3>
                       <p className="text-xs text-neutral-400 max-w-sm mt-3 leading-relaxed">
-                        "{movie.title}" is available exclusively to Premium subscribers. Upgrade now to stream this and other titles in high quality.
+                        "{movie.title}" is available exclusively to Premium subscribers. Upgrade your plan to watch this title.
                       </p>
                       <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-xs justify-center">
                         <button
@@ -764,13 +765,13 @@ const MovieDetails: React.FC = () => {
                           }}
                           className="px-6 py-3 bg-brand-accent hover:bg-blue-650 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-brand-accent/25 select-none"
                         >
-                          Upgrade / View Plans
+                          View Plans
                         </button>
                         <button
-                          onClick={() => setShowUpgradeState(false)}
+                          onClick={() => navigate('/browse')}
                           className="px-6 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer select-none"
                         >
-                          Back
+                          Back to Browse
                         </button>
                       </div>
                     </div>

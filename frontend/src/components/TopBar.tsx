@@ -224,7 +224,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
   const showNoResults = !isSearchLoading && hasSearched && query.trim() && suggestions.length === 0;
 
   return (
-    <header className="fixed top-0 left-56 right-0 z-20 bg-[#080c12]/80 backdrop-blur-xl py-3.5 px-8 flex justify-between items-center">
+    <header className="fixed top-0 left-0 md:left-56 right-0 z-20 bg-[#080c12]/80 backdrop-blur-xl py-3.5 px-4 md:px-8 flex justify-between items-center">
       {/* Search */}
       <div ref={containerRef} className="relative w-full max-w-xl">
         <form onSubmit={handleSearchSubmit} className="relative">

@@ -119,10 +119,10 @@ const Browse: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
         <TopBar profileName={profileName} />
 
-        <main className="flex-grow pt-24 px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-10">
+        <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-10">
           {/* Header & Title */}
           <div>
             <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">

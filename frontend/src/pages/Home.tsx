@@ -305,10 +305,10 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
       <Sidebar />
 
-      <div className="flex-1 ml-56 flex flex-col justify-between min-h-screen">
+      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
         <TopBar profileName={profileName} />
 
-        <main className="flex-grow pt-24 px-8 md:px-12 pb-20 space-y-16 max-w-7xl mx-auto w-full">
+        <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 space-y-12 md:space-y-16 max-w-7xl mx-auto w-full">
           {catalogLoading ? (
             <div className="space-y-12 animate-fadeIn">
               <HeroSkeleton />
