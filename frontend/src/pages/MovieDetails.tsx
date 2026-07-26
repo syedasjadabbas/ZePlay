@@ -64,6 +64,11 @@ const MovieDetails: React.FC = () => {
   const [seekFeedback, setSeekFeedback] = useState<string | null>(null);
   const [volume, setVolume] = useState<number>(1.0);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [videoCurrentTime, setVideoCurrentTime] = useState<number>(0);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(true);
+  const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
+  const [showUpgradeState, setShowUpgradeState] = useState<boolean>(false);
 
   const handleVolumeChange = (newVol: number) => {
     setVolume(newVol);
@@ -81,6 +86,24 @@ const MovieDetails: React.FC = () => {
     setIsMuted(nextMute);
     if (videoRef.current) {
       videoRef.current.muted = nextMute;
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch((e) => console.log('Playback error:', e));
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime;
+      setVideoCurrentTime(newTime);
     }
   };
 
@@ -388,6 +411,21 @@ const MovieDetails: React.FC = () => {
         }
         if (wlData) setIsInWatchlist(wlData.is_in_watchlist === true);
 
+        // Check user subscription plan
+        try {
+          const subRes = await api.get('/subscription/current');
+          const subPlan = subRes.data?.plan?.name || subRes.data?.subscription_plan || '';
+          const userStr = localStorage.getItem('user');
+          const userObj = userStr ? JSON.parse(userStr) : null;
+          const isAdmin = userObj?.is_admin || subRes.data?.status === "Administrator Account" || false;
+          setIsPremiumUser(isAdmin || subPlan === 'premium');
+        } catch (subErr) {
+          console.error("Failed to check subscription", subErr);
+          const userStr = localStorage.getItem('user');
+          const userObj = userStr ? JSON.parse(userStr) : null;
+          setIsPremiumUser(userObj?.is_admin || userObj?.subscription_plan === 'premium');
+        }
+
         // Fire analytics view tracking async — no await, non-blocking
         api.post(`/recommendations/track-view/${id}`).catch(() => {});
 
@@ -550,6 +588,10 @@ const MovieDetails: React.FC = () => {
   const hasResumeOption = Boolean(savedProgress && currentPos > 5 && percentWatched < 95);
 
   const handleStartPlay = (resume: boolean) => {
+    if (!isPremiumUser) {
+      setShowUpgradeState(true);
+      return;
+    }
     setIsPlaying(true);
     const targetTime = (resume && savedProgress && savedProgress.current_position > 0)
       ? savedProgress.current_position
@@ -640,10 +682,17 @@ const MovieDetails: React.FC = () => {
                 >
                   <video
                     ref={videoRef}
-                    controls
-                    controlsList="nofullscreen"
+                    controls={false}
                     className={`w-full h-full object-contain ${isPlaying ? 'block' : 'hidden'}`}
+                    onTimeUpdate={() => {
+                      if (videoRef.current) setVideoCurrentTime(videoRef.current.currentTime);
+                    }}
+                    onDurationChange={() => {
+                      if (videoRef.current) setVideoDuration(videoRef.current.duration);
+                    }}
+                    onPlay={() => setIsPaused(false)}
                     onPause={() => {
+                      setIsPaused(true);
                       if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
                     }}
                     onWaiting={() => setIsBuffering(true)}
@@ -670,6 +719,38 @@ const MovieDetails: React.FC = () => {
                     }}
                   />
 
+                  {/* Polished ZePlay Upgrade State Overlay */}
+                  {showUpgradeState && (
+                    <div className="absolute inset-0 bg-[#0c0f1d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 animate-fadeIn">
+                      <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6">
+                        <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-black text-white tracking-wide uppercase font-display">Premium Required</h3>
+                      <p className="text-xs text-neutral-400 max-w-sm mt-3 leading-relaxed">
+                        "{movie.title}" is available exclusively to Premium subscribers. Upgrade now to stream this and other titles in high quality.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-xs justify-center">
+                        <button
+                          onClick={() => {
+                            if (isFullscreen) toggleContainerFullscreen();
+                            navigate('/subscription');
+                          }}
+                          className="px-6 py-3 bg-brand-accent hover:bg-blue-650 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-brand-accent/25 select-none"
+                        >
+                          Upgrade / View Plans
+                        </button>
+                        <button
+                          onClick={() => setShowUpgradeState(false)}
+                          className="px-6 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer select-none"
+                        >
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {!isPlaying && !isPlayerLoading && (
                     <>
                       {!movie.thumbnail_url || imageError ? (
@@ -677,7 +758,7 @@ const MovieDetails: React.FC = () => {
                       ) : (
                         <img 
                           className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
-                          src={movie.thumbnail_url}
+                          src={getFullPlaybackUrl(movie.thumbnail_url)}
                           alt=""
                           onError={() => setImageError(true)}
                         />
@@ -745,7 +826,7 @@ const MovieDetails: React.FC = () => {
                             }
                             setIsPlaying(false);
                           }}
-                          className="text-xs bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/10 text-white font-bold px-3 py-2 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-lg min-h-[44px]"
+                          className="text-xs bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/10 text-white font-bold px-3 py-2 rounded-full transition-all flex items-center gap-1.5 cursor-pointer shadow-lg min-h-[44px]"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -754,89 +835,143 @@ const MovieDetails: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Bottom-Right: Refined Netflix-Style Unified Control Bar */}
-                      <div className={`absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex items-center gap-1 bg-black/65 backdrop-blur-md px-2.5 py-1.5 rounded-2xl border border-white/10 shadow-2xl transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                        {/* Volume Control with Smooth Expand on Hover/Focus */}
-                        <div className="relative flex items-center group/vol">
-                          <button
-                            type="button"
-                            onClick={toggleMute}
-                            className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
-                            title={isMuted ? "Unmute (M)" : "Mute (M)"}
-                          >
-                            {isMuted || volume === 0 ? (
-                              <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                              </svg>
-                            ) : volume < 0.5 ? (
-                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072" />
-                              </svg>
-                            ) : (
-                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.95 6.05a8 8 0 010 11.314M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                              </svg>
-                            )}
-                          </button>
-                          <div className="w-0 group-hover/vol:w-20 group-focus-within/vol:w-20 overflow-hidden transition-all duration-300 ease-out flex items-center pr-1">
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.05"
-                              value={isMuted ? 0 : volume}
-                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                              className="w-16 h-1 bg-white/30 accent-brand-accent rounded-lg cursor-pointer"
-                              title="Volume adjustment"
-                            />
-                          </div>
+                      {/* Unified Netflix-Style Custom Player Controls Overlay */}
+                      <div className={`absolute bottom-0 inset-x-0 z-20 flex flex-col bg-gradient-to-t from-black/95 via-black/75 to-transparent p-4 md:p-6 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        {/* Custom Progress / Seek Bar */}
+                        <div className="w-full mb-3.5 flex items-center gap-3.5 group/progress">
+                          <span className="text-[10px] text-neutral-400 font-mono select-none">
+                            {formatTime(videoCurrentTime)}
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max={videoDuration || 100}
+                            step="0.1"
+                            value={videoCurrentTime}
+                            onChange={handleSeek}
+                            className="flex-grow h-1.5 bg-white/20 accent-brand-accent rounded-lg cursor-pointer transition-all group-hover/progress:h-2"
+                            title="Seek"
+                          />
+                          <span className="text-[10px] text-neutral-400 font-mono select-none">
+                            {formatTime(videoDuration)}
+                          </span>
                         </div>
 
-                        {/* Quality / Settings Control */}
-                        {streamType === 'HLS' && levels.length > 1 && (
-                          <div className="relative flex items-center p-1 rounded-xl hover:bg-white/10 transition-colors">
-                            <label htmlFor="quality-select" className="p-1.5 text-white/80 cursor-pointer flex items-center gap-1.5 min-h-[44px] min-w-[44px] justify-center" title="Quality / Settings">
-                              <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                            </label>
-                            <select
-                              id="quality-select"
-                              value={selectedLevel}
-                              onChange={(e) => handleQualityChange(parseInt(e.target.value))}
-                              className="text-xs bg-transparent text-white font-extrabold uppercase cursor-pointer outline-none border-none py-1 pr-1.5 focus:ring-0 appearance-none"
-                              title="Video Quality Menu"
+                        {/* Controls Bottom Row */}
+                        <div className="flex items-center justify-between w-full">
+                          {/* Bottom Left controls: Play/Pause, Volume, Time Display */}
+                          <div className="flex items-center gap-3">
+                            {/* Play/Pause Button */}
+                            <button
+                              type="button"
+                              onClick={togglePlayPause}
+                              className="p-2 text-white/90 hover:text-white transition-all transform hover:scale-105 active:scale-95 cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
+                              title={isPaused ? "Play" : "Pause"}
                             >
-                              {levels.map((lvl) => (
-                                <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase">
-                                  {lvl.name === 'Auto'
-                                    ? (selectedLevel === -1 && currentAutoResolution ? `Auto (${currentAutoResolution})` : 'Auto')
-                                    : lvl.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                              {isPaused ? (
+                                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                </svg>
+                              )}
+                            </button>
 
-                        {/* Fullscreen Button */}
-                        <button
-                          onClick={toggleContainerFullscreen}
-                          className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
-                          title="Toggle Fullscreen (F)"
-                        >
-                          {isFullscreen ? (
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m7 5l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4m7-5l5 5m0 0v-4m0 4h-4" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                            </svg>
-                          )}
-                        </button>
+                            {/* Volume controls with smooth expanded slider */}
+                            <div className="relative flex items-center group/vol">
+                              <button
+                                type="button"
+                                onClick={toggleMute}
+                                className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
+                                title={isMuted ? "Unmute (M)" : "Mute (M)"}
+                              >
+                                {isMuted || volume === 0 ? (
+                                  <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                                  </svg>
+                                ) : volume < 0.5 ? (
+                                  <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M17.95 6.05a8 8 0 010 11.314M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                  </svg>
+                                )}
+                              </button>
+                              <div className="w-0 group-hover/vol:w-20 group-focus-within/vol:w-20 overflow-hidden transition-all duration-300 ease-out flex items-center pr-1">
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  value={isMuted ? 0 : volume}
+                                  onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                                  className="w-16 h-1 bg-white/30 accent-brand-accent rounded-lg cursor-pointer"
+                                  title="Volume adjustment"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Time details */}
+                            <div className="text-xs text-neutral-300 font-semibold select-none hidden sm:block">
+                              <span>{formatTime(videoCurrentTime)}</span>
+                              <span className="mx-1.5 text-neutral-600">/</span>
+                              <span>{formatTime(videoDuration)}</span>
+                            </div>
+                          </div>
+
+                          {/* Bottom Right controls: Quality settings, Fullscreen */}
+                          <div className="flex items-center gap-3">
+                            {/* Quality Menu select */}
+                            {streamType === 'HLS' && levels.length > 1 && (
+                              <div className="relative flex items-center p-1 rounded-xl hover:bg-white/10 transition-colors">
+                                <label htmlFor="quality-select" className="p-1.5 text-white/80 cursor-pointer flex items-center gap-1.5 min-h-[44px] min-w-[44px] justify-center" title="Quality / Settings">
+                                  <svg className="w-5 h-5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                </label>
+                                <select
+                                  id="quality-select"
+                                  value={selectedLevel}
+                                  onChange={(e) => handleQualityChange(parseInt(e.target.value))}
+                                  className="text-xs bg-transparent text-white font-extrabold uppercase cursor-pointer outline-none border-none py-1 pr-1.5 focus:ring-0 appearance-none font-sans"
+                                  title="Video Quality Menu"
+                                >
+                                  {levels.map((lvl) => (
+                                    <option key={lvl.index} value={lvl.index} className="bg-[#141414] text-white font-sans uppercase animate-fadeIn">
+                                      {lvl.name === 'Auto'
+                                        ? (selectedLevel === -1 && currentAutoResolution ? `Auto (${currentAutoResolution})` : 'Auto')
+                                        : lvl.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
+                            {/* Fullscreen Button */}
+                            <button
+                              onClick={toggleContainerFullscreen}
+                              className="p-2.5 text-white/80 hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-white/10 flex items-center justify-center min-h-[44px] min-w-[44px]"
+                              title="Toggle Fullscreen (F)"
+                            >
+                              {isFullscreen ? (
+                                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9L4 4m0 0v4m0-4h4m7 5l5-5m0 0v4m0-4h-4M9 15l-5 5m0 0v-4m0 4h4m7-5l5 5m0 0v-4m0 4h-4" />
+                                </svg>
+                              ) : (
+                                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}

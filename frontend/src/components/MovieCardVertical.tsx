@@ -133,12 +133,12 @@ const MovieCardVertical: React.FC<MovieCardVerticalProps> = ({
       }}
       className="flex-shrink-0 w-36 sm:w-44 bg-[#181818] rounded-xl overflow-hidden cursor-pointer active:scale-[0.98] group flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none transition-all"
       style={{
-        transform: hovered ? 'scale(1.12) translateY(-6px)' : 'scale(1) translateY(0)',
+        transform: hovered ? 'scale(1.1) translateY(-4px)' : 'scale(1) translateY(0)',
         transformOrigin: transformOrigin,
         boxShadow: hovered
-          ? '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.15)'
-          : '0 4px 16px rgba(0, 0, 0, 0.4)',
-        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), z-index 0.3s',
+          ? '0 20px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.15)'
+          : '0 4px 12px rgba(0, 0, 0, 0.4)',
+        transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1), z-index 0.35s',
         willChange: 'transform, box-shadow',
         zIndex: hovered ? 50 : 1,
       }}

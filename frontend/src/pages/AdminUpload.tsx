@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../services/api';
+import api, { API_ORIGIN } from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import { useToast } from '../components/Toast';
 import { queryClient } from '../services/queryClient';
@@ -1390,7 +1390,7 @@ const AdminUpload: React.FC = () => {
                       <div className="flex gap-4 items-center">
                         <div className="w-16 h-24 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex-shrink-0 relative group flex items-center justify-center">
                           {editPosterPreview ? (
-                            <img src={editPosterPreview} className="w-full h-full object-cover" alt="" />
+                            <img src={editPosterPreview && (editPosterPreview.startsWith('http') || editPosterPreview.startsWith('blob:') || editPosterPreview.startsWith('data:')) ? editPosterPreview : `${API_ORIGIN}${editPosterPreview}`} className="w-full h-full object-cover" alt="" />
                           ) : (
                             <div className="text-[8px] text-neutral-600 font-bold">No Image</div>
                           )}

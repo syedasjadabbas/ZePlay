@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { API_ORIGIN } from '../services/api';
 import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
@@ -44,7 +44,8 @@ const HERO_INTERVAL_MS = 9000; // 9 second auto-rotate
 const Home: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
-  const [loading, setLoading] = useState(true);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [secondaryLoading, setSecondaryLoading] = useState(true);
   const [heroMovies, setHeroMovies] = useState<Movie[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
@@ -111,28 +112,19 @@ const Home: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
+      setCatalogLoading(true);
+      setSecondaryLoading(true);
       setError(null);
 
-      // Fire ALL requests concurrently — catalog + profile-specific in one wave
-      const [moviesRes, trendingRes, popularRes, recAddedRes, cwRes, persRes, bywRes] = await Promise.all([
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.movies,         queryFn: () => api.get('/catalog/movies').then(r => r.data),                                                                       staleTime: 5 * 60 * 1000 }).catch(() => []),
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.trending,       queryFn: () => api.get('/recommendations/trending').then(r => r.data),                                                            staleTime: 5 * 60 * 1000 }).catch(() => []),
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.popular,        queryFn: () => api.get('/recommendations/popular').then(r => r.data),                                                             staleTime: 5 * 60 * 1000 }).catch(() => []),
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.recentlyAdded,  queryFn: () => api.get('/recommendations/recently-added').then(r => r.data),                                                      staleTime: 5 * 60 * 1000 }).catch(() => []),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.continueWatching(activeProfileId),  queryFn: () => api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).then(r => r.data),  staleTime: 60 * 1000 }).catch(() => []) : Promise.resolve([]),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.personalized(activeProfileId),      queryFn: () => api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).then(r => r.data),      staleTime: 3 * 60 * 1000 }).catch(() => []) : Promise.resolve([]),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.becauseYouWatched(activeProfileId), queryFn: () => api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).then(r => r.data), staleTime: 3 * 60 * 1000 }).catch(() => ({ because_movie: null, recommendations: [] })) : Promise.resolve({ because_movie: null, recommendations: [] }),
-      ]);
+      // 1. Fetch primary catalog movies first
+      const moviesRes = await queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.movies,
+        queryFn: () => api.get('/catalog/movies').then(r => r.data),
+        staleTime: 5 * 60 * 1000
+      }).catch(() => []);
 
       const moviesData: Movie[] = moviesRes || [];
       setMovies(moviesData);
-      setTrendingMovies(trendingRes || []);
-      setPopularMovies(popularRes || []);
-      setRecentlyAddedMovies(recAddedRes || []);
-      setContinueWatchingItems(cwRes || []);
-      setPersonalizedMovies(persRes || []);
-      setBecauseYouWatched(bywRes || { because_movie: null, recommendations: [] });
 
       // Build hero carousel
       let carouselMovies: Movie[] = [];
@@ -151,10 +143,33 @@ const Home: React.FC = () => {
           preloadedHero.current.add(carouselMovies[1].thumbnail_url);
         }
       }
+
+      setCatalogLoading(false);
+
+      // 2. Fetch secondary recommendations concurrently in the background
+      Promise.all([
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.trending,       queryFn: () => api.get('/recommendations/trending').then(r => r.data),                                                            staleTime: 5 * 60 * 1000 }).catch(() => []),
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.popular,        queryFn: () => api.get('/recommendations/popular').then(r => r.data),                                                             staleTime: 5 * 60 * 1000 }).catch(() => []),
+        queryClient.fetchQuery({ queryKey: QUERY_KEYS.recentlyAdded,  queryFn: () => api.get('/recommendations/recently-added').then(r => r.data),                                                      staleTime: 5 * 60 * 1000 }).catch(() => []),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.continueWatching(activeProfileId),  queryFn: () => api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).then(r => r.data),  staleTime: 60 * 1000 }).catch(() => []) : Promise.resolve([]),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.personalized(activeProfileId),      queryFn: () => api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).then(r => r.data),      staleTime: 3 * 60 * 1000 }).catch(() => []) : Promise.resolve([]),
+        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.becauseYouWatched(activeProfileId), queryFn: () => api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).then(r => r.data), staleTime: 3 * 60 * 1000 }).catch(() => ({ because_movie: null, recommendations: [] })) : Promise.resolve({ because_movie: null, recommendations: [] }),
+      ]).then(([trendingRes, popularRes, recAddedRes, cwRes, persRes, bywRes]) => {
+        setTrendingMovies(trendingRes || []);
+        setPopularMovies(popularRes || []);
+        setRecentlyAddedMovies(recAddedRes || []);
+        setContinueWatchingItems(cwRes || []);
+        setPersonalizedMovies(persRes || []);
+        setBecauseYouWatched(bywRes || { because_movie: null, recommendations: [] });
+        setSecondaryLoading(false);
+      }).catch((err) => {
+        console.error("Secondary load error", err);
+        setSecondaryLoading(false);
+      });
     } catch (err: any) {
       setError("Failed to load dashboard. Please try again.");
-    } finally {
-      setLoading(false);
+      setCatalogLoading(false);
+      setSecondaryLoading(false);
     }
   };
 
@@ -264,7 +279,7 @@ const Home: React.FC = () => {
         <TopBar profileName={profileName} />
 
         <main className="flex-grow pt-24 px-8 md:px-12 pb-20 space-y-16 max-w-7xl mx-auto w-full">
-          {loading ? (
+          {catalogLoading ? (
             <div className="space-y-12 animate-fadeIn">
               <HeroSkeleton />
               <div className="space-y-4">
@@ -316,7 +331,7 @@ const Home: React.FC = () => {
                         <div
                           className="absolute inset-0"
                           style={{
-                            backgroundImage: `linear-gradient(to top, rgba(20,20,20,1) 0%, rgba(20,20,20,0.75) 30%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(20,20,20,0.95) 20%, rgba(20,20,20,0.45) 65%, rgba(0,0,0,0) 100%), url(${movie.thumbnail_url})`,
+                            backgroundImage: `linear-gradient(to top, rgba(20,20,20,1) 0%, rgba(20,20,20,0.75) 30%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(20,20,20,0.95) 20%, rgba(20,20,20,0.45) 65%, rgba(0,0,0,0) 100%), url(${movie.thumbnail_url && (movie.thumbnail_url.startsWith('http') || movie.thumbnail_url.startsWith('blob:') || movie.thumbnail_url.startsWith('data:')) ? movie.thumbnail_url : `${API_ORIGIN}${movie.thumbnail_url}`})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }}
@@ -401,122 +416,145 @@ const Home: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {/* 1. Continue Watching */}
-                  {continueWatchingItems.length > 0 && (
-                    <div className="space-y-5">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
-                          Continue Watching
-                        </h3>
-                        <span
-                          onClick={() => navigate('/history')}
-                          className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold flex items-center gap-1"
-                        >
-                          <span>See History</span>
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </span>
-                      </div>
-                      <div className="relative group/row">
-                        <button
-                          onClick={() => scroll(continueRef, 'left')}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
-                        >
-                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-
-                        <div
-                          ref={continueRef}
-                          onWheel={handleWheelScroll}
-                          className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
-                        >
-                          {continueWatchingItems.map((item: any) => {
-                            const m = item.movie;
-                            if (!m) return null;
-                            const isRemoving = removingItems.has(item.history_id);
-                            return (
-                              <div
-                                key={item.history_id}
-                                style={{
-                                  opacity: isRemoving ? 0 : 1,
-                                  transform: isRemoving ? 'scale(0.85)' : 'scale(1)',
-                                  maxWidth: isRemoving ? '0px' : '200px',
-                                  overflow: 'hidden',
-                                  transition: 'opacity 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1), max-width 0.4s cubic-bezier(0.16,1,0.3,1)',
-                                }}
-                              >
-                                <MovieCardVertical
-                                  movie_id={m.movie_id}
-                                  title={m.title}
-                                  thumbnail_url={m.thumbnail_url}
-                                  release_year={m.release_year}
-                                  duration_minutes={m.duration_minutes}
-                                  genres={m.genres || []}
-                                  progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
-                                />
-                              </div>
-                            );
-                          })}
+                  {secondaryLoading ? (
+                    <div className="space-y-12 animate-fadeIn mt-8">
+                      <div className="space-y-4">
+                        <div className="h-6 w-48 bg-[#1c1c1c] animate-shimmer rounded" />
+                        <div className="flex gap-6 overflow-hidden">
+                          {[1, 2, 3, 4, 5, 6].map((idx) => (
+                            <MovieCardSkeleton key={idx} aspect="vertical" />
+                          ))}
                         </div>
-
-                        <button
-                          onClick={() => scroll(continueRef, 'right')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
-                        >
-                          <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="h-6 w-48 bg-[#1c1c1c] animate-shimmer rounded" />
+                        <div className="flex gap-6 overflow-hidden">
+                          {[1, 2, 3, 4, 5, 6].map((idx) => (
+                            <MovieCardSkeleton key={idx} aspect="vertical" />
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {/* 1. Continue Watching */}
+                      {continueWatchingItems.length > 0 && (
+                        <div className="space-y-5">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white font-display">
+                              Continue Watching
+                            </h3>
+                            <span
+                              onClick={() => navigate('/history')}
+                              className="text-xs text-brand-accent hover:underline cursor-pointer font-semibold flex items-center gap-1"
+                            >
+                              <span>See History</span>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </span>
+                          </div>
+                          <div className="relative group/row">
+                            <button
+                              onClick={() => scroll(continueRef, 'left')}
+                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
+                            >
+                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
 
-                  {/* 2. Recommended For You */}
-                  {personalizedMovies.length > 0 && (
-                    <CarouselRow
-                      title="Recommended For You"
-                      movies={personalizedMovies}
-                      scrollRef={recommendedRef}
-                    />
-                  )}
+                            <div
+                              ref={continueRef}
+                              onWheel={handleWheelScroll}
+                              className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide scroll-smooth select-none"
+                            >
+                              {continueWatchingItems.map((item: any) => {
+                                const m = item.movie;
+                                if (!m) return null;
+                                const isRemoving = removingItems.has(item.history_id);
+                                return (
+                                  <div
+                                    key={item.history_id}
+                                    style={{
+                                      opacity: isRemoving ? 0 : 1,
+                                      transform: isRemoving ? 'scale(0.85)' : 'scale(1)',
+                                      maxWidth: isRemoving ? '0px' : '200px',
+                                      overflow: 'hidden',
+                                      transition: 'opacity 0.35s cubic-bezier(0.16,1,0.3,1), transform 0.35s cubic-bezier(0.16,1,0.3,1), max-width 0.4s cubic-bezier(0.16,1,0.3,1)',
+                                    }}
+                                  >
+                                    <MovieCardVertical
+                                      movie_id={m.movie_id}
+                                      title={m.title}
+                                      thumbnail_url={m.thumbnail_url}
+                                      release_year={m.release_year}
+                                      duration_minutes={m.duration_minutes}
+                                      genres={m.genres || []}
+                                      progressPercent={Math.min(Math.round(item.percentage_watched), 100)}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
 
-                  {/* 3. Because You Watched */}
-                  {becauseYouWatched.because_movie && becauseYouWatched.recommendations.length > 0 && (
-                    <CarouselRow
-                      title={<>Because You Watched <span className="text-brand-accent">"{becauseYouWatched.because_movie.title}"</span></>}
-                      movies={becauseYouWatched.recommendations}
-                      scrollRef={becauseRef}
-                    />
-                  )}
+                            <button
+                              onClick={() => scroll(continueRef, 'right')}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-full w-10 h-10 flex items-center justify-center text-white z-10 opacity-0 group-hover/row:opacity-100 transition-opacity duration-300"
+                            >
+                              <svg className="w-5 h-5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
-                  {/* 4. Trending Now */}
-                  {trendingMovies.length > 0 && (
-                    <CarouselRow
-                      title="Trending Now"
-                      movies={trendingMovies}
-                      scrollRef={trendingRef}
-                    />
-                  )}
+                      {/* 2. Recommended For You */}
+                      {personalizedMovies.length > 0 && (
+                        <CarouselRow
+                          title="Recommended For You"
+                          movies={personalizedMovies}
+                          scrollRef={recommendedRef}
+                        />
+                      )}
 
-                  {/* 5. Recently Added */}
-                  {recentlyAddedMovies.length > 0 && (
-                    <CarouselRow
-                      title="Recently Added"
-                      movies={recentlyAddedMovies}
-                      scrollRef={recentlyAddedRef}
-                    />
-                  )}
+                      {/* 3. Because You Watched */}
+                      {becauseYouWatched.because_movie && becauseYouWatched.recommendations.length > 0 && (
+                        <CarouselRow
+                          title={<>Because You Watched <span className="text-brand-accent">"{becauseYouWatched.because_movie.title}"</span></>}
+                          movies={becauseYouWatched.recommendations}
+                          scrollRef={becauseRef}
+                        />
+                      )}
 
-                  {/* 6. Popular Movies */}
-                  {popularMovies.length > 0 && (
-                    <CarouselRow
-                      title="Popular Movies"
-                      movies={popularMovies}
-                      scrollRef={popularRef}
-                    />
+                      {/* 4. Trending Now */}
+                      {trendingMovies.length > 0 && (
+                        <CarouselRow
+                          title="Trending Now"
+                          movies={trendingMovies}
+                          scrollRef={trendingRef}
+                        />
+                      )}
+
+                      {/* 5. Recently Added */}
+                      {recentlyAddedMovies.length > 0 && (
+                        <CarouselRow
+                          title="Recently Added"
+                          movies={recentlyAddedMovies}
+                          scrollRef={recentlyAddedRef}
+                        />
+                      )}
+
+                      {/* 6. Popular Movies */}
+                      {popularMovies.length > 0 && (
+                        <CarouselRow
+                          title="Popular Movies"
+                          movies={popularMovies}
+                          scrollRef={popularRef}
+                        />
+                      )}
+                    </>
                   )}
                 </>
               )}
