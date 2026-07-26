@@ -16,6 +16,7 @@ HEARTBEAT_PREFIX = "zeplay:worker_heartbeat:"
 class JobQueueService:
     def __init__(self):
         self._in_memory_queue: asyncio.Queue = asyncio.Queue()
+        self._in_memory_locks: Dict[str, str] = {}
 
     async def enqueue_job(self, video_id: UUID, retry_count: int = 0) -> bool:
         """
@@ -73,7 +74,7 @@ class JobQueueService:
             return None
 
     async def acquire_lock(self, video_id: str, worker_id: str, ttl_seconds: int = 600) -> bool:
-        """Acquires a distributed lock in Redis for video_id with TTL expiration."""
+        """Acquires a distributed lock in Redis for video_id with TTL expiration, with in-memory fallback."""
         lock_key = f"{LOCK_KEY_PREFIX}{video_id}"
         client = await cache.get_client()
         if client and cache._redis_available:
@@ -82,11 +83,15 @@ class JobQueueService:
                 return bool(res)
             except Exception as e:
                 logger.warning(f"[QUEUE] Redis lock acquire error for {video_id}: {e}")
-                return True
+
+        if video_id in self._in_memory_locks and self._in_memory_locks[video_id] != worker_id:
+            return False
+        self._in_memory_locks[video_id] = worker_id
         return True
 
     async def release_lock(self, video_id: str):
         """Releases the distributed lock for video_id."""
+        self._in_memory_locks.pop(video_id, None)
         lock_key = f"{LOCK_KEY_PREFIX}{video_id}"
         client = await cache.get_client()
         if client and cache._redis_available:
