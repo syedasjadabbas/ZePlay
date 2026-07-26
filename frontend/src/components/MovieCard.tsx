@@ -88,14 +88,14 @@ const MovieCard: React.FC<MovieCardProps> = ({
       }}
       className="group flex-shrink-0 w-44 md:w-56 bg-[#181818] rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] flex flex-col justify-between focus-visible:ring-2 focus-visible:ring-brand-accent focus:outline-none transition-all"
       style={{
-        transform: hovered ? 'scale(1.1) translateY(-4px)' : 'scale(1) translateY(0)',
+        transform: hovered ? 'scale(1.06) translateY(-4px)' : 'scale(1) translateY(0)',
         transformOrigin: transformOrigin,
         boxShadow: hovered
           ? '0 20px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.15)'
           : '0 4px 12px rgba(0, 0, 0, 0.4)',
-        transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1), z-index 0.35s',
-        willChange: 'transform, box-shadow',
-        zIndex: hovered ? 50 : 1,
+        transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+        willChange: 'transform, opacity',
+        zIndex: hovered ? 40 : 1,
       }}
     >
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-950 flex items-center justify-center">

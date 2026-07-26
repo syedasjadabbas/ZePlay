@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api, { API_ORIGIN } from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import { useToast } from '../components/Toast';
-import { queryClient } from '../services/queryClient';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import PremiumPoster from '../components/PremiumPoster';
 
 interface MovieOption {
@@ -214,36 +214,79 @@ const AdminUpload: React.FC = () => {
   const handleSaveMovie = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMovie) return;
+    const startTime = performance.now();
     try {
       setSavingMovie(true);
       setError(null);
       setSuccessMsg(null);
 
       let currentThumbnail = editingMovie.thumbnail_url;
+      const metadataChanged = (
+        editTitle !== editingMovie.title ||
+        editDesc !== editingMovie.description ||
+        editYear !== editingMovie.release_year ||
+        editDuration !== editingMovie.duration_minutes
+      );
+
+      const tasks: Promise<any>[] = [];
+
       if (editPosterFile) {
         const formData = new FormData();
         formData.append('file', editPosterFile);
-        const posterRes = await api.post(`/admin/movies/${editingMovie.movie_id}/poster`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        currentThumbnail = posterRes.data.thumbnail_url;
+        tasks.push(
+          api.post(`/admin/movies/${editingMovie.movie_id}/poster`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        );
       }
 
-      await api.put(`/admin/movies/${editingMovie.movie_id}`, {
-        title: editTitle,
-        description: editDesc,
-        release_year: editYear,
-        duration_minutes: editDuration,
-        thumbnail_url: currentThumbnail,
-        video_url: editingMovie.video_url || 'placeholder'
-      });
+      if (metadataChanged || !editPosterFile) {
+        tasks.push(
+          api.put(`/admin/movies/${editingMovie.movie_id}`, {
+            title: editTitle,
+            description: editDesc,
+            release_year: editYear,
+            duration_minutes: editDuration,
+            thumbnail_url: currentThumbnail,
+            video_url: editingMovie.video_url || 'placeholder'
+          })
+        );
+      }
 
-      setSuccessMsg('Movie catalog entry successfully updated!');
+      const results = await Promise.all(tasks);
+
+      if (editPosterFile && results[0]?.data?.thumbnail_url) {
+        currentThumbnail = results[0].data.thumbnail_url;
+      }
+
+      const durationMs = Math.round(performance.now() - startTime);
+
+      const cacheBustThumbnail = currentThumbnail.includes('?')
+        ? `${currentThumbnail}&v=${Date.now()}`
+        : `${currentThumbnail}?v=${Date.now()}`;
+
+      // Optimistically update the movie in the catalog list state immediately
+      setCatalogMovies((prev) =>
+        prev.map((item) =>
+          item.movie_id === editingMovie.movie_id
+            ? {
+                ...item,
+                title: editTitle,
+                description: editDesc,
+                release_year: editYear,
+                duration_minutes: editDuration,
+                thumbnail_url: cacheBustThumbnail,
+              }
+            : item
+        )
+      );
+
+      setSuccessMsg(`Movie catalog entry updated in ${durationMs}ms!`);
       setEditingMovie(null);
       setEditPosterFile(null);
-      fetchMovies();
-      // Invalidate all React Query caches across the product
-      queryClient.invalidateQueries();
+
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movies });
+      queryClient.invalidateQueries({ queryKey: ['catalog'] });
     } catch (err: any) {
       console.error('Failed to save movie', err);
       setError(err.response?.data?.detail || 'Failed to save movie metadata.');
@@ -1283,7 +1326,8 @@ const AdminUpload: React.FC = () => {
                           {/* Movie poster preview using PremiumPoster fallback if needed */}
                           <div className="w-20 h-28 bg-[#040811] rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative flex items-center justify-center">
                             <img 
-                              src={m.thumbnail_url} 
+                              key={m.thumbnail_url}
+                              src={m.thumbnail_url && (m.thumbnail_url.startsWith('http') || m.thumbnail_url.startsWith('blob:') || m.thumbnail_url.startsWith('data:')) ? m.thumbnail_url : `${API_ORIGIN}${m.thumbnail_url}`} 
                               className="absolute inset-0 w-full h-full object-cover z-10" 
                               alt="" 
                               onError={(e) => {

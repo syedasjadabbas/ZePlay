@@ -112,60 +112,93 @@ const Home: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
-      setCatalogLoading(true);
-      setSecondaryLoading(true);
       setError(null);
 
-      // 1. Fetch primary catalog movies first
-      const moviesRes = await queryClient.fetchQuery({
+      // Check React Query cache for catalog movies first
+      const cachedMovies = queryClient.getQueryData<Movie[]>(QUERY_KEYS.movies);
+      if (cachedMovies && cachedMovies.length > 0) {
+        setMovies(cachedMovies);
+        let carouselMovies: Movie[] = [];
+        const interstellar = cachedMovies.find((m: any) => m.title.toLowerCase() === 'interstellar');
+        if (interstellar) carouselMovies.push(interstellar);
+        const others = cachedMovies.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
+        carouselMovies = [...carouselMovies, ...others].slice(0, 5);
+        setHeroMovies(carouselMovies);
+        setCatalogLoading(false);
+      } else {
+        setCatalogLoading(true);
+      }
+
+      // Fetch primary catalog in background
+      queryClient.fetchQuery({
         queryKey: QUERY_KEYS.movies,
         queryFn: () => api.get('/catalog/movies').then(r => r.data),
         staleTime: 5 * 60 * 1000
-      }).catch(() => []);
+      }).then((moviesData: Movie[]) => {
+        if (moviesData && Array.isArray(moviesData)) {
+          setMovies(moviesData);
+          let carouselMovies: Movie[] = [];
+          const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
+          if (interstellar) carouselMovies.push(interstellar);
+          const others = moviesData.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
+          carouselMovies = [...carouselMovies, ...others].slice(0, 5);
+          setHeroMovies(carouselMovies);
 
-      const moviesData: Movie[] = moviesRes || [];
-      setMovies(moviesData);
-
-      // Build hero carousel
-      let carouselMovies: Movie[] = [];
-      const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
-      if (interstellar) carouselMovies.push(interstellar);
-      const others = moviesData.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
-      carouselMovies = [...carouselMovies, ...others].slice(0, 5);
-      setHeroMovies(carouselMovies);
-
-      // Preload first two hero images
-      if (carouselMovies.length > 0) {
-        preloadImage(carouselMovies[0].thumbnail_url);
-        preloadedHero.current.add(carouselMovies[0].thumbnail_url);
-        if (carouselMovies.length > 1) {
-          preloadImage(carouselMovies[1].thumbnail_url);
-          preloadedHero.current.add(carouselMovies[1].thumbnail_url);
+          if (carouselMovies.length > 0) {
+            preloadImage(carouselMovies[0].thumbnail_url);
+            preloadedHero.current.add(carouselMovies[0].thumbnail_url);
+            if (carouselMovies.length > 1) {
+              preloadImage(carouselMovies[1].thumbnail_url);
+              preloadedHero.current.add(carouselMovies[1].thumbnail_url);
+            }
+          }
         }
-      }
-
-      setCatalogLoading(false);
-
-      // 2. Fetch secondary recommendations concurrently in the background
-      Promise.all([
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.trending,       queryFn: () => api.get('/recommendations/trending').then(r => r.data),                                                            staleTime: 5 * 60 * 1000 }).catch(() => []),
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.popular,        queryFn: () => api.get('/recommendations/popular').then(r => r.data),                                                             staleTime: 5 * 60 * 1000 }).catch(() => []),
-        queryClient.fetchQuery({ queryKey: QUERY_KEYS.recentlyAdded,  queryFn: () => api.get('/recommendations/recently-added').then(r => r.data),                                                      staleTime: 5 * 60 * 1000 }).catch(() => []),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.continueWatching(activeProfileId),  queryFn: () => api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).then(r => r.data),  staleTime: 60 * 1000 }).catch(() => []) : Promise.resolve([]),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.personalized(activeProfileId),      queryFn: () => api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).then(r => r.data),      staleTime: 3 * 60 * 1000 }).catch(() => []) : Promise.resolve([]),
-        activeProfileId ? queryClient.fetchQuery({ queryKey: QUERY_KEYS.becauseYouWatched(activeProfileId), queryFn: () => api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).then(r => r.data), staleTime: 3 * 60 * 1000 }).catch(() => ({ because_movie: null, recommendations: [] })) : Promise.resolve({ because_movie: null, recommendations: [] }),
-      ]).then(([trendingRes, popularRes, recAddedRes, cwRes, persRes, bywRes]) => {
-        setTrendingMovies(trendingRes || []);
-        setPopularMovies(popularRes || []);
-        setRecentlyAddedMovies(recAddedRes || []);
-        setContinueWatchingItems(cwRes || []);
-        setPersonalizedMovies(persRes || []);
-        setBecauseYouWatched(bywRes || { because_movie: null, recommendations: [] });
-        setSecondaryLoading(false);
+        setCatalogLoading(false);
       }).catch((err) => {
-        console.error("Secondary load error", err);
-        setSecondaryLoading(false);
+        console.error("Primary catalog load error", err);
+        setCatalogLoading(false);
       });
+
+      // Fetch secondary recommendations independently without a blocking Promise.all
+      setSecondaryLoading(false);
+
+      queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.trending,
+        queryFn: () => api.get('/recommendations/trending').then(r => r.data),
+        staleTime: 5 * 60 * 1000
+      }).then(r => setTrendingMovies(r || [])).catch(() => {});
+
+      queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.popular,
+        queryFn: () => api.get('/recommendations/popular').then(r => r.data),
+        staleTime: 5 * 60 * 1000
+      }).then(r => setPopularMovies(r || [])).catch(() => {});
+
+      queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.recentlyAdded,
+        queryFn: () => api.get('/recommendations/recently-added').then(r => r.data),
+        staleTime: 5 * 60 * 1000
+      }).then(r => setRecentlyAddedMovies(r || [])).catch(() => {});
+
+      if (activeProfileId) {
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.continueWatching(activeProfileId),
+          queryFn: () => api.get(`/watch-history/continue-watching?profile_id=${activeProfileId}`).then(r => r.data),
+          staleTime: 60 * 1000
+        }).then(r => setContinueWatchingItems(r || [])).catch(() => {});
+
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.personalized(activeProfileId),
+          queryFn: () => api.get(`/recommendations/personalized?profile_id=${activeProfileId}`).then(r => r.data),
+          staleTime: 3 * 60 * 1000
+        }).then(r => setPersonalizedMovies(r || [])).catch(() => {});
+
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.becauseYouWatched(activeProfileId),
+          queryFn: () => api.get(`/recommendations/because-you-watched?profile_id=${activeProfileId}`).then(r => r.data),
+          staleTime: 3 * 60 * 1000
+        }).then(r => setBecauseYouWatched(r || { because_movie: null, recommendations: [] })).catch(() => {});
+      }
     } catch (err: any) {
       setError("Failed to load dashboard. Please try again.");
       setCatalogLoading(false);
@@ -183,7 +216,6 @@ const Home: React.FC = () => {
     heroIntervalRef.current = setInterval(() => {
       setCurrentSlideIndex(prev => {
         const next = (prev + 1) % heroMovies.length;
-        // Preload the one after next
         preloadHeroImages(heroMovies, next);
         return next;
       });
@@ -200,7 +232,6 @@ const Home: React.FC = () => {
     return () => { if (heroIntervalRef.current) clearInterval(heroIntervalRef.current); };
   }, [heroMovies.length, heroPaused, startHeroInterval]);
 
-  // Preload next image whenever currentSlideIndex changes
   useEffect(() => {
     if (heroMovies.length > 1) {
       preloadHeroImages(heroMovies, currentSlideIndex);
@@ -209,7 +240,6 @@ const Home: React.FC = () => {
 
   const handleDotClick = (index: number) => {
     setCurrentSlideIndex(index);
-    // Reset interval on manual change
     if (!heroPaused) startHeroInterval();
   };
 
@@ -244,7 +274,7 @@ const Home: React.FC = () => {
         <div
           ref={scrollRef}
           onWheel={handleWheelScroll}
-          className="flex gap-6 overflow-x-auto py-6 -my-4 px-2 scrollbar-hide scroll-smooth select-none"
+          className="flex gap-6 overflow-x-auto py-8 -my-6 px-3 scrollbar-hide scroll-smooth select-none"
         >
           {rowMovies.map((movie: any) => (
             <MovieCardVertical

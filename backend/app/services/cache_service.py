@@ -12,6 +12,7 @@ class CacheService:
         self._redis_client = None
         self._redis_pool = None
         self._redis_available = False
+        self._last_redis_retry = 0.0
         self._memory_cache: Dict[str, Dict[str, Any]] = {}
         self._hits = 0
         self._misses = 0
@@ -75,15 +76,30 @@ class CacheService:
             self._redis_available = False
             logger.warning(f"Redis cache connection unavailable ({e}). Fallback to in-memory cache.")
 
+    async def _check_redis(self) -> bool:
+        if not settings.REDIS_ENABLED or not self._redis_client:
+            return False
+        if not self._redis_available:
+            now = time.time()
+            if now - self._last_redis_retry > 60.0:
+                self._last_redis_retry = now
+                try:
+                    await self._redis_client.ping()
+                    self._redis_available = True
+                    logger.info("Redis cache connection re-established.")
+                except Exception:
+                    self._redis_available = False
+            return self._redis_available
+        return True
+
     async def get(self, key: str) -> Optional[Any]:
         """
         Retrieve item from cache (Cache First strategy).
         Returns None if cache miss or expired. Handles Redis errors gracefully.
         """
-        if self._redis_client:
+        if await self._check_redis():
             try:
                 data = await self._redis_client.get(key)
-                self._redis_available = True
                 if data is not None:
                     try:
                         await self._redis_client.incr("cache_stats:hits")
@@ -119,11 +135,10 @@ class CacheService:
         if value is None:
             return
 
-        if self._redis_client:
+        if await self._check_redis():
             try:
                 serialized = json.dumps(value, default=str)
                 await self._redis_client.set(key, serialized, ex=ttl)
-                self._redis_available = True
                 return
             except Exception as e:
                 logger.warning(f"Redis set error on key '{key}': {e}")
@@ -138,12 +153,11 @@ class CacheService:
     async def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate all keys matching pattern (e.g. 'catalog:*', 'rec:*')."""
         removed_count = 0
-        if self._redis_client:
+        if await self._check_redis():
             try:
                 keys = await self._redis_client.keys(pattern)
                 if keys:
                     removed_count = await self._redis_client.delete(*keys)
-                self._redis_available = True
             except Exception as e:
                 logger.warning(f"Redis invalidate error on pattern '{pattern}': {e}")
                 self._redis_available = False
@@ -165,14 +179,13 @@ class CacheService:
 
     async def clear_all(self) -> None:
         """Flush all cache entries and reset hit/miss counters."""
-        if self._redis_client:
+        if await self._check_redis():
             try:
                 await self._redis_client.flushdb()
                 try:
                     await self._redis_client.delete("cache_stats:hits", "cache_stats:misses")
                 except Exception:
                     pass
-                self._redis_available = True
             except Exception as e:
                 logger.warning(f"Redis flush error: {e}")
                 self._redis_available = False
@@ -185,12 +198,10 @@ class CacheService:
         """Return cache performance statistics (hits, misses, hit_rate_pct, connection status)."""
         hits = self._hits
         misses = self._misses
-        redis_ok = False
+        redis_ok = await self._check_redis()
 
-        if self._redis_client:
+        if redis_ok:
             try:
-                await self._redis_client.ping()
-                redis_ok = True
                 r_hits = await self._redis_client.get("cache_stats:hits")
                 r_misses = await self._redis_client.get("cache_stats:misses")
                 if r_hits is not None:
@@ -198,10 +209,8 @@ class CacheService:
                 if r_misses is not None:
                     misses = int(r_misses)
             except Exception as e:
-                redis_ok = False
                 logger.warning(f"Failed to fetch Redis cache stats: {e}")
 
-        self._redis_available = redis_ok
         total = hits + misses
         hit_rate = round((hits / total) * 100, 2) if total > 0 else 0.0
 

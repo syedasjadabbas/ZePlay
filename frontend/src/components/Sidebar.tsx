@@ -66,11 +66,23 @@ const Sidebar: React.FC = () => {
     }`;
   };
 
+  const handleLogoClick = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }
+    if (location.pathname !== '/') {
+      navigate('/');
+    } else {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movies });
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    }
+  };
+
   return (
     <aside role="navigation" aria-label="Main navigation" className="fixed left-0 top-0 bottom-0 w-56 bg-[#000000] flex flex-col justify-between z-30 py-8 px-6">
       {/* Brand */}
       <div className="space-y-8">
-        <div className="px-4 cursor-pointer select-none" onClick={() => navigate('/')}>
+        <div className="px-4 cursor-pointer select-none" onClick={handleLogoClick}>
           <span className="text-xl font-black tracking-[0.08em] font-display uppercase">
             <span className="text-[#1E3A8A]">Ze</span>
             <span className="text-[#3B82F6]">Play</span>
@@ -82,7 +94,7 @@ const Sidebar: React.FC = () => {
           <div className="space-y-1">
             <span className="text-[9px] font-bold tracking-widest text-neutral-600 block mb-2 uppercase px-4">Discover</span>
             
-            <button onClick={() => navigate('/')} className={getLinkClass('/')}>
+            <button onClick={handleLogoClick} className={getLinkClass('/')}>
               {isActive('/') && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4.5 bg-[#E50914] rounded-r-sm" />}
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isActive('/') ? 2.5 : 1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />

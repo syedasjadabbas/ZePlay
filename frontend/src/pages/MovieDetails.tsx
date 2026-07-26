@@ -68,6 +68,7 @@ const MovieDetails: React.FC = () => {
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(true);
   const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
+  const [accessState, setAccessState] = useState<'UNKNOWN' | 'FREE' | 'PREMIUM' | 'ADMIN'>('UNKNOWN');
   const [showUpgradeState, setShowUpgradeState] = useState<boolean>(false);
 
   const handleVolumeChange = (newVol: number) => {
@@ -418,12 +419,32 @@ const MovieDetails: React.FC = () => {
           const userStr = localStorage.getItem('user');
           const userObj = userStr ? JSON.parse(userStr) : null;
           const isAdmin = userObj?.is_admin || subRes.data?.status === "Administrator Account" || false;
-          setIsPremiumUser(isAdmin || subPlan === 'premium');
+          if (isAdmin) {
+            setAccessState('ADMIN');
+            setIsPremiumUser(true);
+          } else if (subPlan === 'premium') {
+            setAccessState('PREMIUM');
+            setIsPremiumUser(true);
+          } else {
+            setAccessState('FREE');
+            setIsPremiumUser(false);
+          }
         } catch (subErr) {
           console.error("Failed to check subscription", subErr);
           const userStr = localStorage.getItem('user');
           const userObj = userStr ? JSON.parse(userStr) : null;
-          setIsPremiumUser(userObj?.is_admin || userObj?.subscription_plan === 'premium');
+          const isAdmin = userObj?.is_admin || false;
+          const isPrem = userObj?.subscription_plan === 'premium';
+          if (isAdmin) {
+            setAccessState('ADMIN');
+            setIsPremiumUser(true);
+          } else if (isPrem) {
+            setAccessState('PREMIUM');
+            setIsPremiumUser(true);
+          } else {
+            setAccessState('FREE');
+            setIsPremiumUser(false);
+          }
         }
 
         // Fire analytics view tracking async — no await, non-blocking
@@ -470,7 +491,11 @@ const MovieDetails: React.FC = () => {
 
   // Initialize HLS.js Player
   useEffect(() => {
-    if (!videoRef.current || !movie || loading) return;
+    // SECURITY ENTITLEMENT GATE:
+    // If access state is UNKNOWN/LOADING or FREE, DO NOT initialize HLS or attempt streaming!
+    if (!videoRef.current || !movie || loading || accessState === 'UNKNOWN' || accessState === 'FREE') {
+      return;
+    }
 
     setIsPlayerLoading(true);
     setIsBuffering(false);
@@ -575,7 +600,7 @@ const MovieDetails: React.FC = () => {
       setLevels([]);
       setSelectedLevel(-1);
     };
-  }, [movie, loading]);
+  }, [movie, loading, accessState]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
