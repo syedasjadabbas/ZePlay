@@ -26,14 +26,14 @@ const PlanBadge: React.FC<{ name: string; size?: 'sm' | 'lg' }> = ({ name, size 
   const isPremium = name === 'premium';
   return (
     <span
-      className={`inline-flex items-center gap-1 font-bold uppercase tracking-wider rounded border ${
+      className={`inline-flex items-center gap-1 font-bold uppercase tracking-wider rounded ${
         size === 'lg'
-          ? 'px-3 py-1 text-xs'
+          ? 'px-2.5 py-1 text-xs'
           : 'px-2 py-0.5 text-[9px]'
       } ${
         isPremium
-          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-          : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+          ? 'bg-amber-500/15 text-amber-400 font-mono'
+          : 'bg-neutral-800 text-neutral-400 font-mono'
       }`}
     >
       {name.toUpperCase()}
@@ -173,10 +173,7 @@ const Subscription: React.FC = () => {
 
           {/* Header */}
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
-              Membership
-            </span>
-            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
+            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase">
               Subscription
             </h1>
             <p className="text-xs text-brand-textMuted font-medium mt-1">
@@ -196,7 +193,7 @@ const Subscription: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <PlanBadge name={subscription?.plan.name || 'free'} size="lg" />
-                      <span className={`text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
                         statusColors[subscription?.status || 'active']
                       }`}>
                         {subscription?.status || 'active'}

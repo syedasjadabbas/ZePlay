@@ -588,13 +588,13 @@ const AdminUpload: React.FC = () => {
     <div className="min-h-screen bg-brand-background text-white font-sans selection:bg-[#E50914] selection:text-white pb-20 relative overflow-hidden">
       {/* Top Navbar */}
       <header className="border-b border-white/5 bg-black sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <Link to="/" className="text-xl font-black tracking-widest font-display uppercase hover:scale-[1.01] transition-transform select-none">
             <span className="text-[#1E3A8A]">Ze</span>
             <span className="text-[#3B82F6]">Play</span>
           </Link>
-          <span className="text-[9px] font-bold tracking-widest uppercase bg-white/5 border border-white/10 px-3 py-1 rounded-full text-neutral-300">
-            Studio Ingestion Console
+          <span className="text-xs font-semibold text-neutral-400 border-l border-white/10 pl-4 hidden sm:inline">
+            Studio Console
           </span>
         </div>
         <div className="flex items-center gap-4">

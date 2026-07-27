@@ -126,10 +126,7 @@ const Settings: React.FC = () => {
 
         <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 max-w-2xl mx-auto w-full space-y-8">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-accent bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">
-              Account Control
-            </span>
-            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
+            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase">
               Settings
             </h1>
             <p className="text-xs text-brand-textMuted font-medium mt-1">

@@ -113,7 +113,7 @@ const SearchResults: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
+              <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase">
                 {queryTerm ? `Results for "${queryTerm}"` : 'All Catalog Titles'}
               </h1>
               <p className="text-xs text-brand-textMuted font-medium mt-1">

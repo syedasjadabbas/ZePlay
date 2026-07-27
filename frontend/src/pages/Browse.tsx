@@ -125,7 +125,7 @@ const Browse: React.FC = () => {
         <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 max-w-7xl mx-auto w-full space-y-10">
           {/* Header & Title */}
           <div>
-            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase mt-2">
+            <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-white uppercase">
               Browse Movies
             </h1>
             <p className="text-xs text-brand-textMuted font-medium mt-1">
