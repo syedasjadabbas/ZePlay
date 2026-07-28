@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
@@ -24,7 +24,10 @@ interface Movie {
   video_url: string;
   genres: Genre[];
   average_rating?: number;
+  is_generated?: boolean;
 }
+
+const PAGE_SIZE = 40;
 
 const SearchResults: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,10 +39,16 @@ const SearchResults: React.FC = () => {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   const navigate = useNavigate();
   const activeProfileId = localStorage.getItem('selectedProfileId');
+  const abortRef = useRef<AbortController | null>(null);
+  // Track filter signature to prevent stale load-more appends
+  const filterSigRef = useRef<string>('');
 
   useEffect(() => {
     if (!activeProfileId) {
@@ -49,42 +58,76 @@ const SearchResults: React.FC = () => {
   }, [activeProfileId, navigate]);
 
   useEffect(() => {
-    const fetchGenres = async () => {
-      try {
-        const res = await api.get('/catalog/genres');
-        setGenres(res.data);
-      } catch (e) {
-        // genres are non-critical, silently fail
-      }
-    };
-    fetchGenres();
+    api.get('/catalog/genres')
+      .then(r => setGenres(r.data || []))
+      .catch(() => {});
   }, []);
 
-  const fetchSearchResults = async (signal?: AbortSignal) => {
+  const buildParams = (currentOffset: number) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(currentOffset));
+    if (queryTerm) params.set('q', queryTerm);
+    if (selectedGenre) params.set('genre', selectedGenre);
+    if (sortBy) params.set('sort_by', sortBy);
+    return params;
+  };
+
+  const fetchFirstPage = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    setMovies([]);
+    setOffset(0);
+    setHasMore(false);
+    filterSigRef.current = `${queryTerm}|${selectedGenre}|${sortBy}`;
+
     try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams();
-      if (queryTerm) params.append('q', queryTerm);
-      if (selectedGenre) params.append('genre', selectedGenre);
-      if (sortBy) params.append('sort_by', sortBy);
-
-      const response = await api.get(`/catalog/search?${params.toString()}`, { signal });
-      setMovies(response.data);
+      const params = buildParams(0);
+      const response = await api.get(`/catalog/search?${params}`, { signal });
+      const data: Movie[] = response.data || [];
+      setMovies(data);
+      setOffset(data.length);
+      setHasMore(data.length === PAGE_SIZE);
     } catch (err: any) {
       if (err.name === 'CanceledError' || err.name === 'AbortError') return;
-      setError(err.response?.data?.detail || "Failed to load search results.");
+      setError(err.response?.data?.detail || 'Failed to load search results.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [queryTerm, selectedGenre, sortBy]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetchSearchResults(controller.signal);
-    return () => controller.abort();
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    fetchFirstPage(abortRef.current.signal);
+    return () => { if (abortRef.current) abortRef.current.abort(); };
   }, [queryTerm, selectedGenre, sortBy]);
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    const snapSig = filterSigRef.current;
+    setLoadingMore(true);
+
+    try {
+      const params = buildParams(offset);
+      const response = await api.get(`/catalog/search?${params}`);
+      const data: Movie[] = response.data || [];
+
+      if (filterSigRef.current === snapSig) {
+        setMovies(prev => {
+          const existingIds = new Set(prev.map(m => m.movie_id));
+          const newItems = data.filter(m => !existingIds.has(m.movie_id));
+          return [...prev, ...newItems];
+        });
+        setOffset(prev => prev + data.length);
+        setHasMore(data.length === PAGE_SIZE);
+      }
+    } catch {
+      // Silent fail — user can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleGenreSelect = (genreName: string | null) => {
     const newParams = new URLSearchParams(searchParams);
@@ -117,7 +160,10 @@ const SearchResults: React.FC = () => {
                 {queryTerm ? `Results for "${queryTerm}"` : 'All Catalog Titles'}
               </h1>
               <p className="text-xs text-brand-textMuted font-medium mt-1">
-                Showing {movies.length} {movies.length === 1 ? 'match' : 'matches'} across catalog titles, descriptions, genres, and release years.
+                {loading
+                  ? 'Searching...'
+                  : `Showing ${movies.length}${hasMore ? '+' : ''} ${movies.length === 1 ? 'match' : 'matches'} across catalog titles and genres.`
+                }
               </p>
             </div>
 
@@ -145,8 +191,8 @@ const SearchResults: React.FC = () => {
               <button
                 onClick={() => handleGenreSelect(null)}
                 className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                  !selectedGenre 
-                    ? 'bg-brand-accent text-white' 
+                  !selectedGenre
+                    ? 'bg-brand-accent text-white'
                     : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                 }`}
               >
@@ -158,7 +204,7 @@ const SearchResults: React.FC = () => {
                   onClick={() => handleGenreSelect(g.name)}
                   className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                     selectedGenre.toLowerCase() === g.name.toLowerCase()
-                      ? 'bg-brand-accent text-white' 
+                      ? 'bg-brand-accent text-white'
                       : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
@@ -179,7 +225,7 @@ const SearchResults: React.FC = () => {
             <ErrorState
               title="Search Unavailable"
               message={error}
-              onRetry={() => fetchSearchResults()}
+              onRetry={() => fetchFirstPage()}
             />
           ) : movies.length === 0 ? (
             <EmptyState
@@ -189,18 +235,48 @@ const SearchResults: React.FC = () => {
               onAction={() => setSearchParams({})}
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {movies.map(movie => (
-                <MovieCardVertical
-                  key={movie.movie_id}
-                  movie_id={movie.movie_id}
-                  title={movie.title}
-                  thumbnail_url={movie.thumbnail_url}
-                  release_year={movie.release_year}
-                  duration_minutes={movie.duration_minutes}
-                  genres={movie.genres || []}
-                />
-              ))}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {movies.map(movie => (
+                  <MovieCardVertical
+                    key={movie.movie_id}
+                    movie_id={movie.movie_id}
+                    title={movie.title}
+                    thumbnail_url={movie.thumbnail_url}
+                    release_year={movie.release_year}
+                    duration_minutes={movie.duration_minutes}
+                    genres={movie.genres || []}
+                  />
+                ))}
+              </div>
+
+              {/* Load More */}
+              {hasMore && (
+                <div className="flex justify-center pt-6">
+                  <button
+                    id="search-load-more"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-10 py-3 rounded-xl text-sm font-black bg-white/8 border border-white/10 text-white hover:bg-white/15 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingMore ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Loading...
+                      </span>
+                    ) : 'Load More Results'}
+                  </button>
+                </div>
+              )}
+
+              {!hasMore && movies.length > PAGE_SIZE && (
+                <p className="text-center text-xs text-neutral-500 pt-4 font-medium">
+                  All {movies.length} matches loaded
+                </p>
+              )}
             </div>
           )}
         </main>

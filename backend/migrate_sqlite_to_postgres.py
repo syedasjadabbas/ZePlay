@@ -2,7 +2,6 @@ import os
 import sys
 import sqlite3
 import uuid
-import psycopg2
 from urllib.parse import urlparse
 from datetime import datetime
 

@@ -28,6 +28,7 @@ class MovieResponse(MovieBase):
     movie_id: uuid.UUID
     genres: List[GenreResponse] = Field(default_factory=list)
     average_rating: float = 0.0
+    is_generated: bool = False
     created_at: datetime
     updated_at: datetime
 

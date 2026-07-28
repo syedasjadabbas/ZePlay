@@ -118,11 +118,10 @@ const Home: React.FC = () => {
       const cachedMovies = queryClient.getQueryData<Movie[]>(QUERY_KEYS.movies);
       if (cachedMovies && cachedMovies.length > 0) {
         setMovies(cachedMovies);
-        let carouselMovies: Movie[] = [];
-        const interstellar = cachedMovies.find((m: any) => m.title.toLowerCase() === 'interstellar');
-        if (interstellar) carouselMovies.push(interstellar);
-        const others = cachedMovies.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
-        carouselMovies = [...carouselMovies, ...others].slice(0, 5);
+        // Prefer real (non-generated) movies for hero; fall back to any
+        const realMovies = cachedMovies.filter((m: any) => !m.is_generated);
+        const heroSource = realMovies.length >= 3 ? realMovies : cachedMovies;
+        const carouselMovies = heroSource.slice(0, 5);
         setHeroMovies(carouselMovies);
         setCatalogLoading(false);
       } else {
@@ -137,11 +136,10 @@ const Home: React.FC = () => {
       }).then((moviesData: Movie[]) => {
         if (moviesData && Array.isArray(moviesData)) {
           setMovies(moviesData);
-          let carouselMovies: Movie[] = [];
-          const interstellar = moviesData.find((m: any) => m.title.toLowerCase() === 'interstellar');
-          if (interstellar) carouselMovies.push(interstellar);
-          const others = moviesData.filter((m: any) => m.title.toLowerCase() !== 'interstellar');
-          carouselMovies = [...carouselMovies, ...others].slice(0, 5);
+          // Prefer real (non-generated) movies for hero; fall back to any
+          const realMovies = moviesData.filter((m: any) => !m.is_generated);
+          const heroSource = realMovies.length >= 3 ? realMovies : moviesData;
+          const carouselMovies = heroSource.slice(0, 5);
           setHeroMovies(carouselMovies);
 
           if (carouselMovies.length > 0) {

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Text, DateTime, UUID
+from sqlalchemy import Column, String, Integer, Text, Boolean, DateTime, UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.models.genre import movie_genres
@@ -20,7 +20,10 @@ class Movie(Base):
     duration_minutes = Column(Integer, nullable=False)
     thumbnail_url = Column(String, nullable=False)
     video_url = Column(String, nullable=False)
-    
+
+    # Identifies generated catalog test records (True) vs real uploaded movies (False)
+    is_generated = Column(Boolean, nullable=False, default=False, server_default='0', index=True)
+
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

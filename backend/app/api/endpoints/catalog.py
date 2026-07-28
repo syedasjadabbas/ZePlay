@@ -1,6 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.schemas.movie import MovieResponse
@@ -14,13 +14,25 @@ router = APIRouter()
 @router.get("/movies", response_model=List[MovieResponse])
 async def list_movies(
     genre: Optional[str] = None,
-    limit: int = 50,
-    offset: int = 0,
+    sort_by: Optional[str] = "title",
+    year_range: Optional[str] = None,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.get_current_user)
 ):
-    """Retrieve catalog list of movies, with optional filtering by genre."""
-    return await movie_service.get_movies(db, genre_name=genre, limit=limit, offset=offset)
+    """
+    Retrieve catalog list of movies with server-side filtering.
+    Supports genre, sort_by, year_range (all / 2020s / 2010s / classic), limit, offset.
+    """
+    return await movie_service.get_movies(
+        db,
+        genre_name=genre,
+        sort_by=sort_by,
+        year_range=year_range,
+        limit=limit,
+        offset=offset
+    )
 
 @router.get("/movies/{movie_id}", response_model=MovieResponse)
 async def get_movie(
@@ -50,17 +62,26 @@ async def search_catalog(
     q: Optional[str] = None,
     genre: Optional[str] = None,
     year: Optional[int] = None,
+    year_range: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=40, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.get_current_user)
 ):
     """
-    Search catalog movies across title, description, genre, and release year.
+    Search catalog movies across title, genre name, and release year.
+    Results are paginated. Use offset for Load More pagination.
     """
     return await movie_service.search_movies(
-        db, q=q, genre_name=genre, year=year, sort_by=sort_by, limit=limit, offset=offset
+        db,
+        q=q,
+        genre_name=genre,
+        year=year,
+        year_range=year_range,
+        sort_by=sort_by,
+        limit=limit,
+        offset=offset
     )
 
 @router.get("/search/suggestions", response_model=List[MovieResponse])

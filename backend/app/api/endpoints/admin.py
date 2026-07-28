@@ -6,7 +6,8 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete, or_
+from sqlalchemy import select, func, delete, or_, join
+from sqlalchemy.orm import aliased
 from pydantic import BaseModel, Field
 
 from app.database import get_db
@@ -157,35 +158,33 @@ async def get_content_analytics(
         for r in (await db.execute(watchlist_query)).all()
     ]
 
-    # 4. Most Popular Genres (movie count per genre)
-    # Using raw SQL association check since we use SQLAlchemy model relationships or join tables
-    # Let's see: how is the genre relation defined? Genres table exists. Let's do a simple count.
-    genres = (await db.execute(select(Genre))).scalars().all()
-    most_popular_genres = []
-    for g in genres:
-        # Check association or count
-        # In movie.py model: movies can have genres. Let's query association.
-        # For simplicity, count movies that mention genre.
-        # Let's count genre join matches
-        movie_count = (await db.execute(
-            select(func.count(Movie.movie_id))
-            .filter(Movie.genres.any(Genre.genre_id == g.genre_id))
-        )).scalar() or 0
-        most_popular_genres.append({"genre_id": str(g.genre_id), "name": g.name, "count": movie_count})
-    
-    most_popular_genres = sorted(most_popular_genres, key=lambda x: x["count"], reverse=True)[:5]
+    # 4. Most Popular Genres (movie count per genre) — single aggregate GROUP BY query
+    from app.models.genre import movie_genres as mg_table
+    genre_movie_count_q = (
+        select(Genre.genre_id, Genre.name, func.count(mg_table.c.movie_id).label("count"))
+        .outerjoin(mg_table, Genre.genre_id == mg_table.c.genre_id)
+        .group_by(Genre.genre_id, Genre.name)
+        .order_by(func.count(mg_table.c.movie_id).desc())
+        .limit(5)
+    )
+    most_popular_genres = [
+        {"genre_id": str(r[0]), "name": r[1], "count": r[2]}
+        for r in (await db.execute(genre_movie_count_q)).all()
+    ]
 
-    # 5. Most Watched Categories (genres tracked in WatchHistory)
-    most_watched_categories = []
-    for g in genres:
-        watch_count = (await db.execute(
-            select(func.count(WatchHistory.history_id))
-            .join(Movie, WatchHistory.movie_id == Movie.movie_id)
-            .filter(Movie.genres.any(Genre.genre_id == g.genre_id))
-        )).scalar() or 0
-        most_watched_categories.append({"genre_id": str(g.genre_id), "name": g.name, "views": watch_count})
-    
-    most_watched_categories = sorted(most_watched_categories, key=lambda x: x["views"], reverse=True)[:5]
+    # 5. Most Watched Categories (genres tracked in WatchHistory) — single aggregate query
+    genre_watch_count_q = (
+        select(Genre.genre_id, Genre.name, func.count(WatchHistory.history_id).label("views"))
+        .outerjoin(mg_table, Genre.genre_id == mg_table.c.genre_id)
+        .outerjoin(WatchHistory, WatchHistory.movie_id == mg_table.c.movie_id)
+        .group_by(Genre.genre_id, Genre.name)
+        .order_by(func.count(WatchHistory.history_id).desc())
+        .limit(5)
+    )
+    most_watched_categories = [
+        {"genre_id": str(r[0]), "name": r[1], "views": r[2]}
+        for r in (await db.execute(genre_watch_count_q)).all()
+    ]
 
     # 6. Most Recommended Content (ranked by stats popularity score if stats exist, or movie rating)
     rec_query = (

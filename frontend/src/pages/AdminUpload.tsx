@@ -175,10 +175,13 @@ const AdminUpload: React.FC = () => {
   }, []);
 
   // Fetch functions
-  const fetchMovies = async () => {
+  const fetchMovies = async (query?: string) => {
     try {
-      const response = await api.get('/catalog/movies');
-      setCatalogMovies(response.data);
+      const url = query && query.trim()
+        ? `/catalog/search?q=${encodeURIComponent(query.trim())}&limit=60`
+        : '/catalog/movies?limit=60';
+      const response = await api.get(url);
+      setCatalogMovies(response.data || []);
     } catch (err) {
       console.error('Failed to load movies catalog', err);
     }
@@ -357,6 +360,13 @@ const AdminUpload: React.FC = () => {
       console.error('Failed to load audit logs', err);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchMovies(catalogSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [catalogSearchQuery]);
 
   useEffect(() => {
     fetchUsersList();
@@ -1305,12 +1315,12 @@ const AdminUpload: React.FC = () => {
                     </svg>
                   </div>
                   <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-textMuted bg-white/5 border border-white/10 px-2.5 py-1 rounded-full whitespace-nowrap">
-                    Total: {catalogMovies.filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim())).length}
+                    Total: {catalogMovies.length}
                   </span>
                 </div>
               </div>
 
-              {catalogMovies.filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim())).length === 0 ? (
+              {catalogMovies.length === 0 ? (
                 <div className="py-12 text-center bg-black/20 border border-dashed border-white/10 rounded-2xl">
                   <p className="text-xs text-neutral-400 font-bold uppercase tracking-wider">
                     {catalogSearchQuery ? `No movies found matching "${catalogSearchQuery}"` : 'No movies found in catalog'}
@@ -1318,9 +1328,7 @@ const AdminUpload: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {catalogMovies
-                    .filter(m => m.title.toLowerCase().includes(catalogSearchQuery.toLowerCase().trim()))
-                    .map((m) => (
+                  {catalogMovies.map((m) => (
                       <div key={m.movie_id} className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 hover:border-brand-accent/30 p-5 rounded-[24px] flex flex-col justify-between space-y-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_20px_45px_rgba(0,0,0,0.5)] group relative">
                         <div className="flex gap-4">
                           {/* Movie poster preview using PremiumPoster fallback if needed */}

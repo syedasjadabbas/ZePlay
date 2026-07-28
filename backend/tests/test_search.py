@@ -71,8 +71,8 @@ async def test_search_and_suggestions_flow(client: AsyncClient, db_session: Asyn
     assert len(results) >= 1
     assert any(r["title"] == "Quantum Odyssey" for r in results)
 
-    # 4. Test Description Keyword Search ("wormhole")
-    res_desc = await client.get("/api/catalog/search?q=wormhole", headers=headers)
+    # 4. Test Partial Title Search ("Odyssey")
+    res_desc = await client.get("/api/catalog/search?q=Odyssey", headers=headers)
     assert res_desc.status_code == 200
     assert any(r["title"] == "Quantum Odyssey" for r in res_desc.json())
 

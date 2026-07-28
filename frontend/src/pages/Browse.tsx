@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -25,95 +24,189 @@ interface Movie {
   video_url: string;
   genres: Genre[];
   average_rating?: number;
+  is_generated?: boolean;
 }
+
+const PAGE_SIZE = 40;
 
 const Browse: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [selectedYearRange, setSelectedYearRange] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'relevance' | 'title' | 'year_desc' | 'year_asc'>('relevance');
+  const [sortBy, setSortBy] = useState<'title' | 'year_desc' | 'year_asc'>('title');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const navigate = useNavigate();
   const activeProfileId = localStorage.getItem('selectedProfileId');
 
+  // Abort controller ref to cancel stale requests when filters change
+  const abortRef = useRef<AbortController | null>(null);
+  // Debounce timer for search input
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track current filter signature to prevent stale load-more
+  const filterSigRef = useRef<string>('');
+
   useEffect(() => {
     if (!activeProfileId) {
       navigate('/profiles');
-      return;
     }
   }, [activeProfileId, navigate]);
 
-  const fetchCatalogData = async () => {
+  // Load genres once
+  useEffect(() => {
+    api.get('/catalog/genres')
+      .then(r => setGenres(r.data || []))
+      .catch(() => {});
+  }, []);
+
+  const buildParams = useCallback((currentOffset: number) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(currentOffset));
+    if (selectedGenre) params.set('genre', selectedGenre);
+    if (selectedYearRange !== 'all') params.set('year_range', selectedYearRange);
+    params.set('sort_by', sortBy);
+    return params;
+  }, [selectedGenre, selectedYearRange, sortBy]);
+
+  const filterSig = useCallback(() =>
+    `${selectedGenre || ''}|${selectedYearRange}|${sortBy}|${searchQuery}`,
+    [selectedGenre, selectedYearRange, sortBy, searchQuery]
+  );
+
+  // Fetch first page whenever filters change
+  const fetchFirstPage = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    setMovies([]);
+    setOffset(0);
+    setHasMore(true);
+
     try {
-      setLoading(true);
-      setError(null);
-      const [genres, movies] = await Promise.all([
-        queryClient.fetchQuery({
-          queryKey: QUERY_KEYS.genres,
-          queryFn: () => api.get('/catalog/genres').then(r => r.data),
-          staleTime: 10 * 60 * 1000,
-        }).catch(() => []),
-        queryClient.fetchQuery({
-          queryKey: QUERY_KEYS.movies,
-          queryFn: () => api.get('/catalog/movies').then(r => r.data),
-          staleTime: 5 * 60 * 1000,
-        }),
-      ]);
-      setGenres(genres || []);
-      setMovies(movies || []);
+      let url: string;
+      let params: URLSearchParams;
+
+      if (searchQuery.trim()) {
+        params = new URLSearchParams();
+        params.set('limit', String(PAGE_SIZE));
+        params.set('offset', '0');
+        params.set('q', searchQuery.trim());
+        if (selectedGenre) params.set('genre', selectedGenre);
+        if (selectedYearRange !== 'all') params.set('year_range', selectedYearRange);
+        params.set('sort_by', sortBy);
+        url = `/catalog/search?${params}`;
+      } else {
+        params = buildParams(0);
+        url = `/catalog/movies?${params}`;
+      }
+
+      const res = await api.get(url, { signal });
+      const data: Movie[] = res.data || [];
+      setMovies(data);
+      setOffset(data.length);
+      setHasMore(data.length === PAGE_SIZE);
     } catch (err: any) {
-      setError("Failed to load catalog. Please check your connection.");
+      if (err.name === 'CanceledError' || err.name === 'AbortError') return;
+      setError('Failed to load catalog. Please check your connection.');
     } finally {
       setLoading(false);
     }
+  }, [searchQuery, selectedGenre, selectedYearRange, sortBy, buildParams]);
+
+  // When filters change: cancel in-flight request, debounce search, reload
+  useEffect(() => {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+    const sig = filterSig();
+    filterSigRef.current = sig;
+
+    if (searchQuery.trim()) {
+      // Debounce search input by 350ms
+      searchTimerRef.current = setTimeout(() => {
+        fetchFirstPage(abortRef.current!.signal);
+      }, 350);
+    } else {
+      fetchFirstPage(abortRef.current!.signal);
+    }
+
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [selectedGenre, selectedYearRange, sortBy, searchQuery, fetchFirstPage, filterSig]);
+
+  // Load More — appends next page to existing list
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    const currentSig = filterSig();
+    setLoadingMore(true);
+
+    try {
+      let url: string;
+
+      if (searchQuery.trim()) {
+        const params = new URLSearchParams();
+        params.set('limit', String(PAGE_SIZE));
+        params.set('offset', String(offset));
+        params.set('q', searchQuery.trim());
+        if (selectedGenre) params.set('genre', selectedGenre);
+        if (selectedYearRange !== 'all') params.set('year_range', selectedYearRange);
+        params.set('sort_by', sortBy);
+        url = `/catalog/search?${params}`;
+      } else {
+        const params = buildParams(offset);
+        url = `/catalog/movies?${params}`;
+      }
+
+      const res = await api.get(url);
+      const data: Movie[] = res.data || [];
+
+      // Only append if filters haven't changed during the request
+      if (filterSigRef.current === currentSig) {
+        setMovies(prev => {
+          // Deduplicate by movie_id
+          const existingIds = new Set(prev.map(m => m.movie_id));
+          const newItems = data.filter(m => !existingIds.has(m.movie_id));
+          return [...prev, ...newItems];
+        });
+        setOffset(prev => prev + data.length);
+        setHasMore(data.length === PAGE_SIZE);
+      }
+    } catch (err: any) {
+      // Silent fail for Load More — user can retry
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
-  useEffect(() => {
-    fetchCatalogData();
-  }, []);
+  const handleGenreChange = (genre: string | null) => {
+    setSelectedGenre(genre);
+  };
 
-  // Filter & Sort Logic
-  const filteredMovies = movies.filter(movie => {
-    // Search query filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const titleMatch = movie.title.toLowerCase().includes(q);
-      const descMatch = movie.description.toLowerCase().includes(q);
-      const genreMatch = movie.genres.some(g => g.name.toLowerCase().includes(q));
-      if (!titleMatch && !descMatch && !genreMatch) return false;
-    }
+  const handleYearChange = (year: string) => {
+    setSelectedYearRange(year);
+  };
 
-    // Genre filter
-    if (selectedGenre) {
-      const hasGenre = movie.genres.some(g => g.name === selectedGenre);
-      if (!hasGenre) return false;
-    }
+  const handleSortChange = (sort: 'title' | 'year_desc' | 'year_asc') => {
+    setSortBy(sort);
+  };
 
-    // Year filter
-    if (selectedYearRange === '2020s') {
-      if (movie.release_year < 2020) return false;
-    } else if (selectedYearRange === '2010s') {
-      if (movie.release_year < 2010 || movie.release_year > 2019) return false;
-    } else if (selectedYearRange === 'classic') {
-      if (movie.release_year >= 2010) return false;
-    }
-
-    return true;
-  }).sort((a, b) => {
-    if (sortBy === 'title') {
-      return a.title.localeCompare(b.title);
-    } else if (sortBy === 'year_desc') {
-      return b.release_year - a.release_year;
-    } else if (sortBy === 'year_asc') {
-      return a.release_year - b.release_year;
-    }
-    return 0;
-  });
+  const handleResetFilters = () => {
+    setSelectedGenre(null);
+    setSelectedYearRange('all');
+    setSortBy('title');
+    setSearchQuery('');
+  };
 
   return (
     <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
@@ -142,7 +235,7 @@ const Browse: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search catalog titles, descriptions, or genres..."
+                placeholder="Search catalog titles or genres..."
                 aria-label="Search the catalog"
                 autoComplete="off"
                 className="w-full bg-black/40 border border-white/10 rounded-lg px-5 py-3.5 pl-12 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent/60 transition-all"
@@ -151,7 +244,7 @@ const Browse: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-4 top-3.5 text-xs text-neutral-400 hover:text-white bg-white/10 px-2 py-1 rounded-lg transition-all active:scale-95"
                 >
@@ -167,10 +260,10 @@ const Browse: React.FC = () => {
               </span>
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
                 <button
-                  onClick={() => setSelectedGenre(null)}
+                  onClick={() => handleGenreChange(null)}
                   className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                    !selectedGenre 
-                      ? 'bg-brand-accent text-white font-black' 
+                    !selectedGenre
+                      ? 'bg-brand-accent text-white font-black'
                       : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                   }`}
                 >
@@ -179,10 +272,10 @@ const Browse: React.FC = () => {
                 {genres.map(g => (
                   <button
                     key={g.genre_id}
-                    onClick={() => setSelectedGenre(g.name)}
+                    onClick={() => handleGenreChange(g.name)}
                     className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                      selectedGenre === g.name 
-                        ? 'bg-brand-accent text-white font-black' 
+                      selectedGenre === g.name
+                        ? 'bg-brand-accent text-white font-black'
                         : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
                     }`}
                   >
@@ -197,9 +290,9 @@ const Browse: React.FC = () => {
               {/* Year Selector */}
               <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <span className="text-xs font-semibold text-neutral-400">Release Era:</span>
-                <select 
+                <select
                   value={selectedYearRange}
-                  onChange={(e) => setSelectedYearRange(e.target.value)}
+                  onChange={(e) => handleYearChange(e.target.value)}
                   className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium cursor-pointer"
                 >
                   <option value="all">All Release Years</option>
@@ -212,12 +305,11 @@ const Browse: React.FC = () => {
               {/* Sort Selector */}
               <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                 <span className="text-xs font-semibold text-neutral-400">Sort By:</span>
-                <select 
+                <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={(e) => handleSortChange(e.target.value as any)}
                   className="bg-black/40 border border-white/10 text-xs text-white rounded-lg px-3 py-2.5 focus:outline-none focus:border-brand-accent font-medium cursor-pointer"
                 >
-                  <option value="relevance">Default Catalog Order</option>
                   <option value="title">Title (A-Z)</option>
                   <option value="year_desc">Release Year (Newest First)</option>
                   <option value="year_asc">Release Year (Oldest First)</option>
@@ -237,29 +329,27 @@ const Browse: React.FC = () => {
             <ErrorState
               title="Catalog Unavailable"
               message={error}
-              onRetry={fetchCatalogData}
+              onRetry={() => fetchFirstPage()}
             />
-          ) : filteredMovies.length === 0 ? (
+          ) : movies.length === 0 ? (
             <EmptyState
               title="No Movies Match Your Criteria"
               description="Try adjusting your search query, clearing genre filters, or choosing a different release era option."
               actionText="Reset All Filters"
-              onAction={() => {
-                setSelectedGenre(null);
-                setSelectedYearRange('all');
-                setSearchQuery('');
-                setSortBy('relevance');
-              }}
+              onAction={handleResetFilters}
             />
           ) : (
             <div className="space-y-4">
               <div className="flex justify-between items-center text-xs text-brand-textMuted font-semibold px-1">
-                <span>Showing {filteredMovies.length} catalog results</span>
+                <span>
+                  Showing {movies.length} catalog results
+                  {hasMore ? ' — scroll for more' : ''}
+                </span>
                 {selectedGenre && <span className="text-brand-accent">Genre: {selectedGenre}</span>}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {filteredMovies.map((movie) => (
+                {movies.map((movie) => (
                   <MovieCardVertical
                     key={movie.movie_id}
                     movie_id={movie.movie_id}
@@ -271,6 +361,36 @@ const Browse: React.FC = () => {
                   />
                 ))}
               </div>
+
+              {/* Load More */}
+              {hasMore && (
+                <div className="flex justify-center pt-6">
+                  <button
+                    id="browse-load-more"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-10 py-3 rounded-xl text-sm font-black bg-white/8 border border-white/10 text-white hover:bg-white/15 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingMore ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Loading...
+                      </span>
+                    ) : (
+                      'Load More'
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {!hasMore && movies.length > PAGE_SIZE && (
+                <p className="text-center text-xs text-neutral-500 pt-4 font-medium">
+                  All {movies.length} results loaded
+                </p>
+              )}
             </div>
           )}
         </main>

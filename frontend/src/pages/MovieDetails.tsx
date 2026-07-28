@@ -492,9 +492,13 @@ const MovieDetails: React.FC = () => {
 
   // Initialize HLS.js Player
   useEffect(() => {
-    // SECURITY ENTITLEMENT GATE:
-    // If access state is UNKNOWN/LOADING or FREE, DO NOT initialize HLS or attempt streaming!
+    // SECURITY ENTITLEMENT GATE & GENERATED CATALOGUE CHECK:
     if (!videoRef.current || !movie || loading || accessState === 'UNKNOWN' || accessState === 'FREE') {
+      return;
+    }
+
+    if ((movie as any).is_generated || movie.video_url === 'generated://no-video' || movie.video_url?.startsWith('generated://')) {
+      setIsPlayerLoading(false);
       return;
     }
 
@@ -614,6 +618,12 @@ const MovieDetails: React.FC = () => {
   const hasResumeOption = Boolean(savedProgress && currentPos > 5 && percentWatched < 95);
 
   const handleStartPlay = (resume: boolean) => {
+    if ((movie as any)?.is_generated || movie?.video_url === 'generated://no-video' || movie?.video_url?.startsWith('generated://')) {
+      setIsPlaying(true);
+      setPlayerError("Video unavailable for this catalogue test title.");
+      setIsPlayerLoading(false);
+      return;
+    }
     if (!isPremiumUser) {
       setShowUpgradeState(true);
       return;
