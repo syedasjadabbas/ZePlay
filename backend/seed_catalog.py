@@ -31,19 +31,19 @@ from app.config import settings
 from app.models.genre import movie_genres  # association table
 
 TARGET_COUNT = 1_000
-BATCH_SIZE = 250
+BATCH_SIZE = 2500
 
 # ---------------------------------------------------------------------------
 # Deterministic content generation data
 # ---------------------------------------------------------------------------
-random.seed(42)
-
 TITLE_ADJECTIVES = [
     "Dark", "Silent", "Lost", "Broken", "Hidden", "Fallen", "Rising", "Final",
     "Secret", "Frozen", "Burning", "Hollow", "Ancient", "Shattered", "Golden",
     "Neon", "Iron", "Crystal", "Infinite", "Crimson", "Midnight", "Electric",
     "Phantom", "Echoing", "Savage", "Raging", "Fleeting", "Distant", "Digital",
     "Quantum", "Synthetic", "Turbulent", "Vanishing", "Sovereign", "Parallel",
+    "Celestial", "Starlight", "Astral", "Shadowed", "Obsidian", "Hyperion",
+    "Solar", "Lunar", "Nebula", "Cosmic", "Kinetic", "Stasis", "Spectral",
 ]
 
 TITLE_NOUNS = [
@@ -55,12 +55,14 @@ TITLE_NOUNS = [
     "Summit", "Labyrinth", "Cascade", "Interval", "Witness", "Sovereign",
     "Convergence", "Fracture", "Chronicle", "Vortex", "Sentinel", "Catalyst",
     "Epoch", "Gravity", "Interface", "Mandate", "Orbit", "Requiem",
+    "Matrix", "Singularity", "Threshold", "Trajectory", "Enigma", "Eclipse",
 ]
 
 TITLE_SUFFIXES = [
-    "", "", "", "",  # Most titles have no suffix
+    "", "", "", "", "", "", "",  # Most titles have no suffix
     "Part I", "Part II", "Part III", "Reloaded", "Reborn", "Origins",
-    "Returns", "Final Chapter", "Resurrection", "Legacy",
+    "Returns", "Final Chapter", "Resurrection", "Legacy", "Chapter 4",
+    "Protocol Zero", "Alpha Cut", "Director's Cut", "The Untold Story",
 ]
 
 DESCRIPTIONS = [
@@ -145,12 +147,19 @@ def make_poster_svg(movie_id_str: str, title: str) -> str:
     return f"data:image/svg+xml;base64,{encoded}"
 
 
-def generate_title(rng: random.Random) -> str:
-    """Generate a unique-ish movie title."""
-    adj = rng.choice(TITLE_ADJECTIVES)
-    noun = rng.choice(TITLE_NOUNS)
+def generate_title(rng: random.Random, idx: int) -> str:
+    """Generate a unique deterministic movie title."""
+    adj = TITLE_ADJECTIVES[idx % len(TITLE_ADJECTIVES)]
+    noun = TITLE_NOUNS[(idx // len(TITLE_ADJECTIVES)) % len(TITLE_NOUNS)]
     suffix = rng.choice(TITLE_SUFFIXES)
-    title = f"{adj} {noun}"
+    
+    # If idx is beyond basic combinations, append deterministically derived series marker
+    cycle = idx // (len(TITLE_ADJECTIVES) * len(TITLE_NOUNS))
+    if cycle > 0:
+        title = f"{adj} {noun} {cycle + 1}"
+    else:
+        title = f"{adj} {noun}"
+        
     if suffix:
         title = f"{title}: {suffix}"
     return title
@@ -165,7 +174,7 @@ def generate_description(rng: random.Random) -> str:
     )
 
 
-async def seed(target: int = TARGET_COUNT) -> dict:
+async def seed(target: int = TARGET_COUNT, batch_size: int = BATCH_SIZE) -> dict:
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
     Session = async_sessionmaker(bind=engine, expire_on_commit=False)
 
@@ -183,9 +192,10 @@ async def seed(target: int = TARGET_COUNT) -> dict:
 
         print(f"Real movies (is_generated=false): {real_count}")
         print(f"Existing generated records:       {existing_gen}")
+        print(f"Target generated records:         {target}")
 
         if existing_gen >= target:
-            print(f"Already have {existing_gen} generated records. Nothing to do.")
+            print(f"Already have {existing_gen} generated records (target: {target}). Nothing to do.")
             await engine.dispose()
             return {
                 "real_count": real_count,
@@ -205,7 +215,6 @@ async def seed(target: int = TARGET_COUNT) -> dict:
             return {}
 
         genre_list = [(r[0], r[1]) for r in genres_rows]
-        genre_name_to_id = {name: gid for gid, name in genre_list}
 
         # Build weighted genre selection list
         weighted_genres = []
@@ -214,25 +223,25 @@ async def seed(target: int = TARGET_COUNT) -> dict:
             weighted_genres.append((gid, name, weight))
 
         # --- Generate records ---
-        rng = random.Random(42)  # deterministic
         to_insert = target - existing_gen
-        print(f"Inserting {to_insert} generated records in batches of {BATCH_SIZE}...")
+        print(f"Inserting {to_insert} generated records in batches of {batch_size}...")
 
         t_start = time.monotonic()
         total_inserted = 0
         now = datetime.now(timezone.utc)
 
-        for batch_start in range(0, to_insert, BATCH_SIZE):
+        for batch_start_idx in range(existing_gen, target, batch_size):
             batch_movies = []
             batch_assocs = []
-            count = min(BATCH_SIZE, to_insert - batch_start)
+            batch_end_idx = min(batch_start_idx + batch_size, target)
 
-            for _ in range(count):
-                mid = uuid.uuid4()
-                title = generate_title(rng)
+            for i in range(batch_start_idx, batch_end_idx):
+                mid = uuid.uuid5(uuid.NAMESPACE_OID, f"zeplay-generated-movie-{i}")
+                rng = random.Random(42 + i)
+                title = generate_title(rng, i)
                 desc = generate_description(rng)
-                year = rng.randint(1990, 2026)
-                duration = rng.randint(72, 210)
+                year = 1990 + (i % 37)  # 1990 to 2026 evenly distributed
+                duration = 75 + (i % 135)
                 poster = make_poster_svg(str(mid), title)
 
                 batch_movies.append({
@@ -287,12 +296,13 @@ async def seed(target: int = TARGET_COUNT) -> dict:
                 )
 
             await db.commit()
+            count = len(batch_movies)
             total_inserted += count
             elapsed = time.monotonic() - t_start
-            print(f"  Batch complete: {total_inserted}/{to_insert} inserted ({elapsed:.1f}s elapsed)")
+            print(f"  Batch complete: {total_inserted}/{to_insert} inserted ({existing_gen + total_inserted}/{target} total, {elapsed:.1f}s elapsed)")
 
         t_end = time.monotonic()
-        elapsed_total = t_end - t_start
+        elapsed_total = max(t_end - t_start, 0.001)
 
         # --- Final verification ---
         gen_after_result = await db.execute(
@@ -386,11 +396,23 @@ async def count_only():
 
 
 if __name__ == "__main__":
-    if "--cleanup" in sys.argv:
+    import argparse
+    parser = argparse.ArgumentParser(description="ZePlay Catalog Scale Seeder")
+    parser.add_argument("count_pos", nargs="?", type=int, default=None, help="Target generated count")
+    parser.add_argument("--count", nargs="?", const=-1, type=int, help="Print count or set target generated count")
+    parser.add_argument("--target", type=int, default=None, help="Target generated count")
+    parser.add_argument("--cleanup", action="store_true", help="Clean up generated records")
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE, help="Batch size for bulk insertion")
+
+    args = parser.parse_args()
+
+    if args.cleanup:
         print("=== CLEANUP MODE: removing generated records only ===")
         asyncio.run(cleanup())
-    elif "--count" in sys.argv:
+    elif args.count == -1:
         asyncio.run(count_only())
     else:
-        print(f"=== SEED MODE: targeting {TARGET_COUNT} generated records ===")
-        asyncio.run(seed(TARGET_COUNT))
+        target = args.target or args.count_pos or (args.count if args.count and args.count > 0 else TARGET_COUNT)
+        print(f"=== SEED MODE: targeting {target} generated records ===")
+        asyncio.run(seed(target=target, batch_size=args.batch_size))
+
