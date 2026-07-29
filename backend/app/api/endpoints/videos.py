@@ -139,8 +139,15 @@ async def get_hls_master_playlist(
     if video.master_playlist_url and video.master_playlist_url.startswith("http"):
         return RedirectResponse(video.master_playlist_url)
 
-    video_dir = os.path.dirname(video.storage_path)
-    hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
+    # Use canonical POSIX storage root to avoid stale Windows paths in DB
+    storage_root = video_storage_service.get_storage_path()  # /mnt/e/.../storage/videos
+    canonical_hls_dir = os.path.join(storage_root, f"{video.video_id}_hls")
+    if os.path.isdir(canonical_hls_dir):
+        hls_dir = canonical_hls_dir
+    elif video.hls_path and os.path.isdir(video.hls_path):
+        hls_dir = video.hls_path
+    else:
+        hls_dir = canonical_hls_dir
     playlist_path = os.path.join(hls_dir, "master.m3u8")
 
     if not os.path.exists(playlist_path):
@@ -193,9 +200,15 @@ async def get_hls_file(
         base_url = video.master_playlist_url.rsplit('/', 1)[0]
         return RedirectResponse(f"{base_url}/{file_path}")
 
-    video_dir = os.path.dirname(video.storage_path)
-    real_hls_dir = os.path.join(video_dir, f"{video.video_id}_hls")
-    hls_dir = real_hls_dir if os.path.exists(real_hls_dir) else (video.hls_path or real_hls_dir)
+    # Use canonical POSIX storage root to avoid stale Windows paths in DB
+    storage_root = video_storage_service.get_storage_path()  # /mnt/e/.../storage/videos
+    canonical_hls_dir = os.path.join(storage_root, f"{video.video_id}_hls")
+    if os.path.isdir(canonical_hls_dir):
+        hls_dir = canonical_hls_dir
+    elif video.hls_path and os.path.isdir(video.hls_path):
+        hls_dir = video.hls_path
+    else:
+        hls_dir = canonical_hls_dir
     target_path = os.path.join(hls_dir, file_path)
 
     if not os.path.exists(target_path):
