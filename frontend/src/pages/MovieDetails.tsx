@@ -38,6 +38,13 @@ const MovieDetails: React.FC = () => {
   const { showToast } = useToast();
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
+  const hasVideoStream = Boolean(
+    movie && 
+    movie.video_url && 
+    movie.video_url.trim() !== '' && 
+    !movie.video_url.startsWith('generated://') && 
+    movie.video_url !== 'generated://no-video'
+  );
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [profileName] = useState(() => localStorage.getItem('selectedProfileName') || 'User');
   const [loading, setLoading] = useState(true);
@@ -701,17 +708,7 @@ const MovieDetails: React.FC = () => {
               onRetry={() => window.location.reload()}
             />
           ) : movie ? (
-            (() => {
-              const hasVideoStream = Boolean(
-                movie && 
-                movie.video_url && 
-                movie.video_url.trim() !== '' && 
-                !movie.video_url.startsWith('generated://') && 
-                movie.video_url !== 'generated://no-video'
-              );
-
-              return (
-                <>
+            <>
                   {/* Main Video & Details Card */}
                   <div className="w-full bg-[#181818] border border-white/5 rounded-xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
                     
@@ -1144,7 +1141,7 @@ const MovieDetails: React.FC = () => {
                   )}
                 </div>
 
-                {/* Right Column: Metadata Detail Fields */}
+              {/* Right Column: Metadata Detail Fields */}
                 <div className="w-full lg:w-2/5 p-8 md:p-12 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
                     <h2 className="text-3xl md:text-5xl font-black tracking-tighter font-display leading-tight text-white uppercase">
@@ -1208,7 +1205,6 @@ const MovieDetails: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
 
               {/* Similar Movies Section */}
               {similarMovies.length > 0 && (
