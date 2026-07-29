@@ -10,7 +10,7 @@ class MovieBase(BaseModel):
     release_year: int = Field(..., ge=1888, le=2100)
     duration_minutes: int = Field(..., gt=0)
     thumbnail_url: str = Field(..., min_length=1)
-    video_url: str = Field(..., min_length=1)
+    video_url: str = Field(default="")
 
 class MovieCreate(MovieBase):
     genre_ids: Optional[List[uuid.UUID]] = Field(default_factory=list)

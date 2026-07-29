@@ -61,9 +61,9 @@ class CacheService:
             self._redis_pool = aioredis.ConnectionPool.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                max_connections=500,
-                socket_timeout=5.0,
-                socket_connect_timeout=5.0,
+                max_connections=50,
+                socket_timeout=2.0,
+                socket_connect_timeout=2.0,
                 protocol=2,
             )
             self._redis_client = aioredis.Redis(connection_pool=self._redis_pool)
@@ -101,9 +101,17 @@ class CacheService:
             try:
                 data = await self._redis_client.get(key)
                 if data is not None:
+                    try:
+                        await self._redis_client.incr("cache_stats:hits")
+                    except Exception:
+                        pass
                     self._hits += 1
                     return json.loads(data)
                 else:
+                    try:
+                        await self._redis_client.incr("cache_stats:misses")
+                    except Exception:
+                        pass
                     self._misses += 1
                     return None
             except Exception as e:
@@ -139,51 +147,6 @@ class CacheService:
         # In-memory fallback store
         self._memory_cache[key] = {
             "value": value,
-            "expires_at": time.time() + ttl
-        }
-
-    async def get_raw(self, key: str) -> Optional[str]:
-        """Retrieve raw un-parsed pre-serialized JSON string from cache."""
-        if await self._check_redis():
-            try:
-                data = await self._redis_client.get(key)
-                if data is not None:
-                    self._hits += 1
-                    return data
-                else:
-                    self._misses += 1
-                    return None
-            except Exception as e:
-                logger.warning(f"Redis get_raw error on key '{key}': {e}")
-                self._redis_available = False
-
-        item = self._memory_cache.get(key)
-        if item:
-            if item["expires_at"] > time.time():
-                self._hits += 1
-                val = item["value"]
-                return json.dumps(val, default=str) if not isinstance(val, str) else val
-            else:
-                del self._memory_cache[key]
-
-        self._misses += 1
-        return None
-
-    async def set_raw(self, key: str, json_str: str, ttl: int = 300) -> None:
-        """Store pre-serialized JSON string directly in cache with TTL."""
-        if not json_str:
-            return
-
-        if await self._check_redis():
-            try:
-                await self._redis_client.set(key, json_str, ex=ttl)
-                return
-            except Exception as e:
-                logger.warning(f"Redis set_raw error on key '{key}': {e}")
-                self._redis_available = False
-
-        self._memory_cache[key] = {
-            "value": json_str,
             "expires_at": time.time() + ttl
         }
 

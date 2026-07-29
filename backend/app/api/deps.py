@@ -40,54 +40,18 @@ async def get_current_user(
     except (JWTError, ValueError):
         raise credentials_exception
     
-    from app.services.cache_service import cache
-    from datetime import datetime, timezone
-    cache_key = f"auth:user:{user_id}"
-    cached = await cache.get(cache_key)
-    if cached is not None:
-        try:
-            created_at = datetime.fromisoformat(cached["created_at"]) if cached.get("created_at") else datetime.now(timezone.utc)
-            updated_at = datetime.fromisoformat(cached["updated_at"]) if cached.get("updated_at") else datetime.now(timezone.utc)
-            u = User(
-                user_id=uuid.UUID(cached["user_id"]),
-                email=cached["email"],
-                name=cached["name"],
-                is_active=cached["is_active"],
-                is_admin=cached["is_admin"],
-                is_verified=cached.get("is_verified", True),
-                subscription_plan=cached.get("subscription_plan", "free"),
-                created_at=created_at,
-                updated_at=updated_at,
-            )
-            return u
-        except Exception:
-            pass
-
-    # Retrieve user from the database on cache miss
+    # Retrieve user from the database
     result = await db.execute(select(User).filter(User.user_id == user_id))
     user = result.scalars().first()
     if user is None:
         raise credentials_exception
+    
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your account has been disabled."
         )
-    await cache.set(
-        cache_key,
-        {
-            "user_id": str(user.user_id),
-            "email": user.email,
-            "name": user.name,
-            "is_active": bool(user.is_active),
-            "is_admin": bool(user.is_admin),
-            "is_verified": bool(getattr(user, "is_verified", True)),
-            "subscription_plan": getattr(user, "subscription_plan", "free"),
-            "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
-            "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
-        },
-        ttl=120
-    )
+    
     return user
 
 

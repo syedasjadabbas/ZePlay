@@ -95,18 +95,12 @@ async def get_continue_watching(
     """
     Returns active Continue Watching items for the specified profile (in-progress content).
     """
-    from fastapi.responses import Response
-    import json
     try:
         items = await watch_history_service.get_continue_watching_list(
             db, current_user.user_id, profile_id, limit=limit
         )
-        await db.close()
-        serialized = [build_history_response(item) for item in items]
-        json_str = json.dumps(serialized, default=str)
-        return Response(content=json_str, media_type="application/json")
+        return [build_history_response(item) for item in items]
     except ValueError as err:
-        await db.close()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err)
@@ -122,19 +116,14 @@ async def get_progress(
     """
     Fetches stored watch history & progress position for a single movie and profile.
     """
-    from fastapi.responses import Response
-    import json
     try:
         item = await watch_history_service.get_item_progress(
             db, current_user.user_id, profile_id, movie_id
         )
-        await db.close()
         if not item:
-            return Response(content="null", media_type="application/json")
-        json_str = json.dumps(build_history_response(item), default=str)
-        return Response(content=json_str, media_type="application/json")
+            return None
+        return build_history_response(item)
     except ValueError as err:
-        await db.close()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err)

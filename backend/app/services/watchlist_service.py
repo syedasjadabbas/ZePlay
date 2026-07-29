@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 from app.models.watchlist import Watchlist
 from app.models.profile import Profile
 from app.models.movie import Movie
@@ -45,11 +45,11 @@ async def add_to_watchlist(
         # Reload with movie relationship
         query = (
             select(Watchlist)
-            .options(joinedload(Watchlist.movie).joinedload(Movie.genres))
+            .options(selectinload(Watchlist.movie).selectinload(Movie.genres))
             .filter(Watchlist.watchlist_id == existing.watchlist_id)
         )
         res = await db.execute(query)
-        return res.scalars().unique().first()
+        return res.scalars().first()
 
     now_utc = datetime.now(timezone.utc)
     item = Watchlist(
@@ -63,11 +63,11 @@ async def add_to_watchlist(
 
     query = (
         select(Watchlist)
-        .options(joinedload(Watchlist.movie).joinedload(Movie.genres))
+        .options(selectinload(Watchlist.movie).selectinload(Movie.genres))
         .filter(Watchlist.watchlist_id == item.watchlist_id)
     )
     res = await db.execute(query)
-    return res.scalars().unique().first()
+    return res.scalars().first()
 
 async def remove_from_watchlist(
     db: AsyncSession,
@@ -105,12 +105,12 @@ async def get_profile_watchlist(
 
     query = (
         select(Watchlist)
-        .options(joinedload(Watchlist.movie).joinedload(Movie.genres))
+        .options(selectinload(Watchlist.movie).selectinload(Movie.genres))
         .filter(Watchlist.profile_id == profile_id)
         .order_by(Watchlist.created_at.desc())
     )
     result = await db.execute(query)
-    return list(result.scalars().unique().all())
+    return result.scalars().all()
 
 async def check_in_watchlist(
     db: AsyncSession,

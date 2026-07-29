@@ -67,16 +67,10 @@ async def get_watchlist(
     """
     Retrieves all saved watchlist items for the specified profile.
     """
-    from fastapi.responses import Response
-    import json
     try:
         items = await watchlist_service.get_profile_watchlist(db, current_user.user_id, profile_id)
-        await db.close()
-        serialized = [build_watchlist_response(item) for item in items]
-        json_str = json.dumps(serialized, default=str)
-        return Response(content=json_str, media_type="application/json")
+        return [build_watchlist_response(item) for item in items]
     except ValueError as err:
-        await db.close()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err)

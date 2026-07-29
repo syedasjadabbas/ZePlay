@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Optional, Dict, Tuple
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, or_
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 from app.models.movie import Movie
 from app.models.genre import Genre
 from app.models.movie_stats import MovieStats
@@ -39,7 +39,6 @@ def serialize_movie(movie: Movie) -> dict:
         "thumbnail_url": movie.thumbnail_url,
         "video_url": movie.video_url,
         "average_rating": getattr(movie, "average_rating", 0.0),
-        "is_generated": bool(movie.is_generated),
         "created_at": movie.created_at.isoformat() if movie.created_at else None,
         "updated_at": movie.updated_at.isoformat() if movie.updated_at else None,
         "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (movie.genres or [])]
@@ -92,381 +91,268 @@ async def increment_watch_count(db: AsyncSession, movie_id: UUID) -> None:
         stats.updated_at = now
     await db.commit()
 
-async def get_trending_movies(db: Optional[AsyncSession] = None, limit: int = 10, as_response: bool = True, include_synthetic: bool = False) -> Any:
+async def get_trending_movies(db: AsyncSession, limit: int = 10, include_synthetic: bool = False) -> List[Movie]:
     """Retrieve trending movies sorted by popularity score and creation recency (Cache First)."""
-    from fastapi.responses import Response
-    import json
-
     cache_key = f"rec:trending:{limit}:{include_synthetic}"
-    cached_raw = await cache.get_raw(cache_key)
-    if cached_raw is not None:
-        if as_response:
-            return Response(content=cached_raw, media_type="application/json")
-        return json.loads(cached_raw)
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-    from app.database import SessionLocal
+    query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+    )
+    if not include_synthetic:
+        query = query.filter(Movie.is_generated == False)
 
-    async def _fetch(session: AsyncSession):
-        query = (
-            select(Movie)
-            .options(joinedload(Movie.genres))
-            .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+    query = (
+        query.order_by(
+            desc(func.coalesce(MovieStats.popularity_score, 0.0)),
+            desc(Movie.created_at)
         )
-        if not include_synthetic:
-            query = query.filter(Movie.is_generated == False)
+        .limit(limit)
+    )
+    res = await db.execute(query)
+    movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
-        query = (
-            query.order_by(
-                desc(func.coalesce(MovieStats.popularity_score, 0.0)),
-                desc(Movie.created_at)
-            )
-            .limit(limit)
-        )
-        res = await session.execute(query)
-        movies = list(res.scalars().unique().all())
-        await populate_average_ratings(session, movies)
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
-        serialized = [serialize_movie(m) for m in movies]
-        json_str = json.dumps(serialized)
-        await cache.set_raw(cache_key, json_str, ttl=180)
-        if as_response:
-            return Response(content=json_str, media_type="application/json")
-        return serialized
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
-
-async def get_popular_movies(db: Optional[AsyncSession] = None, limit: int = 10, as_response: bool = True, include_synthetic: bool = False) -> Any:
+async def get_popular_movies(db: AsyncSession, limit: int = 10, include_synthetic: bool = False) -> List[Movie]:
     """Retrieve popular movies sorted by total view counts (Cache First)."""
-    from fastapi.responses import Response
-    import json
-
     cache_key = f"rec:popular:{limit}:{include_synthetic}"
-    cached_raw = await cache.get_raw(cache_key)
-    if cached_raw is not None:
-        if as_response:
-            return Response(content=cached_raw, media_type="application/json")
-        return json.loads(cached_raw)
+    cached = await cache.get(cache_key)
+    if cached is not None:
+        return cached
 
-    from app.database import SessionLocal
+    query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+    )
+    if not include_synthetic:
+        query = query.filter(Movie.is_generated == False)
 
-    async def _fetch(session: AsyncSession):
-        query = (
-            select(Movie)
-            .options(joinedload(Movie.genres))
-            .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+    query = (
+        query.order_by(
+            desc(func.coalesce(MovieStats.view_count, 0)),
+            desc(func.coalesce(MovieStats.popularity_score, 0.0)),
+            desc(Movie.release_year)
         )
-        if not include_synthetic:
-            query = query.filter(Movie.is_generated == False)
+        .limit(limit)
+    )
+    res = await db.execute(query)
+    movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
-        query = (
-            query.order_by(
-                desc(func.coalesce(MovieStats.view_count, 0)),
-                desc(func.coalesce(MovieStats.popularity_score, 0.0)),
-                desc(Movie.release_year)
-            )
-            .limit(limit)
-        )
-        res = await session.execute(query)
-        movies = list(res.scalars().unique().all())
-        await populate_average_ratings(session, movies)
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
-        serialized = [serialize_movie(m) for m in movies]
-        json_str = json.dumps(serialized)
-        await cache.set_raw(cache_key, json_str, ttl=180)
-        if as_response:
-            return Response(content=json_str, media_type="application/json")
-        return serialized
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
-
-async def get_recently_added_movies(db: Optional[AsyncSession] = None, limit: int = 10, include_synthetic: bool = False) -> List[Movie]:
+async def get_recently_added_movies(db: AsyncSession, limit: int = 10, include_synthetic: bool = False) -> List[Movie]:
     """Retrieve newest releases and catalog additions (Cache First)."""
     cache_key = f"rec:recently_added:{limit}:{include_synthetic}"
     cached = await cache.get(cache_key)
     if cached is not None:
         return cached
 
-    from app.database import SessionLocal
+    query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+    )
+    if not include_synthetic:
+        query = query.filter(Movie.is_generated == False)
 
-    async def _fetch(session: AsyncSession):
-        query = (
-            select(Movie)
-            .options(joinedload(Movie.genres))
-        )
-        if not include_synthetic:
-            query = query.filter(Movie.is_generated == False)
+    query = (
+        query.order_by(desc(Movie.created_at), desc(Movie.release_year))
+        .limit(limit)
+    )
+    res = await db.execute(query)
+    movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
-        query = (
-            query.order_by(desc(Movie.created_at), desc(Movie.release_year))
-            .limit(limit)
-        )
-        res = await session.execute(query)
-        movies = list(res.scalars().unique().all())
-        await populate_average_ratings(session, movies)
-
-        serialized = [serialize_movie(m) for m in movies]
-        await cache.set(cache_key, serialized, ttl=180)
-        return movies
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=180)
+    return movies
 
 async def get_personalized_recommendations(
-    db: Optional[AsyncSession] = None,
-    user_id: Optional[UUID] = None,
-    profile_id: Optional[UUID] = None,
-    limit: int = 10,
-    include_synthetic: bool = False
+    db: AsyncSession,
+    user_id: UUID,
+    profile_id: UUID,
+    limit: int = 10
 ) -> List[Movie]:
     """
     Rule-based personalized recommendations based on active profile's genre preferences (Cache First).
     """
-    cache_key = f"rec:personalized:{profile_id}:{limit}:{include_synthetic}"
+    cache_key = f"rec:personalized:{profile_id}:{limit}"
     cached = await cache.get(cache_key)
     if cached is not None:
         return cached
 
-    from app.database import SessionLocal
+    # 1. Fetch profile watch history
+    wh_query = (
+        select(WatchHistory)
+        .options(selectinload(WatchHistory.movie).selectinload(Movie.genres))
+        .filter(WatchHistory.user_id == user_id, WatchHistory.profile_id == profile_id)
+    )
+    wh_res = await db.execute(wh_query)
+    history_items = list(wh_res.scalars().all())
 
-    async def _fetch(session: AsyncSession):
-        from app.models.genre import movie_genres
+    watched_movie_ids = {h.movie_id for h in history_items}
 
-        # 1. Fetch watched movie IDs and matching genre IDs in a single direct query
-        wh_res = await session.execute(
-            select(movie_genres.c.genre_id, WatchHistory.movie_id)
-            .select_from(WatchHistory)
-            .join(movie_genres, WatchHistory.movie_id == movie_genres.c.movie_id)
-            .filter(WatchHistory.user_id == user_id, WatchHistory.profile_id == profile_id)
+    # Extract genre counts
+    genre_counts: Dict[UUID, int] = {}
+    for item in history_items:
+        if item.movie and item.movie.genres:
+            for g in item.movie.genres:
+                genre_counts[g.genre_id] = genre_counts.get(g.genre_id, 0) + 1
+
+    # Fallback to popular if no watch history
+    if not genre_counts:
+        return await get_popular_movies(db, limit=limit)
+
+    # Top genre IDs
+    top_genre_ids = [g_id for g_id, _ in sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:3]]
+
+    # 2. Select movies matching top genres
+    rec_query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .join(Movie.genres)
+        .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+        .filter(Genre.genre_id.in_(top_genre_ids))
+    )
+    if watched_movie_ids:
+        rec_query = rec_query.filter(Movie.movie_id.not_in(watched_movie_ids))
+
+    rec_query = (
+        rec_query.order_by(
+            desc(func.coalesce(MovieStats.popularity_score, 0.0)),
+            desc(Movie.release_year)
         )
-        rows = wh_res.all()
+        .limit(limit)
+    )
+    res = await db.execute(rec_query)
+    recommendations = list(res.scalars().unique().all())
 
-        watched_movie_ids = {r[1] for r in rows}
-
-        # Extract genre counts
-        genre_counts: Dict[UUID, int] = {}
-        for g_id, _ in rows:
-            genre_counts[g_id] = genre_counts.get(g_id, 0) + 1
-
-        # Fallback to popular if no watch history
-        if not genre_counts:
-            return await get_popular_movies(db=session, limit=limit, include_synthetic=include_synthetic)
-
-        # Top genre IDs
-        top_genre_ids = [g_id for g_id, _ in sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:3]]
-
-        # 2. Select movies matching top genres
-        rec_query = (
+    # Fill remaining count with popular movies if recommendations list is small
+    if len(recommendations) < limit:
+        already_included = {m.movie_id for m in recommendations} | watched_movie_ids
+        fill_query = (
             select(Movie)
-            .options(joinedload(Movie.genres))
-            .join(Movie.genres)
-            .filter(Genre.genre_id.in_(top_genre_ids))
+            .options(selectinload(Movie.genres))
+            .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
         )
-        if not include_synthetic:
-            rec_query = rec_query.filter(Movie.is_generated == False)
-        if watched_movie_ids:
-            rec_query = rec_query.filter(Movie.movie_id.not_in(watched_movie_ids))
+        if already_included:
+            fill_query = fill_query.filter(Movie.movie_id.not_in(already_included))
 
-        rec_query = (
-            rec_query.order_by(
-                desc(Movie.release_year),
-                desc(Movie.title)
-            )
-            .limit(limit)
-        )
-        res = await session.execute(rec_query)
-        recommendations = list(res.scalars().unique().all())
+        fill_query = fill_query.order_by(
+            desc(func.coalesce(MovieStats.view_count, 0)),
+            desc(Movie.release_year)
+        ).limit(limit - len(recommendations))
 
-        # Fill remaining count with popular movies if recommendations list is small
-        if len(recommendations) < limit:
-            already_included = {m.movie_id for m in recommendations} | watched_movie_ids
-            fill_query = (
-                select(Movie)
-                .options(joinedload(Movie.genres))
-            )
-            if not include_synthetic:
-                fill_query = fill_query.filter(Movie.is_generated == False)
-            if already_included:
-                fill_query = fill_query.filter(Movie.movie_id.not_in(already_included))
+        fill_res = await db.execute(fill_query)
+        fill_movies = list(fill_res.scalars().unique().all())
+        recommendations.extend(fill_movies)
 
-            fill_query = fill_query.order_by(
-                desc(Movie.release_year),
-                desc(Movie.title)
-            ).limit(limit - len(recommendations))
-
-            fill_res = await session.execute(fill_query)
-            fill_movies = list(fill_res.scalars().unique().all())
-            recommendations.extend(fill_movies)
-
-        from fastapi.responses import Response
-        import json
-
-        final_recs = recommendations[:limit]
-        await populate_average_ratings(session, final_recs)
-        serialized = [serialize_movie(m) for m in final_recs]
-        json_str = json.dumps(serialized)
-        await cache.set_raw(cache_key, json_str, ttl=120)
-        return Response(content=json_str, media_type="application/json")
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
+    final_recs = recommendations[:limit]
+    await populate_average_ratings(db, final_recs)
+    await cache.set(cache_key, [serialize_movie(m) for m in final_recs], ttl=120)
+    return final_recs
 
 async def get_because_you_watched(
-    db: Optional[AsyncSession] = None,
-    user_id: Optional[UUID] = None,
-    profile_id: Optional[UUID] = None,
-    limit: int = 10,
-    include_synthetic: bool = False
+    db: AsyncSession,
+    user_id: UUID,
+    profile_id: UUID,
+    limit: int = 10
 ) -> Tuple[Optional[Movie], List[Movie]]:
     """
     Returns (because_movie, recommendations) based on profile's most recently watched movie (Cache First).
     """
-    cache_key = f"rec:because_you_watched:{profile_id}:{limit}:{include_synthetic}"
+    cache_key = f"rec:because_you_watched:{profile_id}:{limit}"
     cached = await cache.get(cache_key)
     if cached is not None:
         return cached.get("because_movie"), cached.get("recommendations", [])
 
-    from app.database import SessionLocal
+    # Find most recently watched movie
+    last_wh_query = (
+        select(WatchHistory)
+        .options(selectinload(WatchHistory.movie).selectinload(Movie.genres))
+        .filter(WatchHistory.user_id == user_id, WatchHistory.profile_id == profile_id)
+        .order_by(desc(WatchHistory.last_watched))
+        .limit(1)
+    )
+    last_wh_res = await db.execute(last_wh_query)
+    last_wh = last_wh_res.scalars().first()
 
-    async def _fetch(session: AsyncSession):
-        # Find most recently watched movie ID
-        last_wh_query = (
-            select(WatchHistory.movie_id)
-            .filter(WatchHistory.user_id == user_id, WatchHistory.profile_id == profile_id)
-            .order_by(desc(WatchHistory.last_watched))
-            .limit(1)
+    if not last_wh or not last_wh.movie:
+        return None, []
+
+    because_movie = last_wh.movie
+    genre_ids = [g.genre_id for g in because_movie.genres]
+
+    if not genre_ids:
+        return because_movie, []
+
+    rec_query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .join(Movie.genres)
+        .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+        .filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != because_movie.movie_id)
+        .order_by(
+            desc(func.coalesce(MovieStats.popularity_score, 0.0)),
+            desc(Movie.release_year)
         )
-        last_wh_res = await session.execute(last_wh_query)
-        because_movie_id = last_wh_res.scalars().first()
+        .limit(limit)
+    )
+    res = await db.execute(rec_query)
+    recommendations = list(res.scalars().unique().all())
+    await populate_average_ratings(db, [because_movie] + recommendations)
 
-        if not because_movie_id:
-            return None, []
-
-        because_movie_res = await session.execute(
-            select(Movie).options(joinedload(Movie.genres)).filter(Movie.movie_id == because_movie_id)
-        )
-        because_movie = because_movie_res.scalars().first()
-
-        if not because_movie:
-            return None, []
-
-        genre_ids = [g.genre_id for g in because_movie.genres]
-
-        if not genre_ids:
-            return because_movie, []
-
-        rec_query = (
-            select(Movie)
-            .options(joinedload(Movie.genres))
-            .join(Movie.genres)
-            .filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != because_movie.movie_id)
-        )
-        if not include_synthetic:
-            rec_query = rec_query.filter(Movie.is_generated == False)
-
-        rec_query = (
-            rec_query.order_by(
-                desc(Movie.release_year),
-                desc(Movie.title)
-            )
-            .limit(limit)
-        )
-        res = await session.execute(rec_query)
-        recommendations = list(res.scalars().unique().all())
-        from fastapi.responses import Response
-        import json
-
-        await populate_average_ratings(session, [because_movie] + recommendations)
-
-        serializable = {
-            "because_movie": serialize_movie(because_movie),
-            "recommendations": [serialize_movie(m) for m in recommendations]
-        }
-        json_str = json.dumps(serializable)
-        await cache.set_raw(cache_key, json_str, ttl=120)
-        return Response(content=json_str, media_type="application/json")
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
+    serializable = {
+        "because_movie": serialize_movie(because_movie),
+        "recommendations": [serialize_movie(m) for m in recommendations]
+    }
+    await cache.set(cache_key, serializable, ttl=120)
+    return because_movie, recommendations
 
 async def get_similar_movies(
-    db: Optional[AsyncSession] = None,
-    movie_id: Optional[UUID] = None,
-    limit: int = 10,
-    include_synthetic: bool = False
+    db: AsyncSession,
+    movie_id: UUID,
+    limit: int = 10
 ) -> List[Movie]:
     """Find similar movies sharing genres and release proximity (Cache First)."""
-    if movie_id is None and isinstance(db, UUID):
-        movie_id = db
-        db = None
-
-    cache_key = f"rec:similar:{movie_id}:{limit}:{include_synthetic}"
+    cache_key = f"rec:similar:{movie_id}:{limit}"
     cached = await cache.get(cache_key)
     if cached is not None:
         return cached
 
-    from app.database import SessionLocal
+    movie_res = await db.execute(
+        select(Movie).options(selectinload(Movie.genres)).filter(Movie.movie_id == movie_id)
+    )
+    target_movie = movie_res.scalars().first()
 
-    async def _fetch(session: AsyncSession):
-        movie_res = await session.execute(
-            select(Movie).options(joinedload(Movie.genres)).filter(Movie.movie_id == movie_id)
+    if not target_movie or not target_movie.genres:
+        return []
+
+    genre_ids = [g.genre_id for g in target_movie.genres]
+
+    query = (
+        select(Movie)
+        .options(selectinload(Movie.genres))
+        .join(Movie.genres)
+        .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
+        .filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != movie_id)
+        .order_by(
+            desc(func.coalesce(MovieStats.popularity_score, 0.0)),
+            desc(Movie.release_year)
         )
-        target_movie = movie_res.scalars().first()
+        .limit(limit)
+    )
+    res = await db.execute(query)
+    movies = list(res.scalars().unique().all())
+    await populate_average_ratings(db, movies)
 
-        if not target_movie or not target_movie.genres:
-            return []
-
-        genre_ids = [g.genre_id for g in target_movie.genres]
-
-        query = (
-            select(Movie)
-            .options(joinedload(Movie.genres))
-            .join(Movie.genres)
-            .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
-            .filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != movie_id)
-        )
-        if not include_synthetic:
-            query = query.filter(Movie.is_generated == False)
-
-        query = (
-            query.order_by(
-                desc(func.coalesce(MovieStats.popularity_score, 0.0)),
-                desc(Movie.release_year)
-            )
-            .limit(limit)
-        )
-        res = await session.execute(query)
-        movies = list(res.scalars().unique().all())
-        await populate_average_ratings(session, movies)
-
-        serialized = [serialize_movie(m) for m in movies]
-        await cache.set(cache_key, serialized, ttl=300)
-        return movies
-
-    if db is not None:
-        return await _fetch(db)
-    else:
-        async with SessionLocal() as session:
-            return await _fetch(session)
+    await cache.set(cache_key, [serialize_movie(m) for m in movies], ttl=300)
+    return movies

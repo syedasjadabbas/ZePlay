@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 from app.models.watch_history import WatchHistory
 from app.models.profile import Profile
 from app.models.movie import Movie
@@ -24,41 +24,36 @@ async def upsert_playback_progress(
     progress_in: ProgressUpdate
 ) -> WatchHistory:
     """
-    Saves or updates video playback progress for a profile.
-    Automatically calculates percentage_watched and updates last_watched timestamp.
+    Saves or updates playback progress position for a profile and movie asset.
+    Calculates percentage_watched and updates last_watched timestamp.
     """
+    # Verify profile ownership
     if not await verify_profile_ownership(db, user_id, progress_in.profile_id):
         raise ValueError("Profile does not belong to the current user.")
 
-    # Check movie exists
-    movie_res = await db.execute(select(Movie).filter(Movie.movie_id == progress_in.movie_id))
-    if not movie_res.scalars().first():
-        raise ValueError("Movie not found.")
+    # Calculate percentage
+    duration = max(progress_in.duration, 1.0)
+    percentage = min(max((progress_in.current_position / duration) * 100.0, 0.0), 100.0)
 
-    # Check optional video record
-    if progress_in.video_id:
-        video_res = await db.execute(select(Video).filter(Video.video_id == progress_in.video_id))
-        if not video_res.scalars().first():
-            raise ValueError("Video record not found.")
+    # Check for existing watch history record
+    result = await db.execute(
+        select(WatchHistory).filter(
+            WatchHistory.profile_id == progress_in.profile_id,
+            WatchHistory.movie_id == progress_in.movie_id
+        )
+    )
+    existing = result.scalars().first()
 
     now_utc = datetime.now(timezone.utc)
-    percentage = (progress_in.current_position / progress_in.duration * 100.0) if progress_in.duration > 0 else 0.0
 
-    # Query existing history record
-    query_existing = select(WatchHistory).filter(
-        WatchHistory.profile_id == progress_in.profile_id,
-        WatchHistory.movie_id == progress_in.movie_id
-    )
-    res_existing = await db.execute(query_existing)
-    history_record = res_existing.scalars().first()
-
-    if history_record:
-        history_record.current_position = progress_in.current_position
-        history_record.duration = progress_in.duration
-        history_record.percentage_watched = round(percentage, 2)
-        history_record.last_watched = now_utc
+    if existing:
+        existing.current_position = progress_in.current_position
+        existing.duration = duration
+        existing.percentage_watched = percentage
+        existing.last_watched = now_utc
         if progress_in.video_id:
-            history_record.video_id = progress_in.video_id
+            existing.video_id = progress_in.video_id
+        history_record = existing
     else:
         history_record = WatchHistory(
             user_id=user_id,
@@ -66,9 +61,10 @@ async def upsert_playback_progress(
             movie_id=progress_in.movie_id,
             video_id=progress_in.video_id,
             current_position=progress_in.current_position,
-            duration=progress_in.duration,
-            percentage_watched=round(percentage, 2),
-            last_watched=now_utc
+            duration=duration,
+            percentage_watched=percentage,
+            last_watched=now_utc,
+            created_at=now_utc
         )
         db.add(history_record)
 
@@ -81,11 +77,11 @@ async def upsert_playback_progress(
     # Reload with relationships
     query = (
         select(WatchHistory)
-        .options(joinedload(WatchHistory.movie), joinedload(WatchHistory.video))
+        .options(selectinload(WatchHistory.movie), selectinload(WatchHistory.video))
         .filter(WatchHistory.history_id == history_record.history_id)
     )
     res = await db.execute(query)
-    return res.scalars().unique().first()
+    return res.scalars().first()
 
 async def get_continue_watching_list(
     db: AsyncSession,
@@ -102,7 +98,7 @@ async def get_continue_watching_list(
 
     query = (
         select(WatchHistory)
-        .options(joinedload(WatchHistory.movie), joinedload(WatchHistory.video))
+        .options(selectinload(WatchHistory.movie), selectinload(WatchHistory.video))
         .filter(
             WatchHistory.profile_id == profile_id,
             WatchHistory.percentage_watched >= 0.5,
@@ -112,7 +108,7 @@ async def get_continue_watching_list(
         .limit(limit)
     )
     result = await db.execute(query)
-    return list(result.scalars().unique().all())
+    return result.scalars().all()
 
 async def get_item_progress(
     db: AsyncSession,
@@ -126,14 +122,14 @@ async def get_item_progress(
 
     query = (
         select(WatchHistory)
-        .options(joinedload(WatchHistory.movie), joinedload(WatchHistory.video))
+        .options(selectinload(WatchHistory.movie), selectinload(WatchHistory.video))
         .filter(
             WatchHistory.profile_id == profile_id,
             WatchHistory.movie_id == movie_id
         )
     )
     result = await db.execute(query)
-    return result.scalars().unique().first()
+    return result.scalars().first()
 
 async def get_full_watch_history(
     db: AsyncSession,
@@ -146,12 +142,12 @@ async def get_full_watch_history(
 
     query = (
         select(WatchHistory)
-        .options(joinedload(WatchHistory.movie), joinedload(WatchHistory.video))
+        .options(selectinload(WatchHistory.movie), selectinload(WatchHistory.video))
         .filter(WatchHistory.profile_id == profile_id)
         .order_by(WatchHistory.last_watched.desc())
     )
     result = await db.execute(query)
-    return list(result.scalars().unique().all())
+    return result.scalars().all()
 
 async def delete_watch_history_item(
     db: AsyncSession,
