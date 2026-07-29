@@ -184,18 +184,19 @@ async def get_hls_file(
 ):
     """
     Serves HLS files (variant playlists, segment chunks) supporting multi-bitrate subdirectory layouts.
-    Propagates query authentication token to TS chunk segments.
+    Optimized: Serves physical static files directly from local storage without redundant DB queries per segment.
     """
-    video = await video_storage_service.get_video_by_id(db, video_id)
-    
-    # CDN / S3 Redirect integration
-    if video.master_playlist_url and video.master_playlist_url.startswith("http"):
-        base_url = video.master_playlist_url.rsplit('/', 1)[0]
-        return RedirectResponse(f"{base_url}/{file_path}")
-
-    video_dir = os.path.dirname(video.storage_path)
-    hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
+    # Fast path: check physical storage directory directly
+    from app.config import settings
+    hls_dir = os.path.join(settings.STORAGE_DIR, f"{video_id}_hls")
     target_path = os.path.join(hls_dir, file_path)
+
+    if not os.path.exists(target_path):
+        # Fallback to DB lookup if custom storage path was used
+        video = await video_storage_service.get_video_by_id(db, video_id)
+        video_dir = os.path.dirname(video.storage_path)
+        hls_dir = video.hls_path or os.path.join(video_dir, f"{video.video_id}_hls")
+        target_path = os.path.join(hls_dir, file_path)
 
     if not os.path.exists(target_path):
         raise HTTPException(

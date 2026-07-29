@@ -701,154 +701,212 @@ const MovieDetails: React.FC = () => {
               onRetry={() => window.location.reload()}
             />
           ) : movie ? (
-            <>
-              {/* Main Video & Details Card */}
-              <div className="w-full bg-[#181818] border border-white/5 rounded-xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
-                
-                {/* Left Column: Interactive Video Player */}
-                <div 
-                  ref={playerContainerRef}
-                  onMouseMove={handleMouseMove}
-                  onTouchStart={handleTouchStart}
-                  onClick={handlePlayerContainerClick}
-                  className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden transition-all duration-300 ${
-                    isFullscreen 
-                      ? 'w-full h-full' 
-                      : 'w-full lg:w-3/5 aspect-video lg:aspect-auto min-h-[300px] lg:min-h-[450px]'
-                  } ${!showControls && isPlaying ? 'cursor-none' : ''}`}
-                >
-                  <video
-                    ref={videoRef}
-                    controls={false}
-                    className={`w-full h-full object-contain ${isPlaying ? 'block' : 'hidden'}`}
-                    onTimeUpdate={() => {
-                      if (videoRef.current) setVideoCurrentTime(videoRef.current.currentTime);
-                    }}
-                    onDurationChange={() => {
-                      if (videoRef.current) setVideoDuration(videoRef.current.duration);
-                    }}
-                    onPlay={() => setIsPaused(false)}
-                    onPause={() => {
-                      setIsPaused(true);
-                      if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
-                    }}
-                    onWaiting={() => setIsBuffering(true)}
-                    onPlaying={() => {
-                      setIsBuffering(false);
-                      setIsPlayerLoading(false);
-                      setPlayerError(null);
-                    }}
-                    onLoadStart={() => {
-                      setIsPlayerLoading(true);
-                      setPlayerError(null);
-                    }}
-                    onCanPlay={() => setIsPlayerLoading(false)}
-                    onSeeking={() => setIsBuffering(true)}
-                    onSeeked={() => setIsBuffering(false)}
-                    onError={() => {
-                      if (videoRef.current && videoRef.current.error) {
-                        setPlayerError(`Playback error code: ${videoRef.current.error.code} - ${videoRef.current.error.message}`);
-                      } else {
-                        setPlayerError("An unexpected error occurred during media playback.");
-                      }
-                      setIsPlayerLoading(false);
-                      setIsBuffering(false);
-                    }}
-                  />
+            (() => {
+              const hasVideoStream = Boolean(
+                movie && 
+                movie.video_url && 
+                movie.video_url.trim() !== '' && 
+                !movie.video_url.startsWith('generated://') && 
+                movie.video_url !== 'generated://no-video'
+              );
 
-                  {/* Polished ZePlay Upgrade State Overlay */}
-                  {(showUpgradeState || accessState === 'FREE') && (
-                    <div className="absolute inset-0 bg-[#0c0f1d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
-                      <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6">
-                        <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-xl font-black text-white tracking-wide uppercase font-display">Premium Required</h3>
-                      <p className="text-xs text-neutral-400 max-w-sm mt-3 leading-relaxed">
-                        "{movie.title}" is available exclusively to Premium subscribers. Upgrade your plan to watch this title.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-xs justify-center">
-                        <button
-                          onClick={() => {
-                            if (isFullscreen) toggleContainerFullscreen();
-                            navigate('/subscription');
-                          }}
-                          className="px-6 py-3 bg-brand-accent hover:bg-blue-650 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-brand-accent/25 select-none"
-                        >
-                          View Plans
-                        </button>
-                        <button
-                          onClick={() => navigate('/browse')}
-                          className="px-6 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer select-none"
-                        >
-                          Back to Browse
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isPlaying && !isPlayerLoading && (
-                    <>
-                      {!movie.thumbnail_url || imageError ? (
-                        <PremiumPoster title={movie.title} aspectRatio="landscape" />
-                      ) : (
-                        <img 
-                          className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
-                          src={getFullPlaybackUrl(movie.thumbnail_url)}
-                          alt=""
-                          onError={() => setImageError(true)}
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/30 to-transparent" />
-                      
-                      <div className="z-10 text-center p-6 space-y-4 max-w-md animate-fadeIn">
-                        {hasResumeOption ? (
-                          <div className="space-y-3">
-                            <button 
-                              onClick={() => handleStartPlay(true)}
-                              className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-accent/25 min-h-[44px]"
-                            >
-                              <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                              <span>Resume Watching (Continue from {formatTime(currentPos)})</span>
-                            </button>
- 
-                            <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                              <div 
-                                className="bg-brand-accent h-full"
-                                style={{ width: `${percentWatched}%` }}
-                              />
-                            </div>
-
-                            <button 
-                              onClick={() => handleStartPlay(false)}
-                              className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline cursor-pointer p-2 min-h-[44px]"
-                            >
-                              Start From Beginning
-                            </button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => handleStartPlay(false)}
-                            className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium shadow-xl shadow-brand-accent/30 min-h-[44px] min-w-[44px]"
-                          >
-                            <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          </button>
+              return (
+                <>
+                  {/* Main Video & Details Card */}
+                  <div className="w-full bg-[#181818] border border-white/5 rounded-xl overflow-hidden flex flex-col lg:flex-row min-h-[450px] animate-scaleIn">
+                    
+                    {/* Left Column: Interactive Player OR Catalogue Preview Hero */}
+                    {!hasVideoStream ? (
+                      <div className="relative bg-[#111111] flex flex-col items-center justify-center p-8 text-center overflow-hidden w-full lg:w-3/5 min-h-[300px] lg:min-h-[450px]">
+                        {/* Poster backdrop with blur */}
+                        {movie.thumbnail_url && !imageError && (
+                          <img
+                            src={getFullPlaybackUrl(movie.thumbnail_url)}
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover opacity-20 blur-lg scale-110"
+                            onError={() => setImageError(true)}
+                          />
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/80 to-transparent" />
+                        
+                        <div className="z-10 flex flex-col items-center max-w-md space-y-4 animate-fadeIn">
+                          <div className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Catalogue Title</span>
+                          </div>
 
-                        <div>
-                          <h4 className="font-extrabold text-xl font-display text-white tracking-wide">
-                            Watch {movie.title}
-                          </h4>
-                          <div className="flex items-center justify-center gap-2 mt-1" />
+                          <h3 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight">{movie.title}</h3>
+                          
+                          <p className="text-sm font-semibold text-neutral-300">
+                            Not available to watch yet
+                          </p>
+                          
+                          <p className="text-xs text-neutral-400 leading-relaxed max-w-sm bg-white/5 border border-white/10 p-3 rounded-xl backdrop-blur-sm">
+                            This title is part of our curated production catalogue. Video streaming for this release will be made available soon.
+                          </p>
+
+                          {/* Functional My List Button */}
+                          <button
+                            onClick={handleToggleWatchlist}
+                            disabled={watchlistSubmitting}
+                            className={`mt-2 px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                              isInWatchlist
+                                ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                                : 'bg-brand-accent hover:bg-blue-600 text-white shadow-lg shadow-brand-accent/25'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" fill={isInWatchlist ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                            </svg>
+                            <span>{isInWatchlist ? 'In My List' : 'Add to My List'}</span>
+                          </button>
                         </div>
                       </div>
-                    </>
-                  )}
+                    ) : (
+                      <div 
+                        ref={playerContainerRef}
+                        onMouseMove={handleMouseMove}
+                        onTouchStart={handleTouchStart}
+                        onClick={handlePlayerContainerClick}
+                        className={`relative bg-black flex flex-col items-center justify-center group overflow-hidden transition-all duration-300 ${
+                          isFullscreen 
+                            ? 'w-full h-full' 
+                            : 'w-full lg:w-3/5 aspect-video lg:aspect-auto min-h-[300px] lg:min-h-[450px]'
+                        } ${!showControls && isPlaying ? 'cursor-none' : ''}`}
+                      >
+                        <video
+                          ref={videoRef}
+                          controls={false}
+                          className={`w-full h-full object-contain ${isPlaying ? 'block' : 'hidden'}`}
+                          onTimeUpdate={() => {
+                            if (videoRef.current) setVideoCurrentTime(videoRef.current.currentTime);
+                          }}
+                          onDurationChange={() => {
+                            if (videoRef.current) setVideoDuration(videoRef.current.duration);
+                          }}
+                          onPlay={() => setIsPaused(false)}
+                          onPause={() => {
+                            setIsPaused(true);
+                            if (videoRef.current) saveProgress(videoRef.current.currentTime, videoRef.current.duration || (movie.duration_minutes * 60));
+                          }}
+                          onWaiting={() => setIsBuffering(true)}
+                          onPlaying={() => {
+                            setIsBuffering(false);
+                            setIsPlayerLoading(false);
+                            setPlayerError(null);
+                          }}
+                          onLoadStart={() => {
+                            setIsPlayerLoading(true);
+                            setPlayerError(null);
+                          }}
+                          onCanPlay={() => setIsPlayerLoading(false)}
+                          onSeeking={() => setIsBuffering(true)}
+                          onSeeked={() => setIsBuffering(false)}
+                          onError={() => {
+                            if (videoRef.current && videoRef.current.error) {
+                              setPlayerError(`Playback error code: ${videoRef.current.error.code} - ${videoRef.current.error.message}`);
+                            } else {
+                              setPlayerError("An unexpected error occurred during media playback.");
+                            }
+                            setIsPlayerLoading(false);
+                            setIsBuffering(false);
+                          }}
+                        />
+
+                        {/* Premium Required Overlay */}
+                        {(showUpgradeState || accessState === 'FREE') && (
+                          <div className="absolute inset-0 bg-[#0c0f1d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-30 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+                            <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6">
+                              <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-xl font-black text-white tracking-wide uppercase font-display">Premium Required</h3>
+                            <p className="text-xs text-neutral-400 max-w-sm mt-3 leading-relaxed">
+                              "{movie.title}" is available exclusively to Premium subscribers. Upgrade your plan to watch this title.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-xs justify-center">
+                              <button
+                                onClick={() => {
+                                  if (isFullscreen) toggleContainerFullscreen();
+                                  navigate('/subscription');
+                                }}
+                                className="px-6 py-3 bg-brand-accent hover:bg-blue-650 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-brand-accent/25 select-none"
+                              >
+                                View Plans
+                              </button>
+                              <button
+                                onClick={() => navigate('/browse')}
+                                className="px-6 py-3 bg-white/5 hover:bg-white/10 text-neutral-300 text-xs font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all cursor-pointer select-none"
+                              >
+                                Back to Browse
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {!isPlaying && !isPlayerLoading && (
+                          <>
+                            {!movie.thumbnail_url || imageError ? (
+                              <PremiumPoster title={movie.title} aspectRatio="landscape" />
+                            ) : (
+                              <img 
+                                className="absolute inset-0 w-full h-full object-cover opacity-40 blur-[1px] group-hover:scale-105 transition-transform duration-700 ease-[var(--ease-out-premium)]"
+                                src={getFullPlaybackUrl(movie.thumbnail_url)}
+                                alt=""
+                                onError={() => setImageError(true)}
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/30 to-transparent" />
+                            
+                            <div className="z-10 text-center p-6 space-y-4 max-w-md animate-fadeIn">
+                              {hasResumeOption ? (
+                                <div className="space-y-3">
+                                  <button 
+                                    onClick={() => handleStartPlay(true)}
+                                    className="w-full px-6 py-3.5 bg-brand-accent hover:bg-blue-600 text-white font-bold rounded-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-accent/25 min-h-[44px]"
+                                  >
+                                    <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                    <span>Resume Watching (Continue from {formatTime(currentPos)})</span>
+                                  </button>
+
+                                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                                    <div 
+                                      className="bg-brand-accent h-full"
+                                      style={{ width: `${percentWatched}%` }}
+                                    />
+                                  </div>
+
+                                  <button 
+                                    onClick={() => handleStartPlay(false)}
+                                    className="text-xs text-neutral-400 hover:text-white font-semibold transition-colors underline cursor-pointer p-2 min-h-[44px]"
+                                  >
+                                    Start From Beginning
+                                  </button>
+                                </div>
+                              ) : (
+                                <button 
+                                  onClick={() => handleStartPlay(false)}
+                                  className="w-20 h-20 rounded-full bg-brand-accent hover:bg-blue-600 flex items-center justify-center mx-auto cursor-pointer transform hover:scale-110 active:scale-95 transition-all duration-300 ease-[var(--ease-spring-premium)] group/btn btn-premium shadow-xl shadow-brand-accent/30 min-h-[44px] min-w-[44px]"
+                                >
+                                  <svg className="w-8 h-8 fill-current text-white translate-x-1 group-hover/btn:scale-115 transition-transform" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </button>
+                              )}
+
+                              <div>
+                                <h4 className="font-extrabold text-xl font-display text-white tracking-wide">
+                                  Watch {movie.title}
+                                </h4>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
 
                   {/* Player Overlays when Playing */}
                   {isPlaying && (
