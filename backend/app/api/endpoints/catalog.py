@@ -8,6 +8,7 @@ from app.schemas.genre import GenreResponse
 from app.services import movie_service
 from app.api import deps
 from app.services.cache_service import cache
+from fastapi.responses import Response
 
 router = APIRouter()
 
@@ -19,22 +20,29 @@ async def list_movies(
     cursor: Optional[str] = None,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    include_synthetic: bool = Query(default=False, description="Whether to include benchmark synthetic records in results"),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.get_current_user)
 ):
     """
     Retrieve catalog list of movies with server-side filtering.
     Supports genre, sort_by, year_range (all / 2020s / 2010s / classic), cursor, limit, offset.
+    By default, only real curated catalogue movies (is_generated=False) are returned.
     """
-    return await movie_service.get_movies(
-        db,
+    res = await movie_service.get_movies(
+        db=db,
         genre_name=genre,
         sort_by=sort_by,
         year_range=year_range,
         cursor=cursor,
         limit=limit,
-        offset=offset
+        offset=offset,
+        include_synthetic=include_synthetic
     )
+    await db.close()
+    if isinstance(res, Response):
+        return res
+    return res
 
 @router.get("/movies/{movie_id}", response_model=MovieResponse)
 async def get_movie(
@@ -43,7 +51,8 @@ async def get_movie(
     current_user = Depends(deps.get_current_user)
 ):
     """Retrieve detailed metadata records for a single movie entry."""
-    db_movie = await movie_service.get_movie_by_id(db, movie_id)
+    db_movie = await movie_service.get_movie_by_id(db=db, movie_id=movie_id)
+    await db.close()
     if not db_movie:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -57,7 +66,9 @@ async def list_genres(
     current_user = Depends(deps.get_current_user)
 ):
     """Retrieve all available genres."""
-    return await movie_service.get_genres(db)
+    res = await movie_service.get_genres(db=db)
+    await db.close()
+    return res
 
 @router.get("/search", response_model=List[MovieResponse])
 async def search_catalog(
@@ -69,15 +80,17 @@ async def search_catalog(
     cursor: Optional[str] = None,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    include_synthetic: bool = Query(default=False, description="Whether to include benchmark synthetic records in results"),
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.get_current_user)
 ):
     """
     Search catalog movies across title, genre name, and release year.
     Results are paginated. Supports cursor and offset pagination.
+    By default, only real curated catalogue movies (is_generated=False) are returned.
     """
-    return await movie_service.search_movies(
-        db,
+    res = await movie_service.search_movies(
+        db=db,
         q=q,
         genre_name=genre,
         year=year,
@@ -85,8 +98,12 @@ async def search_catalog(
         sort_by=sort_by,
         cursor=cursor,
         limit=limit,
-        offset=offset
+        offset=offset,
+        include_synthetic=include_synthetic
     )
+    if isinstance(res, Response):
+        return res
+    return res
 
 @router.get("/search/suggestions", response_model=List[MovieResponse])
 async def search_suggestions(
@@ -98,16 +115,7 @@ async def search_suggestions(
     """
     Fast search suggestions endpoint for live auto-complete dropdown.
     """
-    cache_key = f"suggestions:{q.lower().strip()}:{limit}"
-    cached_data = await cache.get(cache_key)
-    if cached_data is not None:
-        return cached_data
-
-    suggestions = await movie_service.get_search_suggestions(db, q=q, limit=limit)
-    
-    # Serialize suggestions list to dictionaries to store in cache safely
-    from fastapi.encoders import jsonable_encoder
-    serialized = jsonable_encoder(suggestions)
-    await cache.set(cache_key, serialized, ttl=300)
-    
-    return suggestions
+    res = await movie_service.get_search_suggestions(db=db, q=q, limit=limit)
+    if isinstance(res, Response):
+        return res
+    return res

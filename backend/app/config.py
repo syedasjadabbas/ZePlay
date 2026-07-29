@@ -8,9 +8,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
 
-    # Production Database Connection Pooling Settings
-    DB_POOL_SIZE: int = 20
-    DB_MAX_OVERFLOW: int = 10
+    # Production Database Connection Pooling Settings (Safe Budget: 4 workers * 20 = 80 max DB connections <= 100 max_connections)
+    DB_POOL_SIZE: int = 15
+    DB_MAX_OVERFLOW: int = 5
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
 

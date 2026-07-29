@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from app.config import settings
 from app.api.router import api_router
 
@@ -22,6 +23,8 @@ origins = [
     "http://127.0.0.1:3000",
 ]
 origins = [org.rstrip("/") for org in origins if org]
+
+# GZipMiddleware removed for zero GIL event loop blocking
 
 app.add_middleware(
     CORSMiddleware,

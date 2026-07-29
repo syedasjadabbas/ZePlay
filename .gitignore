@@ -30,8 +30,10 @@ backend/local_zeplay.db
 backend/local_emails.log
 backend/*.db
 backend/*.bak
+backend/*.log
 backend/storage/
 dump.rdb
+*.dump
 
 # Node / Frontend
 node_modules/

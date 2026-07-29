@@ -63,18 +63,16 @@ async def get_current_user(
         except Exception:
             pass
 
-    # Retrieve user from the database
+    # Retrieve user from the database on cache miss
     result = await db.execute(select(User).filter(User.user_id == user_id))
     user = result.scalars().first()
     if user is None:
         raise credentials_exception
-    
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Your account has been disabled."
         )
-    
     await cache.set(
         cache_key,
         {
