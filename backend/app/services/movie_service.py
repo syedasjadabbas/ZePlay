@@ -85,16 +85,18 @@ async def get_movies(
     genre_name: Optional[str] = None,
     sort_by: Optional[str] = "title",
     year_range: Optional[str] = None,
+    cursor: Optional[str] = None,
     limit: int = 40,
     offset: int = 0
 ) -> List[Movie]:
     """
     Retrieve paginated catalog movies with optional genre, year_range, and sort_by filters.
+    Supports both keyset cursor pagination (high speed at deep pages) and traditional offset.
     All filtering is server-side. Cache keyed by all params (TTL=300s).
     """
     cache_key = (
         f"catalog:movies:{genre_name or 'all'}:{sort_by or 'title'}"
-        f":{year_range or 'all'}:{limit}:{offset}"
+        f":{year_range or 'all'}:{cursor or 'none'}:{limit}:{offset}"
     )
     cached = await cache.get(cache_key)
     if cached is not None:
@@ -113,13 +115,45 @@ async def get_movies(
     elif year_range == "classic":
         query = query.filter(Movie.release_year < 2010)
 
-    # Sort order
+    # Keyset/Cursor Pagination Filter
+    if cursor and "__" in cursor:
+        val, last_id_str = cursor.rsplit("__", 1)
+        try:
+            last_id = uuid.UUID(last_id_str)
+            if sort_by == "year_desc":
+                last_year = int(val)
+                query = query.filter(
+                    or_(
+                        Movie.release_year < last_year,
+                        and_(Movie.release_year == last_year, Movie.movie_id > last_id)
+                    )
+                )
+            elif sort_by == "year_asc":
+                last_year = int(val)
+                query = query.filter(
+                    or_(
+                        Movie.release_year > last_year,
+                        and_(Movie.release_year == last_year, Movie.movie_id > last_id)
+                    )
+                )
+            else:
+                query = query.filter(
+                    or_(
+                        Movie.title > val,
+                        and_(Movie.title == val, Movie.movie_id > last_id)
+                    )
+                )
+            offset = 0  # Override offset when cursor is provided
+        except Exception:
+            pass
+
+    # Deterministic Sort Order
     if sort_by == "year_desc":
-        query = query.order_by(Movie.release_year.desc(), Movie.title)
+        query = query.order_by(Movie.release_year.desc(), Movie.title.asc(), Movie.movie_id.asc())
     elif sort_by == "year_asc":
-        query = query.order_by(Movie.release_year.asc(), Movie.title)
+        query = query.order_by(Movie.release_year.asc(), Movie.title.asc(), Movie.movie_id.asc())
     else:
-        query = query.order_by(Movie.title)
+        query = query.order_by(Movie.title.asc(), Movie.movie_id.asc())
 
     query = query.offset(offset).limit(limit)
     result = await db.execute(query)
@@ -145,7 +179,7 @@ async def get_movies(
         for m in movies
     ]
     await cache.set(cache_key, serializable, ttl=300)
-    return movies
+    return serializable
 
 async def get_movie_by_id(db: AsyncSession, movie_id: uuid.UUID) -> Optional[Movie]:
     """Retrieve detailed movie object by ID (Cache First)."""
@@ -255,6 +289,7 @@ async def search_movies(
     year: Optional[int] = None,
     year_range: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
+    cursor: Optional[str] = None,
     limit: int = 40,
     offset: int = 0
 ) -> List[Movie]:
@@ -267,7 +302,7 @@ async def search_movies(
     genre_clean = genre_name.strip().lower() if genre_name and genre_name.strip() else ""
     cache_key = (
         f"catalog:search:{q_clean}:{genre_clean}:{year or ''}"
-        f":{year_range or ''}:{sort_by}:{limit}:{offset}"
+        f":{year_range or ''}:{sort_by}:{cursor or 'none'}:{limit}:{offset}"
     )
     cached = await cache.get(cache_key)
     if cached is not None:
@@ -286,7 +321,7 @@ async def search_movies(
         query = query.filter(or_(*conditions))
 
     if genre_clean:
-        query = query.join(Movie.genres).filter(Genre.name.ilike(genre_clean))
+        query = query.filter(Movie.genres.any(Genre.name.ilike(genre_clean)))
 
     if year:
         query = query.filter(Movie.release_year == year)
@@ -298,12 +333,36 @@ async def search_movies(
     elif year_range == "classic":
         query = query.filter(Movie.release_year < 2010)
 
+    # Keyset Cursor Filter
+    if cursor and "__" in cursor:
+        val, last_id_str = cursor.rsplit("__", 1)
+        try:
+            last_id = uuid.UUID(last_id_str)
+            if sort_by == "year_desc":
+                last_year = int(val)
+                query = query.filter(
+                    or_(
+                        Movie.release_year < last_year,
+                        and_(Movie.release_year == last_year, Movie.movie_id > last_id)
+                    )
+                )
+            else:
+                query = query.filter(
+                    or_(
+                        Movie.title > val,
+                        and_(Movie.title == val, Movie.movie_id > last_id)
+                    )
+                )
+            offset = 0
+        except Exception:
+            pass
+
     if sort_by == "year_desc":
-        query = query.order_by(Movie.release_year.desc(), Movie.title)
+        query = query.order_by(Movie.release_year.desc(), Movie.title.asc(), Movie.movie_id.asc())
     elif sort_by == "title":
-        query = query.order_by(Movie.title)
+        query = query.order_by(Movie.title.asc(), Movie.movie_id.asc())
     else:
-        query = query.order_by(Movie.created_at.desc())
+        query = query.order_by(Movie.created_at.desc(), Movie.movie_id.asc())
 
     query = query.offset(offset).limit(limit)
     result = await db.execute(query)
@@ -329,7 +388,7 @@ async def search_movies(
         for m in movies
     ]
     await cache.set(cache_key, serialized, ttl=90)
-    return movies
+    return serialized
 
 async def get_search_suggestions(
     db: AsyncSession,

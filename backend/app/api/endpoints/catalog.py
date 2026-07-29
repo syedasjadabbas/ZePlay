@@ -16,6 +16,7 @@ async def list_movies(
     genre: Optional[str] = None,
     sort_by: Optional[str] = "title",
     year_range: Optional[str] = None,
+    cursor: Optional[str] = None,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -23,13 +24,14 @@ async def list_movies(
 ):
     """
     Retrieve catalog list of movies with server-side filtering.
-    Supports genre, sort_by, year_range (all / 2020s / 2010s / classic), limit, offset.
+    Supports genre, sort_by, year_range (all / 2020s / 2010s / classic), cursor, limit, offset.
     """
     return await movie_service.get_movies(
         db,
         genre_name=genre,
         sort_by=sort_by,
         year_range=year_range,
+        cursor=cursor,
         limit=limit,
         offset=offset
     )
@@ -64,6 +66,7 @@ async def search_catalog(
     year: Optional[int] = None,
     year_range: Optional[str] = None,
     sort_by: Optional[str] = "relevance",
+    cursor: Optional[str] = None,
     limit: int = Query(default=40, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -71,7 +74,7 @@ async def search_catalog(
 ):
     """
     Search catalog movies across title, genre name, and release year.
-    Results are paginated. Use offset for Load More pagination.
+    Results are paginated. Supports cursor and offset pagination.
     """
     return await movie_service.search_movies(
         db,
@@ -80,6 +83,7 @@ async def search_catalog(
         year=year,
         year_range=year_range,
         sort_by=sort_by,
+        cursor=cursor,
         limit=limit,
         offset=offset
     )

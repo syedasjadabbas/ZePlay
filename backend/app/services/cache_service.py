@@ -61,9 +61,9 @@ class CacheService:
             self._redis_pool = aioredis.ConnectionPool.from_url(
                 settings.REDIS_URL,
                 decode_responses=True,
-                max_connections=50,
-                socket_timeout=2.0,
-                socket_connect_timeout=2.0,
+                max_connections=500,
+                socket_timeout=5.0,
+                socket_connect_timeout=5.0,
                 protocol=2,
             )
             self._redis_client = aioredis.Redis(connection_pool=self._redis_pool)

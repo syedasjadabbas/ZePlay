@@ -338,6 +338,7 @@ async def update_user_status(
     user.is_active = status_in.is_active
     await db.commit()
     await db.refresh(user)
+    await cache.invalidate_pattern(f"auth:user:{user_id}")
 
     action_label = "user_enable" if status_in.is_active else "user_disable"
     await log_event(
@@ -459,6 +460,7 @@ async def update_user_role(
     user.is_admin = role_in.is_admin
     await db.commit()
     await db.refresh(user)
+    await cache.invalidate_pattern(f"auth:user:{user_id}")
 
     action_label = "admin_promotion" if role_in.is_admin else "admin_removal"
     await log_event(
