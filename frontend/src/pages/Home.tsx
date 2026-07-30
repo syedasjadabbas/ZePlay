@@ -131,7 +131,7 @@ const Home: React.FC = () => {
       // Fetch primary catalog in background
       queryClient.fetchQuery({
         queryKey: QUERY_KEYS.movies,
-        queryFn: () => api.get('/catalog/movies').then(r => r.data),
+        queryFn: () => api.get('/catalog/movies?limit=5').then(r => r.data),
         staleTime: 5 * 60 * 1000
       }).then((moviesData: Movie[]) => {
         if (moviesData && Array.isArray(moviesData)) {

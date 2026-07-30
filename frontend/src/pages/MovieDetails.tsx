@@ -380,52 +380,58 @@ const MovieDetails: React.FC = () => {
       try {
         setLoading(true);
 
-        // Fire all 4 requests in a single parallel wave using React Query cache
-        const [movieData, simData, progData, wlData] = await Promise.all([
-          // Movie detail — cached for 5min, skips network if already loaded
+        // 1. Fetch primary movie metadata first (cached for 5min)
+        const movieData = await queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.movie(id!),
+          queryFn: () => api.get(`/catalog/movies/${id}`).then(r => r.data),
+          staleTime: 5 * 60 * 1000,
+        });
+
+        setMovie(movieData);
+        setLoading(false); // Unblock UI immediately so metadata & title display <60ms
+
+        // 2. Fetch secondary data asynchronously without blocking main UI render
+        queryClient.fetchQuery({
+          queryKey: QUERY_KEYS.similar(id!),
+          queryFn: () => api.get(`/recommendations/similar/${id}`).then(r => r.data),
+          staleTime: 5 * 60 * 1000,
+        }).then(simData => setSimilarMovies(simData || [])).catch(() => []);
+
+        if (activeProfileId) {
           queryClient.fetchQuery({
-            queryKey: QUERY_KEYS.movie(id!),
-            queryFn: () => api.get(`/catalog/movies/${id}`).then(r => r.data),
-            staleTime: 5 * 60 * 1000,
-          }),
-          // Similar movies — cached
-          queryClient.fetchQuery({
-            queryKey: QUERY_KEYS.similar(id!),
-            queryFn: () => api.get(`/recommendations/similar/${id}`).then(r => r.data),
-            staleTime: 5 * 60 * 1000,
-          }).catch(() => []),
-          // Watch progress — short TTL (user-specific, changes during playback)
-          activeProfileId ? queryClient.fetchQuery({
             queryKey: QUERY_KEYS.watchProgress(id!, activeProfileId),
             queryFn: () => api.get(`/watch-history/progress/${id}?profile_id=${activeProfileId}`).then(r => r.data),
             staleTime: 30 * 1000,
-          }).catch(() => null) : Promise.resolve(null),
-          // Watchlist check
-          activeProfileId ? queryClient.fetchQuery({
+          }).then(progData => {
+            if (progData) {
+              setSavedProgress({
+                current_position: progData.current_position,
+                duration: progData.duration,
+                percentage_watched: progData.percentage_watched
+              });
+            }
+          }).catch(() => null);
+
+          queryClient.fetchQuery({
             queryKey: QUERY_KEYS.watchlistCheck(id!, activeProfileId),
             queryFn: () => api.get(`/watchlist/check/${id}?profile_id=${activeProfileId}`).then(r => r.data),
             staleTime: 2 * 60 * 1000,
-          }).catch(() => null) : Promise.resolve(null),
-        ]);
-
-        setMovie(movieData);
-        setSimilarMovies(simData || []);
-        if (progData) {
-          setSavedProgress({
-            current_position: progData.current_position,
-            duration: progData.duration,
-            percentage_watched: progData.percentage_watched
-          });
+          }).then(wlData => {
+            if (wlData) setIsInWatchlist(wlData.is_in_watchlist === true);
+          }).catch(() => null);
         }
-        if (wlData) setIsInWatchlist(wlData.is_in_watchlist === true);
 
-        // Check user subscription plan
+        // 3. Check user subscription plan (cached via React Query)
         try {
-          const subRes = await api.get('/subscription/current');
-          const subPlan = subRes.data?.plan?.name || subRes.data?.subscription_plan || '';
+          const subData = await queryClient.fetchQuery({
+            queryKey: QUERY_KEYS.subscription,
+            queryFn: () => api.get('/subscription/current').then(r => r.data),
+            staleTime: 5 * 60 * 1000,
+          });
+          const subPlan = subData?.plan?.name || subData?.subscription_plan || '';
           const userStr = localStorage.getItem('user');
           const userObj = userStr ? JSON.parse(userStr) : null;
-          const isAdmin = userObj?.is_admin || subRes.data?.status === "Administrator Account" || false;
+          const isAdmin = userObj?.is_admin || subData?.status === "Administrator Account" || false;
           if (isAdmin) {
             setAccessState('ADMIN');
             setIsPremiumUser(true);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import MovieCardVertical from '../components/MovieCardVertical';
@@ -59,11 +60,13 @@ const Browse: React.FC = () => {
     }
   }, [activeProfileId, navigate]);
 
-  // Load genres once
+  // Load genres once (cached via queryClient across page navigations)
   useEffect(() => {
-    api.get('/catalog/genres')
-      .then(r => setGenres(r.data || []))
-      .catch(() => {});
+    queryClient.fetchQuery({
+      queryKey: QUERY_KEYS.genres,
+      queryFn: () => api.get('/catalog/genres').then(r => r.data || []),
+      staleTime: 30 * 60 * 1000,
+    }).then(setGenres).catch(() => {});
   }, []);
 
   const buildParams = useCallback((currentOffset: number) => {
