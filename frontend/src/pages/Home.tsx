@@ -118,14 +118,33 @@ const Home: React.FC = () => {
       const cachedMovies = queryClient.getQueryData<Movie[]>(QUERY_KEYS.movies);
       if (cachedMovies && cachedMovies.length > 0) {
         setMovies(cachedMovies);
-        // Prefer real (non-generated) movies for hero; fall back to any
         const realMovies = cachedMovies.filter((m: any) => !m.is_generated);
         const heroSource = realMovies.length >= 3 ? realMovies : cachedMovies;
-        const carouselMovies = heroSource.slice(0, 5);
-        setHeroMovies(carouselMovies);
+        setHeroMovies(heroSource.slice(0, 5));
         setCatalogLoading(false);
       } else {
         setCatalogLoading(true);
+      }
+
+      // Hydrate secondary section states from React Query cache immediately
+      const cachedTrending = queryClient.getQueryData<Movie[]>(QUERY_KEYS.trending);
+      if (cachedTrending) setTrendingMovies(cachedTrending);
+
+      const cachedPopular = queryClient.getQueryData<Movie[]>(QUERY_KEYS.popular);
+      if (cachedPopular) setPopularMovies(cachedPopular);
+
+      const cachedRecentlyAdded = queryClient.getQueryData<Movie[]>(QUERY_KEYS.recentlyAdded);
+      if (cachedRecentlyAdded) setRecentlyAddedMovies(cachedRecentlyAdded);
+
+      if (activeProfileId) {
+        const cachedCW = queryClient.getQueryData<any[]>(QUERY_KEYS.continueWatching(activeProfileId));
+        if (cachedCW) setContinueWatchingItems(cachedCW);
+
+        const cachedPers = queryClient.getQueryData<Movie[]>(QUERY_KEYS.personalized(activeProfileId));
+        if (cachedPers) setPersonalizedMovies(cachedPers);
+
+        const cachedBYW = queryClient.getQueryData<BecauseYouWatchedState>(QUERY_KEYS.becauseYouWatched(activeProfileId));
+        if (cachedBYW) setBecauseYouWatched(cachedBYW);
       }
 
       // Fetch primary catalog in background
@@ -136,7 +155,6 @@ const Home: React.FC = () => {
       }).then((moviesData: Movie[]) => {
         if (moviesData && Array.isArray(moviesData)) {
           setMovies(moviesData);
-          // Prefer real (non-generated) movies for hero; fall back to any
           const realMovies = moviesData.filter((m: any) => !m.is_generated);
           const heroSource = realMovies.length >= 3 ? realMovies : moviesData;
           const carouselMovies = heroSource.slice(0, 5);

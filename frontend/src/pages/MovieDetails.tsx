@@ -409,7 +409,22 @@ const MovieDetails: React.FC = () => {
 
     const fetchMovieDetails = async () => {
       try {
-        setLoading(true);
+        // Check React Query cache first for immediate paint (<10ms)
+        const cachedMovie = queryClient.getQueryData<Movie>(QUERY_KEYS.movie(id!));
+        if (cachedMovie) {
+          setMovie(cachedMovie);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+
+        const cachedSimilar = queryClient.getQueryData<Movie[]>(QUERY_KEYS.similar(id!));
+        if (cachedSimilar) setSimilarMovies(cachedSimilar);
+
+        if (activeProfileId) {
+          const cachedWL = queryClient.getQueryData<any>(QUERY_KEYS.watchlistCheck(id!, activeProfileId));
+          if (cachedWL !== undefined) setIsInWatchlist(Boolean(cachedWL?.in_watchlist));
+        }
 
         // 1. Fetch primary movie metadata first (cached for 5min)
         const movieData = await queryClient.fetchQuery({
