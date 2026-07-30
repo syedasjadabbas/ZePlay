@@ -16,7 +16,7 @@ A full-stack streaming platform engineered around adaptive video delivery, backg
   <img src="docs/images/zeplay-overview.png" width="100%" alt="ZePlay Engineering Overview">
 </p>
 
-> Place the generated ZePlay infographic at `docs/images/zeplay-overview.png`.
+
 
 ---
 
