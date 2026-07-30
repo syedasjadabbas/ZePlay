@@ -320,10 +320,11 @@ async def get_because_you_watched(
 async def get_similar_movies(
     db: AsyncSession,
     movie_id: UUID,
-    limit: int = 10
+    limit: int = 10,
+    include_synthetic: bool = False
 ) -> List[Movie]:
     """Find similar movies sharing genres and release proximity (Cache First)."""
-    cache_key = f"rec:similar:{movie_id}:{limit}"
+    cache_key = f"rec:similar:{movie_id}:{limit}:{include_synthetic}"
     cached = await cache.get(cache_key)
     if cached is not None:
         return cached
@@ -343,7 +344,12 @@ async def get_similar_movies(
         .options(selectinload(Movie.genres))
         .join(Movie.genres)
         .outerjoin(MovieStats, Movie.movie_id == MovieStats.movie_id)
-        .filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != movie_id)
+    )
+    if not include_synthetic:
+        query = query.filter(Movie.is_generated == False)
+
+    query = (
+        query.filter(Genre.genre_id.in_(genre_ids), Movie.movie_id != movie_id)
         .order_by(
             desc(func.coalesce(MovieStats.popularity_score, 0.0)),
             desc(Movie.release_year)

@@ -76,11 +76,12 @@ async def get_because_you_watched(
 async def get_similar(
     movie_id: UUID,
     limit: int = 10,
+    include_synthetic: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(deps.get_current_user)
 ):
     """Retrieve similar movies based on shared genres and metadata."""
-    return await recommendation_service.get_similar_movies(db, movie_id=movie_id, limit=limit)
+    return await recommendation_service.get_similar_movies(db, movie_id=movie_id, limit=limit, include_synthetic=include_synthetic)
 
 @router.post("/track-view/{movie_id}", response_model=MovieStatsResponse)
 async def track_view(
