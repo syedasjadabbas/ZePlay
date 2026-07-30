@@ -109,25 +109,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
       onSuccess();
       onClose();
     } catch (err: any) {
-      setErrorMessage(
-        err.response?.data?.detail ||
-          'Simulated payment authorization failed. Please try a valid test card.'
-      );
+      if (err.response?.status === 404) {
+        setErrorMessage('Payment service is unavailable. Please try again.');
+      } else {
+        const detail = err.response?.data?.detail;
+        if (typeof detail === 'string' && detail.trim() && detail !== 'Not Found') {
+          setErrorMessage(detail);
+        } else if (Array.isArray(detail) && detail.length > 0 && detail[0]?.msg) {
+          setErrorMessage(detail[0].msg);
+        } else {
+          setErrorMessage('Simulated payment authorization failed. Please try a valid test card.');
+        }
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none">
-      <div className="relative w-full max-w-lg bg-[#0B1533] border border-brand-accent/30 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-white overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none overflow-hidden h-[100dvh]">
+      <div className="relative w-full max-w-md sm:max-w-lg bg-[#0B1533] border border-brand-accent/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl text-white my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col">
+        {/* Header - Fixed Top */}
+        <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-shrink-0">
           <div>
             <span className="text-[10px] font-black text-brand-accent uppercase tracking-widest block">
               Simulated Payment Checkout
             </span>
-            <h2 className="text-2xl font-black font-display tracking-tight text-white uppercase">
+            <h2 className="text-xl sm:text-2xl font-black font-display tracking-tight text-white uppercase">
               Upgrade to Premium
             </h2>
           </div>
@@ -143,161 +151,165 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
           </button>
         </div>
 
-        {/* Plan Summary Card */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-neutral-300">Selected Plan</span>
-            <h3 className="text-lg font-black text-brand-accent uppercase tracking-wide">ZePlay Premium</h3>
-            <p className="text-[11px] text-neutral-400">4K Ultra HD • Multi-Device • Full Catalog</p>
-          </div>
-          <div className="text-right">
-            <span className="text-2xl font-black text-white">$9.99</span>
-            <span className="text-xs text-neutral-400 font-medium block">/ month</span>
-          </div>
-        </div>
-
-        {/* Demo Quick Test Fillers */}
-        <div className="bg-brand-accent/10 border border-brand-accent/20 rounded-xl p-3 text-xs space-y-2">
-          <div className="flex items-center gap-1.5 text-brand-accent font-bold">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Demo Test Payment Mode</span>
-          </div>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => handleQuickTestCard('success')}
-              className="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-3 py-1 rounded-lg border border-emerald-500/30 transition-all cursor-pointer"
-            >
-              Fill Valid Card (4242...)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickTestCard('failure')}
-              className="text-[11px] font-bold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 px-3 py-1 rounded-lg border border-rose-500/30 transition-all cursor-pointer"
-            >
-              Fill Failing Card (...0002)
-            </button>
-          </div>
-        </div>
-
-        {/* Error Notification Banner */}
-        {errorMessage && (
-          <div className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs font-semibold p-3.5 rounded-xl animate-fadeIn">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* Payment Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Cardholder Name */}
-          <div>
-            <label className="text-xs font-bold text-neutral-300 block mb-1">Cardholder Name</label>
-            <input
-              type="text"
-              value={cardName}
-              onChange={(e) => setCardName(e.target.value)}
-              placeholder="e.g. Syed Asjad Abbas"
-              disabled={loading}
-              className={`w-full bg-black/40 border rounded-xl px-4 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none transition-all ${
-                fieldErrors.cardName ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
-              }`}
-            />
-            {fieldErrors.cardName && (
-              <span className="text-[11px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cardName}</span>
-            )}
+        {/* Scrollable Body Content */}
+        <div className="overflow-y-auto overflow-x-hidden space-y-4 py-3 flex-1 pr-1 custom-scrollbar">
+          {/* Plan Summary Card */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-neutral-300">Selected Plan</span>
+              <h3 className="text-base sm:text-lg font-black text-brand-accent uppercase tracking-wide">ZePlay Premium</h3>
+              <p className="text-[10px] sm:text-[11px] text-neutral-400">4K Ultra HD • Multi-Device • Full Catalog</p>
+            </div>
+            <div className="text-right">
+              <span className="text-xl sm:text-2xl font-black text-white">$9.99</span>
+              <span className="text-[10px] sm:text-xs text-neutral-400 font-medium block">/ month</span>
+            </div>
           </div>
 
-          {/* Card Number */}
-          <div>
-            <label className="text-xs font-bold text-neutral-300 block mb-1">Card Number</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                placeholder="4242 4242 4242 4242"
-                maxLength={19}
-                disabled={loading}
-                className={`w-full bg-black/40 border rounded-xl px-4 py-2.5 pr-10 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
-                  fieldErrors.cardNumber ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
-                }`}
-              />
-              <svg className="w-5 h-5 text-neutral-400 absolute right-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          {/* Demo Quick Test Fillers */}
+          <div className="bg-brand-accent/10 border border-brand-accent/20 rounded-xl p-3 text-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-brand-accent font-bold">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
+              <span>Demo Test Payment Mode</span>
             </div>
-            {fieldErrors.cardNumber && (
-              <span className="text-[11px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cardNumber}</span>
-            )}
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              <button
+                type="button"
+                onClick={() => handleQuickTestCard('success')}
+                className="text-[10px] sm:text-[11px] font-bold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 px-2.5 py-1 rounded-lg border border-emerald-500/30 transition-all cursor-pointer"
+              >
+                Fill Valid Card (4242...)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickTestCard('failure')}
+                className="text-[10px] sm:text-[11px] font-bold bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 px-2.5 py-1 rounded-lg border border-rose-500/30 transition-all cursor-pointer"
+              >
+                Fill Failing Card (...0002)
+              </button>
+            </div>
           </div>
 
-          {/* Expiry & CVV */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Error Notification Banner */}
+          {errorMessage && (
+            <div className="bg-rose-500/15 border border-rose-500/30 text-rose-200 text-xs font-semibold p-3.5 rounded-xl animate-fadeIn">
+              {errorMessage}
+            </div>
+          )}
+
+          {/* Payment Form Fields */}
+          <form id="checkout-payment-form" onSubmit={handleSubmit} className="space-y-3.5">
+            {/* Cardholder Name */}
             <div>
-              <label className="text-xs font-bold text-neutral-300 block mb-1">Expiry Date</label>
+              <label className="text-xs font-bold text-neutral-300 block mb-1">Cardholder Name</label>
               <input
                 type="text"
-                value={expiry}
-                onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                placeholder="MM/YY"
-                maxLength={7}
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                placeholder="e.g. Syed Asjad Abbas"
                 disabled={loading}
-                className={`w-full bg-black/40 border rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
-                  fieldErrors.expiry ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
+                className={`w-full bg-black/40 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white placeholder-neutral-500 focus:outline-none transition-all ${
+                  fieldErrors.cardName ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
                 }`}
               />
-              {fieldErrors.expiry && (
-                <span className="text-[11px] font-semibold text-rose-400 mt-1 block">{fieldErrors.expiry}</span>
+              {fieldErrors.cardName && (
+                <span className="text-[10px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cardName}</span>
               )}
             </div>
 
+            {/* Card Number */}
             <div>
-              <label className="text-xs font-bold text-neutral-300 block mb-1">Security Code (CVV)</label>
-              <input
-                type="password"
-                value={cvv}
-                onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="123"
-                maxLength={4}
-                disabled={loading}
-                className={`w-full bg-black/40 border rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
-                  fieldErrors.cvv ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
-                }`}
-              />
-              {fieldErrors.cvv && (
-                <span className="text-[11px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cvv}</span>
+              <label className="text-xs font-bold text-neutral-300 block mb-1">Card Number</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+                  placeholder="4242 4242 4242 4242"
+                  maxLength={19}
+                  disabled={loading}
+                  className={`w-full bg-black/40 border rounded-xl px-3.5 py-2 pr-9 text-xs sm:text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
+                    fieldErrors.cardNumber ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
+                  }`}
+                />
+                <svg className="w-4 h-4 text-neutral-400 absolute right-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              {fieldErrors.cardNumber && (
+                <span className="text-[10px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cardNumber}</span>
               )}
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-brand-accent hover:bg-brand-accent/90 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-brand-accent/30 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <span>Pay $9.99 & Activate</span>
-              )}
-            </button>
-          </div>
-        </form>
+            {/* Expiry & CVV */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-neutral-300 block mb-1">Expiry Date</label>
+                <input
+                  type="text"
+                  value={expiry}
+                  onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+                  placeholder="MM/YY"
+                  maxLength={7}
+                  disabled={loading}
+                  className={`w-full bg-black/40 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
+                    fieldErrors.expiry ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
+                  }`}
+                />
+                {fieldErrors.expiry && (
+                  <span className="text-[10px] font-semibold text-rose-400 mt-1 block">{fieldErrors.expiry}</span>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-neutral-300 block mb-1">Security Code (CVV)</label>
+                <input
+                  type="password"
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="123"
+                  maxLength={4}
+                  disabled={loading}
+                  className={`w-full bg-black/40 border rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white font-mono placeholder-neutral-500 focus:outline-none transition-all ${
+                    fieldErrors.cvv ? 'border-rose-500' : 'border-white/10 focus:border-brand-accent'
+                  }`}
+                />
+                {fieldErrors.cvv && (
+                  <span className="text-[10px] font-semibold text-rose-400 mt-1 block">{fieldErrors.cvv}</span>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Action Controls - Fixed Bottom */}
+        <div className="border-t border-white/10 pt-3 mt-1 flex-shrink-0 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white py-2.5 sm:py-3 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="checkout-payment-form"
+            disabled={loading}
+            className="flex-1 bg-brand-accent hover:bg-brand-accent/90 text-white py-2.5 sm:py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-brand-accent/30 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <span>Pay $9.99 & Activate</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
