@@ -107,7 +107,7 @@ interface AuditLog {
 const AdminUpload: React.FC = () => {
   const { showConfirm } = useModal();
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('movies_manage');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit' | 'transactions'>('movies_manage');
 
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
@@ -158,6 +158,18 @@ const AdminUpload: React.FC = () => {
   const auditLimit = 50;
   const [auditOffset, setAuditOffset] = useState(0);
 
+  // States for Payment Transactions
+  const [paymentTransactions, setPaymentTransactions] = useState<any[]>([]);
+
+  const fetchPaymentTransactions = async () => {
+    try {
+      const res = await api.get('/payment/admin/transactions');
+      setPaymentTransactions(res.data || []);
+    } catch (err: any) {
+      console.error('Failed to fetch payment transactions', err);
+    }
+  };
+
   // General Notification
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -180,6 +192,8 @@ const AdminUpload: React.FC = () => {
       fetchHealth();
     } else if (activeTab === 'audit') {
       fetchAuditLogs();
+    } else if (activeTab === 'transactions') {
+      fetchPaymentTransactions();
     }
 
     // Interval polling for transient states only on active background tabs
@@ -692,7 +706,7 @@ const AdminUpload: React.FC = () => {
         )}
 
         {/* Dashboard Tabs bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 select-none">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 select-none">
           {[
             { id: 'movies_manage', label: 'Catalog', icon: '🎬', desc: 'Movies directory' },
             { id: 'ingestion', label: 'Ingestion', icon: '📤', desc: 'Video assets' },
@@ -701,6 +715,7 @@ const AdminUpload: React.FC = () => {
             { id: 'content', label: 'Analytics', icon: '📈', desc: 'Views & Engagement' },
             { id: 'health', label: 'Services', icon: '⚡', desc: 'DB & Redis health' },
             { id: 'audit', label: 'Security', icon: '🛡️', desc: 'Audit trails' },
+            { id: 'transactions', label: 'Payments', icon: '💳', desc: 'Simulated Checkouts' },
           ].map((t) => (
             <button
               key={t.id}
@@ -1918,6 +1933,70 @@ const AdminUpload: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab: Payment Transactions */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-extrabold text-white uppercase tracking-tight">Payment Transactions</h2>
+                <p className="text-xs text-neutral-400">Simulated checkout activity log (Card credentials never stored)</p>
+              </div>
+              <button
+                onClick={fetchPaymentTransactions}
+                className="text-xs font-bold text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-xl border border-white/10 transition-all cursor-pointer"
+              >
+                Refresh Log
+              </button>
+            </div>
+
+            <div className="bg-[#181818] border border-white/5 rounded-2xl overflow-x-auto shadow-2xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 text-neutral-400 font-extrabold uppercase text-[10px] bg-black/40">
+                    <th className="p-4">Transaction ID</th>
+                    <th className="p-4">User</th>
+                    <th className="p-4">Plan</th>
+                    <th className="p-4">Amount</th>
+                    <th className="p-4">Payment Method</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 font-medium text-neutral-200">
+                  {paymentTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-neutral-400">
+                        No payment transactions recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    paymentTransactions.map((tx) => (
+                      <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="p-4 font-mono text-[11px] text-neutral-400">{tx.id.slice(0, 8)}...</td>
+                        <td className="p-4 font-bold text-white">{tx.user_email || tx.user_id.slice(0, 8)}</td>
+                        <td className="p-4 uppercase text-brand-accent font-extrabold">{tx.plan_name}</td>
+                        <td className="p-4 font-mono text-emerald-400 font-bold">${tx.amount.toFixed(2)} {tx.currency}</td>
+                        <td className="p-4 font-mono text-neutral-300">{tx.card_brand} •••• {tx.last4}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 font-bold ${
+                            tx.status === 'success' ? 'text-emerald-400' : 'text-rose-400'
+                          }`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            <span className="capitalize">{tx.status}</span>
+                          </span>
+                        </td>
+                        <td className="p-4 text-neutral-400 font-mono text-[11px]">
+                          {new Date(tx.created_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, profiles, catalog, admin, videos, watch_history, recommendations, watchlist, ratings, subscription
+from app.api.endpoints import auth, profiles, catalog, admin, videos, watch_history, recommendations, watchlist, ratings, subscription, payment
 
 api_router = APIRouter()
 
@@ -14,6 +14,7 @@ api_router.include_router(recommendations.router, prefix="/recommendations", tag
 api_router.include_router(watchlist.router, prefix="/watchlist", tags=["Watchlist"])
 api_router.include_router(ratings.router, prefix="/ratings", tags=["User Ratings"])
 api_router.include_router(subscription.router, prefix="/subscription", tags=["Subscription"])
+api_router.include_router(payment.router, prefix="/payment", tags=["Payment Checkout"])
 
 
 

@@ -4,6 +4,7 @@ import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import Footer from '../components/Footer';
+import CheckoutModal from '../components/CheckoutModal';
 
 interface Plan {
   id: string;
@@ -108,18 +109,15 @@ const Subscription: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
   };
 
-  const handleUpgrade = async () => {
-    try {
-      setActionLoading(true);
-      await api.post('/subscription/upgrade', { plan_name: 'premium' });
-      syncLocalSessionState('premium');
-      showToast('🎉 Upgraded to Premium! Enjoy all premium features.', 'success');
-      await fetchData();
-    } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Upgrade failed.', 'error');
-    } finally {
-      setActionLoading(false);
-    }
+  const [showCheckout, setShowCheckout] = useState(false);
+
+  const handleUpgrade = () => {
+    setShowCheckout(true);
+  };
+
+  const handleCheckoutSuccess = async () => {
+    showToast('🎉 Payment Successful! Upgraded to Premium.', 'success');
+    await fetchData();
   };
 
   const handleDowngrade = async () => {
@@ -451,6 +449,12 @@ const Subscription: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CheckoutModal
+        isOpen={showCheckout}
+        onClose={() => setShowCheckout(false)}
+        onSuccess={handleCheckoutSuccess}
+      />
     </div>
   );
 };

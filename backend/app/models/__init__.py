@@ -12,6 +12,7 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.rating import Rating
 from app.models.subscription_plan import SubscriptionPlan
 from app.models.user_subscription import UserSubscription
+from app.models.payment_transaction import PaymentTransaction
 from app.models.audit_log import AuditLog
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "Rating",
     "SubscriptionPlan",
     "UserSubscription",
+    "PaymentTransaction",
     "AuditLog",
 ]
 

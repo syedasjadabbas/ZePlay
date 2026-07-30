@@ -52,11 +52,13 @@ async def startup_event():
     logger = logging.getLogger("uvicorn")
     logger.info(f"Database URL in use: {settings.DATABASE_URL}")
     
-    # Validate database connectivity
+    # Validate database connectivity and ensure tables exist
     try:
-        async with engine.connect() as conn:
+        from app.models import Base
+        async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
-        logger.info("Database connection validation successful.")
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database connection validation and schema synchronization successful.")
     except Exception as e:
         logger.error(f"Database connection validation failed: {e}")
         
