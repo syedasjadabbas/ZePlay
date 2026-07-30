@@ -74,33 +74,62 @@ def generate_fallback_hls_assets(hls_dir: str, video: Video) -> Tuple[str, str]:
     with open(master_m3u8_path, "w", encoding="utf-8") as f:
         f.write(master_content)
 
-    # Generate directories and dummy assets for each variant level
+    ffmpeg_bin = get_ffmpeg_path()
     dummy_ts_data = b"\x47\x40\x00\x10" + b"\x00" * 184
-    for tier in ["480p", "720p", "1080p"]:
+
+    for tier, scale, bitrate in [
+        ("480p", "854x480", "700k"),
+        ("720p", "1280x720", "2000k"),
+        ("1080p", "1920x1080", "4000k"),
+    ]:
         tier_dir = os.path.join(hls_dir, tier)
         os.makedirs(tier_dir, exist_ok=True)
-        
-        # Write dummy segment files
-        with open(os.path.join(tier_dir, "segment_000.ts"), "wb") as f:
-            f.write(dummy_ts_data * 50)
-        with open(os.path.join(tier_dir, "segment_001.ts"), "wb") as f:
-            f.write(dummy_ts_data * 50)
-            
-        # Write level index playlist
-        index_content = (
-            "#EXTM3U\n"
-            "#EXT-X-VERSION:3\n"
-            "#EXT-X-TARGETDURATION:6\n"
-            "#EXT-X-MEDIA-SEQUENCE:0\n"
-            "#EXT-X-PLAYLIST-TYPE:VOD\n"
-            "#EXTINF:6.000000,\n"
-            "segment_000.ts\n"
-            "#EXTINF:6.000000,\n"
-            "segment_001.ts\n"
-            "#EXT-X-ENDLIST\n"
-        )
-        with open(os.path.join(tier_dir, "index.m3u8"), "w", encoding="utf-8") as f:
-            f.write(index_content)
+        playlist_path = os.path.join(tier_dir, "index.m3u8")
+        segment_pattern = os.path.join(tier_dir, "segment_%03d.ts")
+
+        rendered_with_ffmpeg = False
+        if ffmpeg_bin:
+            try:
+                cmd = [
+                    ffmpeg_bin, "-y",
+                    "-f", "lavfi", "-i", f"smptebars=size={scale}:rate=30:duration=15",
+                    "-f", "lavfi", "-i", "sine=frequency=440:duration=15",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-b:v", bitrate,
+                    "-pix_fmt", "yuv420p", "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+                    "-c:a", "aac", "-b:a", "128k", "-ac", "2",
+                    "-f", "hls",
+                    "-hls_time", "5",
+                    "-hls_playlist_type", "vod",
+                    "-hls_segment_filename", segment_pattern,
+                    playlist_path
+                ]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if res.returncode == 0 and os.path.exists(playlist_path):
+                    rendered_with_ffmpeg = True
+            except Exception as e:
+                print(f"[FALLBACK] FFmpeg execution error: {e}")
+
+        if not rendered_with_ffmpeg:
+            # Fallback for systems without FFmpeg
+            with open(os.path.join(tier_dir, "segment_000.ts"), "wb") as f:
+                f.write(dummy_ts_data * 50)
+            with open(os.path.join(tier_dir, "segment_001.ts"), "wb") as f:
+                f.write(dummy_ts_data * 50)
+
+            index_content = (
+                "#EXTM3U\n"
+                "#EXT-X-VERSION:3\n"
+                "#EXT-X-TARGETDURATION:6\n"
+                "#EXT-X-MEDIA-SEQUENCE:0\n"
+                "#EXT-X-PLAYLIST-TYPE:VOD\n"
+                "#EXTINF:6.000000,\n"
+                "segment_000.ts\n"
+                "#EXTINF:6.000000,\n"
+                "segment_001.ts\n"
+                "#EXT-X-ENDLIST\n"
+            )
+            with open(playlist_path, "w", encoding="utf-8") as f:
+                f.write(index_content)
 
     return master_m3u8_path, hls_dir
 
