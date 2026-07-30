@@ -63,9 +63,19 @@ async def search_catalog(
     """
     Search catalog movies across title, description, genre, and release year.
     """
-    return await movie_service.search_movies(
+    cache_key = f"catalog:search:{q or ''}:{genre or ''}:{year or ''}:{sort_by}:{limit}:{offset}:{include_synthetic}"
+    cached_data = await cache.get(cache_key)
+    if cached_data is not None:
+        return cached_data
+
+    movies = await movie_service.search_movies(
         db, q=q, genre_name=genre, year=year, sort_by=sort_by, limit=limit, offset=offset, include_synthetic=include_synthetic
     )
+
+    from fastapi.encoders import jsonable_encoder
+    serialized = jsonable_encoder(movies)
+    await cache.set(cache_key, serialized, ttl=300)
+    return movies
 
 @router.get("/search/suggestions", response_model=List[MovieResponse])
 async def search_suggestions(

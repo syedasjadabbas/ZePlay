@@ -376,6 +376,37 @@ const MovieDetails: React.FC = () => {
   }, [activeProfileId, navigate]);
 
   useEffect(() => {
+    // Scroll to top immediately when movie ID changes
+    window.scrollTo(0, 0);
+
+    // Destroy prior HLS instance and reset playback states
+    if (hlsInstance) {
+      try {
+        hlsInstance.destroy();
+      } catch {}
+      setHlsInstance(null);
+    }
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute('src');
+        videoRef.current.load();
+      } catch {}
+    }
+
+    setIsPlaying(false);
+    setMovie(null);
+    setSimilarMovies([]);
+    setSavedProgress(null);
+    setError(null);
+    setPlayerError(null);
+    setIsPlayerLoading(true);
+    setIsBuffering(false);
+    setShowUpgradeState(false);
+    setVideoCurrentTime(0);
+    setVideoDuration(0);
+    setImageError(false);
+
     const fetchMovieDetails = async () => {
       try {
         setLoading(true);
@@ -475,7 +506,6 @@ const MovieDetails: React.FC = () => {
     };
 
     if (id) {
-      setImageError(false);
       fetchMovieDetails();
     }
   }, [id, activeProfileId]);
@@ -721,11 +751,6 @@ const MovieDetails: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/80 to-transparent" />
                     
                     <div className="z-10 flex flex-col items-center max-w-md space-y-4 animate-fadeIn">
-                      <div className="px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Catalogue Title</span>
-                      </div>
-
                       <h3 className="text-2xl sm:text-3xl font-black text-white font-display tracking-tight">{movie.title}</h3>
                       
                       <p className="text-sm font-semibold text-neutral-300">

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { API_ORIGIN } from '../services/api';
+import { resolvePosterUrl } from '../services/api';
 
 interface ProgressiveImageProps {
   src: string;
@@ -25,13 +25,7 @@ const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const resolveSrc = (path: string): string => {
-    if (!path) return '';
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
-      return path;
-    }
-    return `${API_ORIGIN}${path}`;
-  };
+  const resolvedSrc = resolvePosterUrl(src);
 
   // Detect already-cached images and reset states when src updates
   useEffect(() => {
@@ -61,7 +55,7 @@ const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
       />
       <img
         ref={imgRef}
-        src={resolveSrc(src)}
+        src={resolvedSrc}
         alt={alt}
         loading={lazy ? 'lazy' : 'eager'}
         decoding="async"

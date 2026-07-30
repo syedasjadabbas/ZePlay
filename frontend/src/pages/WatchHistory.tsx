@@ -9,6 +9,7 @@ import Footer from '../components/Footer';
 import { MovieCardSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import ProgressiveImage from '../components/ProgressiveImage';
 
 interface Movie {
   movie_id: string;
@@ -165,11 +166,17 @@ const WatchHistoryPage: React.FC = () => {
                     <div>
                       {/* Thumbnail & Progress Bar */}
                       <div className="relative aspect-video bg-black overflow-hidden">
-                        <img 
-                          src={movie?.thumbnail_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800'} 
-                          alt={movie?.title || 'Movie'} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        {movie?.thumbnail_url ? (
+                          <ProgressiveImage 
+                            src={movie.thumbnail_url} 
+                            alt={movie.title || 'Movie'} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-neutral-900 flex items-center justify-center text-xs text-neutral-500">
+                            {movie?.title || 'No Poster'}
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
 
                         {/* Percent Badge */}

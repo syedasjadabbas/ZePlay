@@ -26,6 +26,16 @@ import AdminRoute from './components/AdminRoute';
 import { ModalProvider } from './components/ModalProvider';
 import { ToastProvider } from './components/Toast';
 
+import { useLocation } from 'react-router-dom';
+
+const ScrollToTop: React.FC = () => {
+  const { pathname, search } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname, search]);
+  return null;
+};
+
 // Minimal fallback — no layout shift, no spinner for sub-200ms loads
 const PageFallback: React.FC = () => (
   <div className="min-h-screen bg-[#080e1c]" aria-hidden="true" />
@@ -34,6 +44,7 @@ const PageFallback: React.FC = () => (
 const App: React.FC = () => {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <ToastProvider>
       <ModalProvider>
         <Suspense fallback={<PageFallback />}>

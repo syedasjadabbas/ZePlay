@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import api, { API_ORIGIN } from '../services/api';
+import api, { resolvePosterUrl } from '../services/api';
 import { useModal } from '../components/ModalProvider';
 import { useToast } from '../components/Toast';
 import { queryClient, QUERY_KEYS } from '../services/queryClient';
@@ -102,19 +102,21 @@ interface AuditLog {
 }
 
 const AdminUpload: React.FC = () => {
-  const { showAlert, showConfirm } = useModal();
+  const { showConfirm } = useModal();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'users' | 'ingestion' | 'movies_manage' | 'health' | 'audit'>('movies_manage');
 
   // States for ingestion
   const [file, setFile] = useState<File | null>(null);
   const [selectedMovieId, setSelectedMovieId] = useState<string>('');
-  const [movies] = useState<MovieOption[]>([]);
+  const [movies, setMovies] = useState<MovieOption[]>([]);
   const [videos, setVideos] = useState<VideoAsset[]>([]);
   const [uploading, setUploading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activePreviewVideo, setActivePreviewVideo] = useState<VideoAsset | null>(null);
+  const [ingestionSearch, setIngestionSearch] = useState('');
+  const [ingestionStatusFilter, setIngestionStatusFilter] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // States for Catalog Movie Management
@@ -158,30 +160,48 @@ const AdminUpload: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchMovies();
-    fetchVideos();
-    fetchAnalytics();
-    fetchContentRankings();
-    fetchHealth();
-    fetchUsersList();
-    fetchAuditLogs();
-
-    const interval = setInterval(() => {
-      fetchVideos();
+    // Lazy-load data based on active tab
+    if (activeTab === 'movies_manage') {
+      fetchMovies(catalogSearchQuery);
+    } else if (activeTab === 'overview') {
+      fetchAnalytics();
       fetchHealth();
+    } else if (activeTab === 'content') {
+      fetchContentRankings();
+    } else if (activeTab === 'users') {
+      fetchUsersList();
+    } else if (activeTab === 'ingestion') {
+      fetchVideos();
+      fetchMovies();
+    } else if (activeTab === 'health') {
+      fetchHealth();
+    } else if (activeTab === 'audit') {
+      fetchAuditLogs();
+    }
+
+    // Interval polling for transient states only on active background tabs
+    const interval = setInterval(() => {
+      if (activeTab === 'ingestion') {
+        fetchVideos();
+      } else if (activeTab === 'health' || activeTab === 'overview') {
+        fetchHealth();
+      }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   // Fetch functions
   const fetchMovies = async (query?: string) => {
     try {
       const url = query && query.trim()
-        ? `/catalog/search?q=${encodeURIComponent(query.trim())}&limit=60`
-        : '/catalog/movies?limit=60';
+        ? `/catalog/search?q=${encodeURIComponent(query.trim())}&limit=122`
+        : '/catalog/movies?limit=122';
       const response = await api.get(url);
-      setCatalogMovies(response.data || []);
+      const data = response.data || [];
+      setCatalogMovies(data);
+      // Also update movies option list for video ingestion dropdown
+      setMovies(data.map((m: any) => ({ movie_id: m.movie_id, title: m.title, release_year: m.release_year })));
     } catch (err) {
       console.error('Failed to load movies catalog', err);
     }
@@ -223,7 +243,7 @@ const AdminUpload: React.FC = () => {
       setError(null);
       setSuccessMsg(null);
 
-      let currentThumbnail = editingMovie.thumbnail_url;
+      let updatedThumbnailUrl = editingMovie.thumbnail_url;
       const metadataChanged = (
         editTitle !== editingMovie.title ||
         editDesc !== editingMovie.description ||
@@ -231,44 +251,37 @@ const AdminUpload: React.FC = () => {
         editDuration !== editingMovie.duration_minutes
       );
 
-      const tasks: Promise<any>[] = [];
-
+      // Step 1: Upload poster image if selected
       if (editPosterFile) {
         const formData = new FormData();
         formData.append('file', editPosterFile);
-        tasks.push(
-          api.post(`/admin/movies/${editingMovie.movie_id}/poster`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          })
-        );
+        const posterRes = await api.post(`/admin/movies/${editingMovie.movie_id}/poster`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (posterRes.data?.thumbnail_url) {
+          updatedThumbnailUrl = posterRes.data.thumbnail_url;
+        }
       }
 
-      if (metadataChanged || !editPosterFile) {
-        tasks.push(
-          api.put(`/admin/movies/${editingMovie.movie_id}`, {
-            title: editTitle,
-            description: editDesc,
-            release_year: editYear,
-            duration_minutes: editDuration,
-            thumbnail_url: currentThumbnail,
-            video_url: editingMovie.video_url || 'placeholder'
-          })
-        );
-      }
-
-      const results = await Promise.all(tasks);
-
-      if (editPosterFile && results[0]?.data?.thumbnail_url) {
-        currentThumbnail = results[0].data.thumbnail_url;
+      // Step 2: Update movie text metadata if changed
+      if (metadataChanged) {
+        await api.put(`/admin/movies/${editingMovie.movie_id}`, {
+          title: editTitle,
+          description: editDesc,
+          release_year: editYear,
+          duration_minutes: editDuration,
+          thumbnail_url: updatedThumbnailUrl,
+          video_url: editingMovie.video_url || 'placeholder'
+        });
       }
 
       const durationMs = Math.round(performance.now() - startTime);
 
-      const cacheBustThumbnail = currentThumbnail.includes('?')
-        ? `${currentThumbnail}&v=${Date.now()}`
-        : `${currentThumbnail}?v=${Date.now()}`;
+      const cacheBustThumbnail = updatedThumbnailUrl.includes('?')
+        ? `${updatedThumbnailUrl}&v=${Date.now()}`
+        : `${updatedThumbnailUrl}?v=${Date.now()}`;
 
-      // Optimistically update the movie in the catalog list state immediately
+      // Optimistically update the movie in catalog state immediately
       setCatalogMovies((prev) =>
         prev.map((item) =>
           item.movie_id === editingMovie.movie_id
@@ -284,15 +297,21 @@ const AdminUpload: React.FC = () => {
         )
       );
 
-      setSuccessMsg(`Movie catalog entry updated in ${durationMs}ms!`);
+      setSuccessMsg(`Movie poster & catalog entry updated successfully in ${durationMs}ms!`);
+      showToast(`Poster & metadata updated successfully for "${editTitle}".`, 'info');
       setEditingMovie(null);
       setEditPosterFile(null);
 
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movies });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.movie(editingMovie.movie_id) });
       queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      fetchMovies(catalogSearchQuery);
+      fetchContentRankings();
     } catch (err: any) {
       console.error('Failed to save movie', err);
-      setError(err.response?.data?.detail || 'Failed to save movie metadata.');
+      const msg = err.response?.data?.detail || 'Failed to save movie poster or metadata.';
+      setError(msg);
+      showToast(`Save failed: ${msg}`, 'error');
     } finally {
       setSavingMovie(false);
     }
@@ -556,26 +575,32 @@ const AdminUpload: React.FC = () => {
     }
   };
 
-  const handleDeleteVideo = async (videoId: string) => {
+  const handleDeleteVideo = async (videoAsset: VideoAsset) => {
+    const assetName = videoAsset.original_filename || videoAsset.filename || 'Video Asset';
     const confirm = await showConfirm(
       "Delete Video Asset",
-      "Are you sure you want to delete this video asset?",
+      `Are you sure you want to delete video asset "${assetName}"? This action will permanently remove the raw video asset and all associated HLS stream segments from storage.`,
       "danger",
-      "Delete"
+      "Delete Asset"
     );
     if (!confirm) return;
 
     try {
-      await api.delete(`/videos/admin/${videoId}`);
-      setVideos((prev) => prev.filter((v) => v.video_id !== videoId));
-      if (activePreviewVideo?.video_id === videoId) {
+      setError(null);
+      await api.delete(`/videos/admin/${videoAsset.video_id}`);
+      setVideos((prev) => prev.filter((v) => v.video_id !== videoAsset.video_id));
+      if (activePreviewVideo?.video_id === videoAsset.video_id) {
         setActivePreviewVideo(null);
       }
+      showToast(`Video asset "${assetName}" deleted successfully.`, 'info');
+      setSuccessMsg(`Video asset "${assetName}" deleted successfully.`);
       fetchAnalytics();
       fetchHealth();
       fetchAuditLogs();
-    } catch (err) {
-      showAlert("Error", "Failed to delete video asset.", "danger");
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Failed to delete video asset.';
+      setError(msg);
+      showToast(`Delete failed: ${msg}`, 'error');
     }
   };
 
@@ -752,7 +777,7 @@ const AdminUpload: React.FC = () => {
                       </span>
                       <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
                         {m.thumbnail_url ? (
-                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                          <img src={resolvePosterUrl(m.thumbnail_url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
                         )}
@@ -779,7 +804,7 @@ const AdminUpload: React.FC = () => {
                       </span>
                       <div className="w-14 h-9 bg-neutral-905 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 relative flex items-center justify-center">
                         {m.thumbnail_url ? (
-                          <img src={m.thumbnail_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                          <img src={resolvePosterUrl(m.thumbnail_url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-neutral-850 to-neutral-950 flex items-center justify-center text-[8px] font-black text-neutral-500">ZEPLAY</div>
                         )}
@@ -1154,20 +1179,114 @@ const AdminUpload: React.FC = () => {
               </form>
             </div>
 
-            {/* List of Ingested Videos (Redesigned as Grid of Assets) */}
+            {/* List of Ingested Videos (Redesigned with Search & Action Filter) */}
             <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 rounded-[32px] overflow-hidden backdrop-blur-xl shadow-2xl">
-              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/15">
-                <h3 className="text-xs font-black uppercase tracking-wider text-brand-accent font-display">Ingested Video Assets</h3>
-                <span className="text-[9px] font-black uppercase tracking-widest bg-white/5 border border-white/10 px-3 py-1 rounded-full text-brand-textMuted">Total Assets: {videos.length}</span>
+              <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/15">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-brand-accent font-display">Ingested Video Assets</h3>
+                  <p className="text-[10px] text-neutral-450 mt-0.5 font-medium">Filter by title, filename, or transcoding status</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Search Input */}
+                  <div className="relative w-full sm:w-56">
+                    <input
+                      type="text"
+                      placeholder="Search filename or title..."
+                      value={ingestionSearch}
+                      onChange={(e) => setIngestionSearch(e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 bg-[#050913]/70 border border-white/10 rounded-full text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-brand-accent transition-all input-premium"
+                    />
+                    <svg className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+
+                  {/* Status Action Filter */}
+                  <select
+                    value={ingestionStatusFilter}
+                    onChange={(e) => setIngestionStatusFilter(e.target.value)}
+                    className="px-3 py-2 bg-[#050913]/70 border border-white/10 rounded-full text-xs text-neutral-300 focus:outline-none focus:border-brand-accent cursor-pointer"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="completed">Completed</option>
+                    <option value="processing">Processing</option>
+                    <option value="uploaded">Uploaded</option>
+                    <option value="failed">Failed</option>
+                  </select>
+
+                  {/* Reset Filters Button */}
+                  {(ingestionSearch || ingestionStatusFilter) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIngestionSearch('');
+                        setIngestionStatusFilter('');
+                      }}
+                      className="px-3 py-2 bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white border border-white/10 text-[9px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+
+                  <span className="text-[9px] font-black uppercase tracking-widest bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-brand-textMuted whitespace-nowrap">
+                    Filtered: {
+                      videos.filter((v) => {
+                        const mTitle = getMovieTitle(v.movie_id).toLowerCase();
+                        const fname = (v.filename || '').toLowerCase();
+                        const origFname = (v.original_filename || '').toLowerCase();
+                        const st = (v.status || '').toLowerCase();
+                        const q = ingestionSearch.trim().toLowerCase();
+                        const matchQ = !q || mTitle.includes(q) || fname.includes(q) || origFname.includes(q) || st.includes(q);
+                        const matchS = !ingestionStatusFilter || st === ingestionStatusFilter.toLowerCase();
+                        return matchQ && matchS;
+                      }).length
+                    } / {videos.length}
+                  </span>
+                </div>
               </div>
 
               {videos.length === 0 ? (
                 <div className="p-16 text-center text-brand-textMuted text-xs font-semibold">
                   No ingested video assets found in storage.
                 </div>
+              ) : videos.filter((v) => {
+                  const mTitle = getMovieTitle(v.movie_id).toLowerCase();
+                  const fname = (v.filename || '').toLowerCase();
+                  const origFname = (v.original_filename || '').toLowerCase();
+                  const st = (v.status || '').toLowerCase();
+                  const q = ingestionSearch.trim().toLowerCase();
+                  const matchQ = !q || mTitle.includes(q) || fname.includes(q) || origFname.includes(q) || st.includes(q);
+                  const matchS = !ingestionStatusFilter || st === ingestionStatusFilter.toLowerCase();
+                  return matchQ && matchS;
+                }).length === 0 ? (
+                <div className="p-16 text-center text-brand-textMuted text-xs font-semibold space-y-3">
+                  <p className="text-sm font-bold text-neutral-300">No video assets match your search/filter criteria.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIngestionSearch('');
+                      setIngestionStatusFilter('');
+                    }}
+                    className="px-4 py-2 bg-brand-accent/20 border border-brand-accent/40 text-brand-accent text-xs font-bold rounded-xl hover:bg-brand-accent/30 transition-all cursor-pointer"
+                  >
+                    Reset Search & Filters
+                  </button>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-                  {videos.map((v) => (
+                  {videos
+                    .filter((v) => {
+                      const mTitle = getMovieTitle(v.movie_id).toLowerCase();
+                      const fname = (v.filename || '').toLowerCase();
+                      const origFname = (v.original_filename || '').toLowerCase();
+                      const st = (v.status || '').toLowerCase();
+                      const q = ingestionSearch.trim().toLowerCase();
+                      const matchQ = !q || mTitle.includes(q) || fname.includes(q) || origFname.includes(q) || st.includes(q);
+                      const matchS = !ingestionStatusFilter || st === ingestionStatusFilter.toLowerCase();
+                      return matchQ && matchS;
+                    })
+                    .map((v) => (
                     <div key={v.video_id} className="bg-black/30 border border-white/5 hover:border-white/15 p-5 rounded-2xl flex flex-col justify-between space-y-4 transition-all duration-300">
                       <div className="space-y-3">
                         <div className="flex justify-between items-start gap-4">
@@ -1248,7 +1367,7 @@ const AdminUpload: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteVideo(v.video_id)}
+                          onClick={() => handleDeleteVideo(v)}
                           className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-95"
                         >
                           Delete
@@ -1335,7 +1454,7 @@ const AdminUpload: React.FC = () => {
                           <div className="w-20 h-28 bg-[#040811] rounded-xl overflow-hidden flex-shrink-0 border border-white/10 relative flex items-center justify-center">
                             <img 
                               key={m.thumbnail_url}
-                              src={m.thumbnail_url && (m.thumbnail_url.startsWith('http') || m.thumbnail_url.startsWith('blob:') || m.thumbnail_url.startsWith('data:')) ? m.thumbnail_url : `${API_ORIGIN}${m.thumbnail_url}`} 
+                              src={resolvePosterUrl(m.thumbnail_url)} 
                               className="absolute inset-0 w-full h-full object-cover z-10" 
                               alt="" 
                               onError={(e) => {
@@ -1442,7 +1561,7 @@ const AdminUpload: React.FC = () => {
                       <div className="flex gap-4 items-center">
                         <div className="w-16 h-24 bg-black/40 border border-white/10 rounded-xl overflow-hidden flex-shrink-0 relative group flex items-center justify-center">
                           {editPosterPreview ? (
-                            <img src={editPosterPreview && (editPosterPreview.startsWith('http') || editPosterPreview.startsWith('blob:') || editPosterPreview.startsWith('data:')) ? editPosterPreview : `${API_ORIGIN}${editPosterPreview}`} className="w-full h-full object-cover" alt="" />
+                            <img src={resolvePosterUrl(editPosterPreview)} className="w-full h-full object-cover" alt="" />
                           ) : (
                             <div className="text-[8px] text-neutral-600 font-bold">No Image</div>
                           )}

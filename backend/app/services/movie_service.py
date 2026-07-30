@@ -248,17 +248,7 @@ async def search_movies(
     """
     Multi-field catalog search querying title, description, genre name, and release year.
     """
-    avg_rating_subquery = (
-        select(Rating.movie_id, func.avg(Rating.score).label("avg_score"))
-        .group_by(Rating.movie_id)
-        .subquery()
-    )
-
-    query = (
-        select(Movie, func.coalesce(avg_rating_subquery.c.avg_score, 0.0))
-        .outerjoin(avg_rating_subquery, Movie.movie_id == avg_rating_subquery.c.movie_id)
-        .options(selectinload(Movie.genres))
-    )
+    query = select(Movie).options(selectinload(Movie.genres))
     if not include_synthetic:
         query = query.filter(Movie.is_generated == False)
     
@@ -289,18 +279,29 @@ async def search_movies(
 
     query = query.offset(offset).limit(limit)
     result = await db.execute(query)
+    movies = list(result.scalars().unique().all())
     
-    movies = []
-    for row in result.unique().all():
-        movie, avg_score = row
-        movie.average_rating = round(float(avg_score or 0.0), 1)
-        movies.append(movie)
+    if not movies:
+        return []
+
+    movie_ids = [m.movie_id for m in movies]
+    ratings_res = await db.execute(
+        select(Rating.movie_id, func.avg(Rating.score))
+        .filter(Rating.movie_id.in_(movie_ids))
+        .group_by(Rating.movie_id)
+    )
+    rating_map = {r[0]: round(float(r[1]), 1) for r in ratings_res.all()}
+
+    for m in movies:
+        m.average_rating = rating_map.get(m.movie_id, 0.0)
+
     return movies
 
 async def get_search_suggestions(
     db: AsyncSession,
     q: str,
-    limit: int = 5
+    limit: int = 5,
+    include_synthetic: bool = False
 ) -> List[Movie]:
     """Quick search suggestions query for live auto-complete."""
     if not q or not q.strip():
@@ -314,25 +315,26 @@ async def get_search_suggestions(
     if q.strip().isdigit():
         conditions.append(Movie.release_year == int(q.strip()))
         
-    avg_rating_subquery = (
-        select(Rating.movie_id, func.avg(Rating.score).label("avg_score"))
-        .group_by(Rating.movie_id)
-        .subquery()
-    )
+    query = select(Movie).options(selectinload(Movie.genres)).filter(or_(*conditions))
+    if not include_synthetic:
+        query = query.filter(Movie.is_generated == False)
 
-    query = (
-        select(Movie, func.coalesce(avg_rating_subquery.c.avg_score, 0.0))
-        .outerjoin(avg_rating_subquery, Movie.movie_id == avg_rating_subquery.c.movie_id)
-        .options(selectinload(Movie.genres))
-        .filter(or_(*conditions))
-        .order_by(Movie.title)
-        .limit(limit)
-    )
+    query = query.order_by(Movie.title).limit(limit)
     result = await db.execute(query)
+    movies = list(result.scalars().unique().all())
     
-    movies = []
-    for row in result.unique().all():
-        movie, avg_score = row
-        movie.average_rating = round(float(avg_score or 0.0), 1)
-        movies.append(movie)
+    if not movies:
+        return []
+
+    movie_ids = [m.movie_id for m in movies]
+    ratings_res = await db.execute(
+        select(Rating.movie_id, func.avg(Rating.score))
+        .filter(Rating.movie_id.in_(movie_ids))
+        .group_by(Rating.movie_id)
+    )
+    rating_map = {r[0]: round(float(r[1]), 1) for r in ratings_res.all()}
+
+    for m in movies:
+        m.average_rating = rating_map.get(m.movie_id, 0.0)
+
     return movies

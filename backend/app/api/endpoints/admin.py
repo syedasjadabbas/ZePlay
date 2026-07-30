@@ -46,10 +46,15 @@ async def get_analytics(
     current_user: User = Depends(deps.get_current_admin_user)
 ):
     """Retrieve detailed platform business intelligence metrics."""
+    cache_key = "admin:analytics"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     # Basic counts
     total_users = (await db.execute(select(func.count(User.user_id)))).scalar() or 0
     total_profiles = (await db.execute(select(func.count(Profile.profile_id)))).scalar() or 0
-    total_movies = (await db.execute(select(func.count(Movie.movie_id)))).scalar() or 0
+    total_movies = (await db.execute(select(func.count(Movie.movie_id)).filter(Movie.is_generated == False))).scalar() or 0
     total_videos = (await db.execute(select(func.count(Video.video_id)))).scalar() or 0
     total_ratings = (await db.execute(select(func.count(Rating.rating_id)))).scalar() or 0
 
@@ -94,7 +99,7 @@ async def get_analytics(
     if total_subscribers > 0:
         conversion_rate = round((premium_users / total_subscribers) * 100, 2)
 
-    return {
+    res = {
         "total_users": total_users,
         "total_profiles": total_profiles,
         "total_movies": total_movies,
@@ -109,6 +114,8 @@ async def get_analytics(
         "average_rating": avg_rating,
         "average_watch_time": avg_watch_time
     }
+    await cache.set(cache_key, res, ttl=30)
+    return res
 
 # ---------------------------------------------------------------------------
 # 2. Content Analytics
@@ -119,10 +126,16 @@ async def get_content_analytics(
     current_user: User = Depends(deps.get_current_admin_user)
 ):
     """Retrieve visual charts analytics and rankings for content consumption."""
+    cache_key = "admin:content-analytics"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     # 1. Most Watched Movies
     watched_query = (
         select(Movie.movie_id, Movie.title, Movie.thumbnail_url, func.count(WatchHistory.history_id).label("views"))
         .join(WatchHistory, Movie.movie_id == WatchHistory.movie_id)
+        .filter(Movie.is_generated == False)
         .group_by(Movie.movie_id)
         .order_by(func.count(WatchHistory.history_id).desc())
         .limit(5)
@@ -136,6 +149,7 @@ async def get_content_analytics(
     rated_query = (
         select(Movie.movie_id, Movie.title, Movie.thumbnail_url, func.avg(Rating.score).label("rating"))
         .join(Rating, Movie.movie_id == Rating.movie_id)
+        .filter(Movie.is_generated == False)
         .group_by(Movie.movie_id)
         .order_by(func.avg(Rating.score).desc())
         .limit(5)
@@ -149,6 +163,7 @@ async def get_content_analytics(
     watchlist_query = (
         select(Movie.movie_id, Movie.title, Movie.thumbnail_url, func.count(Watchlist.watchlist_id).label("saves"))
         .join(Watchlist, Movie.movie_id == Watchlist.movie_id)
+        .filter(Movie.is_generated == False)
         .group_by(Movie.movie_id)
         .order_by(func.count(Watchlist.watchlist_id).desc())
         .limit(5)
@@ -158,7 +173,7 @@ async def get_content_analytics(
         for r in (await db.execute(watchlist_query)).all()
     ]
 
-    # 4. Most Popular Genres (movie count per genre) — single aggregate GROUP BY query
+    # 4. Most Popular Genres
     from app.models.genre import movie_genres as mg_table
     genre_movie_count_q = (
         select(Genre.genre_id, Genre.name, func.count(mg_table.c.movie_id).label("count"))
@@ -172,7 +187,7 @@ async def get_content_analytics(
         for r in (await db.execute(genre_movie_count_q)).all()
     ]
 
-    # 5. Most Watched Categories (genres tracked in WatchHistory) — single aggregate query
+    # 5. Most Watched Categories
     genre_watch_count_q = (
         select(Genre.genre_id, Genre.name, func.count(WatchHistory.history_id).label("views"))
         .outerjoin(mg_table, Genre.genre_id == mg_table.c.genre_id)
@@ -186,9 +201,10 @@ async def get_content_analytics(
         for r in (await db.execute(genre_watch_count_q)).all()
     ]
 
-    # 6. Most Recommended Content (ranked by stats popularity score if stats exist, or movie rating)
+    # 6. Most Recommended Content (curated titles only)
     rec_query = (
         select(Movie.movie_id, Movie.title, Movie.thumbnail_url)
+        .filter(Movie.is_generated == False)
         .order_by(Movie.created_at.desc())
         .limit(5)
     )
@@ -197,7 +213,7 @@ async def get_content_analytics(
         for r in (await db.execute(rec_query)).all()
     ]
 
-    return {
+    res = {
         "most_watched_movies": most_watched,
         "highest_rated_movies": highest_rated,
         "most_added_watchlist": most_added,
@@ -205,6 +221,8 @@ async def get_content_analytics(
         "most_watched_categories": most_watched_categories,
         "most_recommended": most_recommended
     }
+    await cache.set(cache_key, res, ttl=30)
+    return res
 
 # ---------------------------------------------------------------------------
 # 3. Platform Health Monitoring
@@ -215,6 +233,11 @@ async def get_health_monitoring(
     current_user: User = Depends(deps.get_current_admin_user)
 ):
     """Retrieve storage, database, HLS processing, and system status markers."""
+    cache_key = "admin:health"
+    cached_data = await cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     # Database check
     db_status = "healthy"
     try:
@@ -229,29 +252,32 @@ async def get_health_monitoring(
         cache_status = "warning"
 
     # Storage Check
-    video_dir = "storage/videos/"
-    total_files = 0
-    total_segments = 0
-    storage_bytes = 0
+    import anyio
 
-    if os.path.exists(video_dir):
-        for root, _, files in os.walk(video_dir):
-            for f in files:
-                fpath = os.path.join(root, f)
-                try:
-                    storage_bytes += os.path.getsize(fpath)
-                    total_files += 1
-                    if f.endswith(".ts"):
-                        total_segments += 1
-                except Exception:
-                    pass
+    def _calc_storage():
+        t_files, t_segs, s_bytes = 0, 0, 0
+        video_dir = "storage/videos/"
+        if os.path.exists(video_dir):
+            for root, _, files in os.walk(video_dir):
+                for f in files:
+                    fpath = os.path.join(root, f)
+                    try:
+                        s_bytes += os.path.getsize(fpath)
+                        t_files += 1
+                        if f.endswith(".ts"):
+                            t_segs += 1
+                    except Exception:
+                        pass
+        return t_files, t_segs, s_bytes
+
+    total_files, total_segments, storage_bytes = await anyio.to_thread.run_sync(_calc_storage)
 
     # Status counts
     total_uploaded = (await db.execute(select(func.count(Video.video_id)).filter(Video.status == "uploaded"))).scalar() or 0
     total_hls = (await db.execute(select(func.count(Video.video_id)).filter(Video.status == "completed"))).scalar() or 0
     queue_processing = (await db.execute(select(func.count(Video.video_id)).filter(Video.status == "processing"))).scalar() or 0
 
-    return {
+    res = {
         "database_status": db_status,
         "cache_status": cache_status,
         "cache_stats": cache_stats,
@@ -262,6 +288,8 @@ async def get_health_monitoring(
         "total_video_segments": total_segments,
         "processing_queue_status": queue_processing
     }
+    await cache.set(cache_key, res, ttl=15)
+    return res
 
 # ---------------------------------------------------------------------------
 # 4. User Management

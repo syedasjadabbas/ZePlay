@@ -7,6 +7,18 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 // Server origin (no /api suffix) — used for building media/HLS streaming URLs
 export const API_ORIGIN = API_URL.replace(/\/api$/, '');
 
+/**
+ * Centralized poster URL resolver.
+ * Converts relative static paths (/static/posters/...) to full backend origin URLs.
+ */
+export const resolvePosterUrl = (path: string | null | undefined): string => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:') || path.startsWith('blob:')) {
+    return path;
+  }
+  return `${API_ORIGIN}${path}`;
+};
+
 const api = axios.create({
   baseURL: API_URL,
 });

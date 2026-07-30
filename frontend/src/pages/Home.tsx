@@ -300,10 +300,10 @@ const Home: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-transparent text-white flex font-sans select-none">
+    <div className="min-h-screen bg-transparent text-white flex font-sans select-none overflow-x-hidden">
       <Sidebar />
 
-      <div className="flex-1 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0">
+      <div className="flex-1 min-w-0 ml-0 md:ml-56 flex flex-col justify-between min-h-screen pb-20 md:pb-0 overflow-x-hidden">
         <TopBar profileName={profileName} />
 
         <main className="flex-grow pt-24 px-4 sm:px-8 md:px-12 pb-20 space-y-12 md:space-y-16 max-w-7xl mx-auto w-full">
@@ -357,11 +357,9 @@ const Home: React.FC = () => {
                       >
                         {/* Background image */}
                         <div
-                          className="absolute inset-0"
+                          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
                           style={{
-                            backgroundImage: `linear-gradient(to top, rgba(20,20,20,1) 0%, rgba(20,20,20,0.75) 30%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(20,20,20,0.95) 20%, rgba(20,20,20,0.45) 65%, rgba(0,0,0,0) 100%), url(${movie.thumbnail_url && (movie.thumbnail_url.startsWith('http') || movie.thumbnail_url.startsWith('blob:') || movie.thumbnail_url.startsWith('data:')) ? movie.thumbnail_url : `${API_ORIGIN}${movie.thumbnail_url}`})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
+                            backgroundImage: `linear-gradient(to top, rgba(20,20,20,1) 0%, rgba(20,20,20,0.75) 30%, rgba(0,0,0,0) 100%), linear-gradient(to right, rgba(20,20,20,0.95) 20%, rgba(20,20,20,0.45) 65%, rgba(0,0,0,0) 100%), url(${API_ORIGIN}/static/backdrops/backdrop_${movie.movie_id}.jpg), url(${movie.thumbnail_url && (movie.thumbnail_url.startsWith('http') || movie.thumbnail_url.startsWith('blob:') || movie.thumbnail_url.startsWith('data:')) ? movie.thumbnail_url : `${API_ORIGIN}${movie.thumbnail_url}`})`,
                           }}
                         />
 

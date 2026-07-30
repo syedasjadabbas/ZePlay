@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { resolvePosterUrl } from '../services/api';
 
 interface TopBarProps {
   profileName: string;
@@ -290,11 +290,14 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
                     <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-800">
                       {m.thumbnail_url && (
                         <img
-                          src={m.thumbnail_url}
+                          src={resolvePosterUrl(m.thumbnail_url)}
                           alt={m.title}
                           className="w-full h-full object-cover"
                           loading="lazy"
                           decoding="async"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
                         />
                       )}
                     </div>
