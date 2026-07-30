@@ -61,8 +61,11 @@ interface HealthStats {
     hits: number;
     misses: number;
     hit_rate_pct: number;
-    keys_count: number;
-    engine: string;
+    total_keys?: number;
+    keys_count?: number;
+    redis_connected?: boolean;
+    cache_engine?: string;
+    engine?: string;
   };
   storage_usage_bytes: number;
   total_files: number;
@@ -349,7 +352,18 @@ const AdminUpload: React.FC = () => {
       const response = await api.get('/admin/health');
       setHealth(response.data);
     } catch (err) {
-      console.error('Failed to load health statistics', err);
+      console.error('Failed to fetch system health:', err);
+      setHealth({
+        database_status: 'error',
+        cache_status: 'error',
+        cache_stats: { hits: 0, misses: 0, hit_rate_pct: 0, total_keys: 0, redis_connected: false, cache_engine: 'Unavailable' },
+        storage_usage_bytes: 0,
+        total_files: 0,
+        total_uploaded_files: 0,
+        total_hls_assets: 0,
+        total_video_segments: 0,
+        processing_queue_status: 0
+      });
     }
   };
 
@@ -1816,6 +1830,92 @@ const AdminUpload: React.FC = () => {
                     );
                   })
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 6: Services (Database & Redis Health) */}
+        {activeTab === 'health' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Header & Controls */}
+            <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-8 rounded-[32px] backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-wide text-brand-accent font-display">Services Health & Data Infrastructure</h2>
+                <p className="text-xs text-neutral-450 mt-1 font-medium">Real-time status of PostgreSQL engine, Redis distributed caching, and media storage assets.</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleClearCache}
+                disabled={clearingCache}
+                className="px-6 py-3.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black uppercase tracking-wider rounded-2xl transition-all cursor-pointer flex items-center gap-2.5 active:scale-95 shadow-lg shrink-0 disabled:opacity-50"
+              >
+                <span>⚡</span>
+                <span>{clearingCache ? 'Flushing Cache...' : 'Flush Redis & Memory Cache'}</span>
+              </button>
+            </div>
+
+            {/* Health Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Card 1: Database Status */}
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">PostgreSQL Engine</span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    health?.database_status === 'healthy'
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {health?.database_status === 'healthy' ? '● Healthy' : '● Error'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-black text-white font-display">PostgreSQL Datastore</div>
+                  <p className="text-xs text-neutral-400 font-medium">Primary relational database engine for catalog, profiles, and subscription entitlements.</p>
+                </div>
+              </div>
+
+              {/* Card 2: Redis Cache Status */}
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">Cache Layer</span>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    health?.cache_stats?.redis_connected
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  }`}>
+                    {health?.cache_stats?.redis_connected ? '● Redis Connected' : '● In-Memory Fallback'}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-black text-white font-display">
+                    {health?.cache_stats?.hit_rate_pct ?? 0}% Hit Rate
+                  </div>
+                  <div className="flex justify-between text-xs text-neutral-400 font-medium border-t border-white/5 pt-2">
+                    <span>Cache Hits: <strong className="text-white">{health?.cache_stats?.hits ?? 0}</strong></span>
+                    <span>Cache Misses: <strong className="text-white">{health?.cache_stats?.misses ?? 0}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Storage Assets */}
+              <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">Media Storage</span>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    Active Storage
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-2xl font-black text-white font-display">
+                    {formatFileSize(health?.storage_usage_bytes || 0)}
+                  </div>
+                  <div className="flex justify-between text-xs text-neutral-400 font-medium border-t border-white/5 pt-2">
+                    <span>HLS Assets: <strong className="text-white">{health?.total_hls_assets ?? 0}</strong></span>
+                    <span>Segment Files: <strong className="text-white">{health?.total_video_segments ?? 0}</strong></span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

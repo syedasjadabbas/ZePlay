@@ -190,13 +190,13 @@ const SearchResults: React.FC = () => {
             <h3 className="text-xs font-black text-neutral-450 uppercase tracking-widest">
               Filter by Category / Genre
             </h3>
-            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex flex-wrap gap-2 sm:gap-2.5 items-center max-w-full">
               <button
                 onClick={() => handleGenreSelect(null)}
-                className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border border-white/5 ${
                   !selectedGenre
-                    ? 'bg-brand-accent text-white'
-                    : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                    ? 'bg-brand-accent text-white font-black shadow-md'
+                    : 'bg-black/40 text-neutral-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 All Genres
@@ -205,10 +205,10 @@ const SearchResults: React.FC = () => {
                 <button
                   key={g.genre_id}
                   onClick={() => handleGenreSelect(g.name)}
-                  className={`px-5 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border border-white/5 ${
                     selectedGenre.toLowerCase() === g.name.toLowerCase()
-                      ? 'bg-brand-accent text-white'
-                      : 'bg-black/30 text-brand-textMuted hover:bg-black/50 hover:text-white'
+                      ? 'bg-brand-accent text-white font-black shadow-md'
+                      : 'bg-black/40 text-neutral-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {g.name}

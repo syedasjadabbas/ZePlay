@@ -8,12 +8,27 @@ interface AdminRouteProps {
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
   const token = getToken();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(() => {
+    try {
+      const cachedUser = localStorage.getItem('user');
+      if (cachedUser) {
+        const parsed = JSON.parse(cachedUser);
+        return parsed.is_admin === true;
+      }
+    } catch {}
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => isAdmin === null);
 
   useEffect(() => {
     if (!token) {
       setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
+
+    // If cached admin state exists, bypass blocking network spinner
+    if (isAdmin !== null) {
       setLoading(false);
       return;
     }
@@ -35,7 +50,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     };
 
     checkAdmin();
-  }, [token]);
+  }, [token, isAdmin]);
 
   if (!token) {
     return <Navigate to="/login" replace />;
