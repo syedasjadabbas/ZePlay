@@ -1,8 +1,14 @@
 import axios from 'axios';
 
-// Convention: VITE_API_URL must end with /api
-// Example: https://zeplay-backend.onrender.com/api
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const getInitialApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.hostname) {
+    return `${window.location.protocol}//${window.location.hostname}:8000/api`;
+  }
+  return 'http://localhost:8000/api';
+};
+
+const API_URL = getInitialApiUrl();
 
 // Server origin (no /api suffix) — used for building media/HLS streaming URLs
 export const API_ORIGIN = API_URL.replace(/\/api$/, '');
