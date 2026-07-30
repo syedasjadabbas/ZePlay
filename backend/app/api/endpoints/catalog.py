@@ -93,10 +93,5 @@ async def search_suggestions(
         return cached_data
 
     suggestions = await movie_service.get_search_suggestions(db, q=q, limit=limit)
-    
-    # Serialize suggestions list to dictionaries to store in cache safely
-    from fastapi.encoders import jsonable_encoder
-    serialized = jsonable_encoder(suggestions)
-    await cache.set(cache_key, serialized, ttl=300)
-    
+    await cache.set(cache_key, suggestions, ttl=300)
     return suggestions

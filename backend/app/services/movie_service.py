@@ -302,7 +302,7 @@ async def get_search_suggestions(
     q: str,
     limit: int = 5,
     include_synthetic: bool = False
-) -> List[Movie]:
+) -> List[dict]:
     """Quick search suggestions query for live auto-complete."""
     if not q or not q.strip():
         return []
@@ -334,7 +334,19 @@ async def get_search_suggestions(
     )
     rating_map = {r[0]: round(float(r[1]), 1) for r in ratings_res.all()}
 
-    for m in movies:
-        m.average_rating = rating_map.get(m.movie_id, 0.0)
-
-    return movies
+    return [
+        {
+            "movie_id": str(m.movie_id),
+            "title": m.title,
+            "description": m.description,
+            "release_year": m.release_year,
+            "duration_minutes": m.duration_minutes,
+            "thumbnail_url": m.thumbnail_url,
+            "video_url": m.video_url,
+            "average_rating": rating_map.get(m.movie_id, 0.0),
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+            "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+            "genres": [{"genre_id": str(g.genre_id), "name": g.name} for g in (m.genres or [])]
+        }
+        for m in movies
+    ]

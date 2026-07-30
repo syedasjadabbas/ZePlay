@@ -142,7 +142,7 @@ const TopBar: React.FC<TopBarProps> = ({ profileName, profileAvatar }) => {
       } finally {
         if (!controller.signal.aborted) setIsSearchLoading(false);
       }
-    }, 180);
+    }, 90);
     return () => {
       clearTimeout(timer);
       controller.abort();

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { queryClient, QUERY_KEYS } from '../services/queryClient';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import Footer from '../components/Footer';
@@ -94,10 +95,24 @@ const Subscription: React.FC = () => {
     fetchData();
   }, []);
 
+  const syncLocalSessionState = (planName: string) => {
+    try {
+      const rawUser = localStorage.getItem('user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        u.subscription_plan = planName;
+        localStorage.setItem('user', JSON.stringify(u));
+      }
+    } catch {}
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.subscription });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
+  };
+
   const handleUpgrade = async () => {
     try {
       setActionLoading(true);
       await api.post('/subscription/upgrade', { plan_name: 'premium' });
+      syncLocalSessionState('premium');
       showToast('🎉 Upgraded to Premium! Enjoy all premium features.', 'success');
       await fetchData();
     } catch (err: any) {
@@ -112,6 +127,7 @@ const Subscription: React.FC = () => {
     try {
       setActionLoading(true);
       await api.post('/subscription/downgrade', { plan_name: 'free' });
+      syncLocalSessionState('free');
       showToast('Downgraded to Free plan.', 'success');
       await fetchData();
     } catch (err: any) {
@@ -126,6 +142,7 @@ const Subscription: React.FC = () => {
     try {
       setActionLoading(true);
       await api.post('/subscription/cancel');
+      syncLocalSessionState('free');
       showToast('Subscription cancelled.', 'success');
       await fetchData();
     } catch (err: any) {

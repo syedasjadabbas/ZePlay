@@ -478,6 +478,12 @@ const MovieDetails: React.FC = () => {
           const userStr = localStorage.getItem('user');
           const userObj = userStr ? JSON.parse(userStr) : null;
           const isAdmin = userObj?.is_admin || subData?.status === "Administrator Account" || false;
+
+          if (userObj && subPlan && userObj.subscription_plan !== subPlan) {
+            userObj.subscription_plan = subPlan;
+            localStorage.setItem('user', JSON.stringify(userObj));
+          }
+
           if (isAdmin) {
             setAccessState('ADMIN');
             setIsPremiumUser(true);
