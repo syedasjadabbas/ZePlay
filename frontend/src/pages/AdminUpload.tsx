@@ -677,14 +677,16 @@ const AdminUpload: React.FC = () => {
 
         {/* Dynamic Notification Badges */}
         {error && (
-          <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-2xl flex items-center gap-3 animate-scaleIn shadow-lg">
-            <span className="font-extrabold uppercase bg-rose-500 text-white px-2.5 py-0.5 rounded-lg text-[9px] tracking-wider">ERROR</span>
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs rounded-2xl flex items-center gap-2.5 animate-scaleIn shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
+            <span className="font-bold text-rose-400">Error:</span>
             <span className="font-semibold">{error}</span>
           </div>
         )}
         {successMsg && (
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs rounded-2xl flex items-center gap-3 animate-scaleIn shadow-lg">
-            <span className="font-extrabold uppercase bg-emerald-500 text-white px-2.5 py-0.5 rounded-lg text-[9px] tracking-wider">SUCCESS</span>
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs rounded-2xl flex items-center gap-2.5 animate-scaleIn shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            <span className="font-bold text-emerald-400">Notice:</span>
             <span className="font-semibold">{successMsg}</span>
           </div>
         )}
@@ -1862,12 +1864,11 @@ const AdminUpload: React.FC = () => {
               <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">PostgreSQL Engine</span>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    health?.database_status === 'healthy'
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  <span className={`text-xs font-bold flex items-center gap-1.5 ${
+                    health?.database_status === 'healthy' ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
-                    {health?.database_status === 'healthy' ? '● Healthy' : '● Error'}
+                    <span className="w-2 h-2 rounded-full bg-current" />
+                    <span>{health?.database_status === 'healthy' ? 'Operational' : 'Unavailable'}</span>
                   </span>
                 </div>
                 <div className="space-y-1">
@@ -1880,12 +1881,11 @@ const AdminUpload: React.FC = () => {
               <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">Cache Layer</span>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                    health?.cache_stats?.redis_connected
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  <span className={`text-xs font-bold flex items-center gap-1.5 ${
+                    health?.cache_stats?.redis_connected ? 'text-emerald-400' : 'text-amber-400'
                   }`}>
-                    {health?.cache_stats?.redis_connected ? '● Redis Connected' : '● In-Memory Fallback'}
+                    <span className="w-2 h-2 rounded-full bg-current" />
+                    <span>{health?.cache_stats?.redis_connected ? 'Connected' : 'In-memory fallback'}</span>
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -1903,8 +1903,9 @@ const AdminUpload: React.FC = () => {
               <div className="bg-gradient-to-br from-[#0c142c]/90 to-[#070b16]/95 border border-white/10 p-6 rounded-3xl backdrop-blur-xl shadow-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-450">Media Storage</span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                    Active Storage
+                  <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-current" />
+                    <span>Active</span>
                   </span>
                 </div>
                 <div className="space-y-2">
