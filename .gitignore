@@ -26,6 +26,9 @@ env/
 !.env.example
 
 # Local dev DB & email logs & media storage
+*.db
+*.sqlite
+*.sqlite3
 backend/local_zeplay.db
 backend/local_emails.log
 backend/*.db
